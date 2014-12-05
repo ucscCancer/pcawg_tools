@@ -1,0 +1,26 @@
+tcga_code	dcc_specimen_type	tumour/normal
+11	Normal - solid tissue	normal
+10	Normal - blood derived	normal
+14	Normal - bone marrow	normal
+	Normal - tissue adjacent to primary	normal
+12	Normal - buccal cell	 normal
+13	Normal - EBV immortalized	normal
+	Normal - lymph node	normal
+	Normal - other normal	normal
+01	Primary tumour - solid tissue	tumour
+03	Primary tumour - blood derived (peripheral blood)	tumour
+09	Primary tumour - blood derived (bone marrow)	tumour
+05	Primary tumour - additional new primary	tumour
+	Primary tumour - other	    tumour
+02	Recurrent tumour - solid tissue	tumour
+40	Recurrent tumour - blood derived (peripheral blood)	tumour
+04	Recurrent tumour - blood derived (bone marrow)	tumour
+	Recurrent tumour - other tumour	 tumour
+06	Metastatic tumour - NOS	 tumour
+	Metastatic tumour - lymph node	tumour
+	Metastatic tumour - metastasis local to lymph node	tumour
+	Metastatic tumour - metastasis to distant location	tumour
+07	Metastatic tumour - additional metastatic tumour	tumour
+60	Xenograft - derived from primary tumour	  tumour
+61	Xenograft - derived from tumour cell line tumour	tumour
+50	Cell line - derived from tumour	tumour

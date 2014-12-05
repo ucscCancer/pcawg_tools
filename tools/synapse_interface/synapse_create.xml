@@ -1,0 +1,151 @@
+<tool id="synapse_upload" name="Synapse Upload" version="3.0.1">
+	<description>Create Synapse</description>
+	<requirements>
+		<requirement type="package" version="1.0.3">synapseclient</requirement>
+	</requirements>
+	<command interpreter="python">synapse_galaxy_client.py upload $script_file
+$etype
+$properties_file
+$annotations_file
+$outfile
+
+#if str($attachment) != ''
+$attachment
+#else
+-
+#end if
+
+#if str($attachment_name) != ''
+$attachment_name
+#else
+-
+#end if
+
+
+#if str($synid) != ''
+$synid
+#else
+-
+#end if
+</command>
+	<request_param_translation>
+		<request_param galaxy_name="auth|sessionToken" remote_name="sessionToken" missing="" />
+    </request_param_translation>
+	<inputs>
+		<conditional name="auth">
+			<param name="method" type="select" label="Authentication Method">
+				<option value="openid">OpenID</option>
+				<option value="password">Password</option>
+				<option value="apikey">API Key</option>
+			</param>
+			<when value="openid">
+				<param name="sessionToken" type="text" size="90" label="SessionToken" help="Log in via OpenID using the Link in the help section"/>
+			</when>
+			<when value="password">
+				<param name="user" type="text" size="90" label="Username">
+					<sanitizer>
+						<valid initial="string.printable"/>
+					</sanitizer>
+				</param>
+				<param name="pass" type="text" size="90" label="Password" help="If you have a sessionToken, you don't have to enter your password">
+					<sanitizer>
+						<valid initial="string.printable"/>
+					</sanitizer>
+				</param>
+			</when>
+			<when value="apikey">
+				<param name="user" type="text" size="90" label="Username">
+					<sanitizer>
+						<valid initial="string.printable"/>
+					</sanitizer>
+				</param>
+				<param name="apikey" type="text" size="90" label="APIKey" help="Synapse API Key"/>
+			</when>
+		</conditional>
+
+		<param name="name" type="text" size="90" label="Entity Name"/>
+		<param name="synid" type="text" size="30" label="Synapse ID" help="Leave Blank to create new Entity"/>
+		<param name="attachment" type="data" optional="true" label="Attachment"/>
+		<param name="attachment_name" type="text" size="90" optional="true" label="Attachment Name"/>
+		<param name="etype" type="select" label="Entity Type">
+			<option value="Data">Data</option>
+			<option value="Folder">Folder</option>
+		</param>
+		<param name="parentId" type="text" size="30" label="Parent ID"/>
+		<repeat name="properties" title="Properties">
+			<param name="name" type="select" size="90" label="Name">
+				<option value="description">Description</option>
+				<option value="species">Species</option>
+				<option value="numSamples">Number of Samples</option>
+				<option value="disease">Disease</option>
+				<option value="tissueType">Tissue Type</option>
+			</param>
+			<param name="value" type="text" size="90" label="Value">
+				<sanitizer>
+					<valid initial="string.printable">
+						<remove value="&quot;"/>
+					</valid>
+					<mapping initial="none">
+						<add source="&quot;" target="\&quot;"/>
+					</mapping>
+				</sanitizer>
+			</param>
+		</repeat>
+
+		<repeat name="annotations" title="Annotations">
+			<param name="name" type="text" size="90" label="Name"/>
+			<param name="value" type="text" size="90" label="Value">
+				<sanitizer>
+					<valid initial="string.printable">
+						<remove value="&quot;"/>
+					</valid>
+					<mapping initial="none">
+						<add source="&quot;" target="\&quot;"/>
+					</mapping>
+				</sanitizer>
+			</param>
+		</repeat>
+
+	</inputs>
+	<outputs>
+		<data format="txt" name="outfile" />
+	</outputs>
+	<configfiles>
+		<configfile name="script_file">#if $auth.method == 'openid'
+token
+$auth.sessionToken
+#else if $auth.method == 'apikey'
+apikey
+$auth.user
+$auth.apikey
+#else
+password
+$auth.user
+$auth.pass
+#end if
+</configfile>
+		<configfile name="properties_file">parentId	$parentId
+#for a in $properties:
+${a.name}	${a.value}
+#end for
+#if str($name) != ''
+name	$name
+#end if
+</configfile>
+		<configfile name="annotations_file">#for a in $annotations:
+${a.name}	${a.value}
+#end for
+</configfile>
+
+	</configfiles>
+		<help>
+
+Login via OpenID |location_link|.
+
+.. |location_link| raw:: html
+
+   &lt;a href="https://synapse.sagebase.org/Portal/openid?OPEN_ID_PROVIDER=GOOGLE&amp;RETURN_TO_URL=${host_url}?tool_id=synapse_upload&amp;" target="_blank"&gt;at Synapse&lt;/a&gt;
+
+	</help>
+
+</tool>

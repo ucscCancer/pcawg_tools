@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ANALYSIS_SET xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.ncbi.nlm.nih.gov/viewvc/v1/trunk/sra/doc/SRA_1-5/SRA.analysis.xsd?view=co">
+    <ANALYSIS alias="REPLACE_ME.bam" analysis_date="DATE" center_name="UCSC">
+    <TITLE>TCGA/ICGC PanCancer Specimen-Level Alignment for Specimen SAMPLE1 from Participant PARTICIPANT1</TITLE>
+    <STUDY_REF refcenter="OICR" refname="PCAWG_CHECK">
+    </STUDY_REF>
+    <DESCRIPTION>Specimen-level BAM from the reference alignment of specimen SAMPLE1 from donor PARTICIPANT1. This is based on the SeqWare BWA-Mem PanCancer Workflow version 2.6.0 available at https://s3.amazonaws.com/oicr.workflow.bundles/released-bundles/Workflow_Bundle_BWA_2.6.0_SeqWare_1.0.15.zip.  This workflow can be created from source, see https://github.com/kellrott/tcga_realign. Input BAMs are prepared and submitted to GNOS server according to the submission SOP documented at: https://wiki.oicr.on.ca/display/PANCANCER/PCAP+%28a.k.a.+PAWG%29+Sequence+Submission+SOP+-+v1.0</DESCRIPTION>
+    <ANALYSIS_TYPE>
+      <REFERENCE_ALIGNMENT>
+        <ASSEMBLY>
+          <STANDARD short_name="GRCh37"/>
+        </ASSEMBLY>
+        <RUN_LABELS>
+                    <RUN data_block_name="H12U9ADXX" read_group_label="H12U9.1" refcenter="BI" refname="H12U9ADXX130815.1.AATGTTCT.G39020.TCGA-CG-4443-01A-01D-A290-08.2.bam" />
+                    <RUN data_block_name="H12U9ADXX" read_group_label="H12U9.2" refcenter="BI" refname="H12U9ADXX130815.2.AATGTTCT.G39020.TCGA-CG-4443-01A-01D-A290-08.2.bam" />
+                    <RUN data_block_name="H12TDADXX" read_group_label="H12TD.1" refcenter="BI" refname="H12TDADXX130815.1.AATGTTCT.G39020.TCGA-CG-4443-01A-01D-A290-08.2.bam" />
+                    <RUN data_block_name="H12TDADXX" read_group_label="H12TD.2" refcenter="BI" refname="H12TDADXX130815.2.AATGTTCT.G39020.TCGA-CG-4443-01A-01D-A290-08.2.bam" />
+        </RUN_LABELS>
+        <SEQ_LABELS>
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000001.10" seq_label="1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000002.11" seq_label="2" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000003.11" seq_label="3" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000004.11" seq_label="4" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000005.9" seq_label="5" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000006.11" seq_label="6" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000007.13" seq_label="7" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000008.10" seq_label="8" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000009.11" seq_label="9" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000010.10" seq_label="10" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000011.9" seq_label="11" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000012.11" seq_label="12" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000013.10" seq_label="13" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000014.8" seq_label="14" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000015.9" seq_label="15" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000016.9" seq_label="16" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000017.10" seq_label="17" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000018.9" seq_label="18" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000019.9" seq_label="19" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000020.10" seq_label="20" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000021.8" seq_label="21" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000022.10" seq_label="22" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000023.10" seq_label="X" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_000024.9" seq_label="Y" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_012920" seq_label="MT" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000207.1" seq_label="GL000207.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000226.1" seq_label="GL000226.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000229.1" seq_label="GL000229.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000231.1" seq_label="GL000231.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000210.1" seq_label="GL000210.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000239.1" seq_label="GL000239.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000235.1" seq_label="GL000235.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000201.1" seq_label="GL000201.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000247.1" seq_label="GL000247.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000245.1" seq_label="GL000245.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000197.1" seq_label="GL000197.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000203.1" seq_label="GL000203.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000246.1" seq_label="GL000246.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000249.1" seq_label="GL000249.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000196.1" seq_label="GL000196.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000248.1" seq_label="GL000248.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000244.1" seq_label="GL000244.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000238.1" seq_label="GL000238.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000202.1" seq_label="GL000202.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000234.1" seq_label="GL000234.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000232.1" seq_label="GL000232.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000206.1" seq_label="GL000206.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000240.1" seq_label="GL000240.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000236.1" seq_label="GL000236.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000241.1" seq_label="GL000241.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000243.1" seq_label="GL000243.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000242.1" seq_label="GL000242.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000230.1" seq_label="GL000230.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000237.1" seq_label="GL000237.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000233.1" seq_label="GL000233.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000204.1" seq_label="GL000204.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000198.1" seq_label="GL000198.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000208.1" seq_label="GL000208.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000191.1" seq_label="GL000191.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000227.1" seq_label="GL000227.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000228.1" seq_label="GL000228.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000214.1" seq_label="GL000214.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000221.1" seq_label="GL000221.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000209.1" seq_label="GL000209.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000218.1" seq_label="GL000218.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000220.1" seq_label="GL000220.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000213.1" seq_label="GL000213.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000211.1" seq_label="GL000211.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000199.1" seq_label="GL000199.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000217.1" seq_label="GL000217.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000216.1" seq_label="GL000216.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000215.1" seq_label="GL000215.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000205.1" seq_label="GL000205.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000219.1" seq_label="GL000219.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000224.1" seq_label="GL000224.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000223.1" seq_label="GL000223.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000195.1" seq_label="GL000195.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000212.1" seq_label="GL000212.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000222.1" seq_label="GL000222.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000200.1" seq_label="GL000200.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000193.1" seq_label="GL000193.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000194.1" seq_label="GL000194.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000225.1" seq_label="GL000225.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="GL000192.1" seq_label="GL000192.1" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="NC_007605" seq_label="NC_007605" />
+            <SEQUENCE data_block_name="REPLACE_ME" accession="hs37d5" seq_label="hs37d5" />
+        </SEQ_LABELS>
+        <PROCESSING>
+          <PIPELINE>
+            <PIPE_SECTION>
+              <STEP_INDEX>GATK IndelRealigner</STEP_INDEX>
+              <PREV_STEP_INDEX>N/A</PREV_STEP_INDEX>
+              <PROGRAM>N/A</PROGRAM>
+              <VERSION>2.6-14-g014fd39-picard_2013_07_25</VERSION>
+              <NOTES>knownAlleles=[(RodBinding name=knownAlleles source=Homo_sapiens_assembly19.dbsnp.vcf), (RodBinding name=knownAlleles2 source=Homo_sapiens_assembly19.known_indels.vcf)] targetIntervals=Homo_sapiens_assembly19.indel_cleaner.intervals LODThresholdForCleaning=0.4 consensusDeterminationModel=KNOWNS_ONLY entropyThreshold=0.15 maxReadsInMemory=1000000 maxIsizeForMovement=3000 maxPositionalMoveAllowed=200 maxConsensuses=30 maxReadsForConsensuses=120 maxReadsForRealignment=20000 noOriginalAlignmentTags=false nWayOut=null generate_nWayOut_md5s=false check_early=false noPGTag=false keepPGTags=false indelsFileForDebugging=null statisticsFileForDebugging=null SNPsFileForDebugging=null</NOTES>
+            </PIPE_SECTION>
+          </PIPELINE>
+          <DIRECTIVES>
+            <alignment_includes_unaligned_reads>true</alignment_includes_unaligned_reads>
+            <alignment_marks_duplicate_reads>true</alignment_marks_duplicate_reads>
+            <alignment_includes_failed_reads>false</alignment_includes_failed_reads>
+          </DIRECTIVES>
+        </PROCESSING>
+      </REFERENCE_ALIGNMENT>
+    </ANALYSIS_TYPE>
+    <TARGETS>
+      <TARGET refcenter="TCGA" refname="REPLACEME" sra_object_type="SAMPLE"/>
+      <IDENTIFIERS>
+        <EXTERNAL_ID label="TCGA" namespace="REPLACEME">REPLACEME</EXTERNAL_ID>
+        <UUID>REPLACEME</UUID>
+      </IDENTIFIERS>
+    </TARGETS>
+    <DATA_BLOCK name="REPLACE_ME">
+      <FILES>
+        <FILE checksum="REPLACE_ME" checksum_method="MD5" filename="PCAWG.REPLACE_ME.bam" filetype="bam"/>
+      </FILES>
+    </DATA_BLOCK>
+    <ANALYSIS_ATTRIBUTES>
+      <ANALYSIS_ATTRIBUTE>
+        <TAG>STUDY</TAG>
+        <VALUE>PCAWG 2.0</VALUE>
+      </ANALYSIS_ATTRIBUTE>
+      <ANALYSIS_ATTRIBUTE>
+        <TAG>workflow_name</TAG>
+        <VALUE>Workflow_Bundle_BWA (UCSC Implementation)</VALUE>
+      </ANALYSIS_ATTRIBUTE>
+      <ANALYSIS_ATTRIBUTE>
+        <TAG>workflow_version</TAG>
+        <VALUE>2.6.0</VALUE>
+      </ANALYSIS_ATTRIBUTE>
+      <ANALYSIS_ATTRIBUTE>
+        <TAG>workflow_source_url</TAG>
+        <VALUE>https://github.com/kellrott/tcga_realign</VALUE>
+      </ANALYSIS_ATTRIBUTE>
+      <ANALYSIS_ATTRIBUTE>
+        <TAG>workflow_bundle_url</TAG>
+        <VALUE>https://s3.amazonaws.com/oicr.workflow.bundles/released-bundles/Workflow_Bundle_BWA_2.6.0_SeqWare_1.0.15.zip</VALUE>
+      </ANALYSIS_ATTRIBUTE>
+      <ANALYSIS_ATTRIBUTE>
+        <TAG>bwa_version</TAG>
+        <VALUE>0.7.8-r455</VALUE>
+      </ANALYSIS_ATTRIBUTE>
+      <ANALYSIS_ATTRIBUTE>
+        <TAG>biobambam_version</TAG>
+        <VALUE>0.0.148</VALUE>
+      </ANALYSIS_ATTRIBUTE>
+      <ANALYSIS_ATTRIBUTE>
+        <TAG>PCAP-core_version</TAG>
+        <VALUE>1.1.1</VALUE>
+      </ANALYSIS_ATTRIBUTE>
+    </ANALYSIS_ATTRIBUTES>
+  </ANALYSIS>
+</ANALYSIS_SET>

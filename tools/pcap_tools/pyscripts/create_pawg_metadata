@@ -1,0 +1,386 @@
+#!/usr/bin/env python
+#dump all metadata with given state to individual uuid names directories
+#and then updates analysis.xml with PAWG required fields
+
+#needs to do some merging of different metadata to get final product acceptable to PanCan, ICGC, and CGHub
+#1) uses a template analysis.xml with the PanCan realignment project specific metadata, which is global for all realignments, most of the additional ICGC metadata is also captured in the template analysis.xml
+
+#2) it then stitches in the required RUN_LABELs and TARGETS elements from the original metadata analysis.xml
+
+#3) finally it replaced the FILES block with the new checksum and filename for the realigned bam file
+
+import ConfigParser
+from optparse import OptionParser
+import os
+import sys
+import re
+import lxml.etree as xp
+import datetime
+import subprocess
+from subprocess import Popen
+import uuid
+import logging
+import shutil
+#import UofC's utils for getting CGHub's sample/aliquot level (DCC-sourced) metadata into the ANALYSIS_ATTRIBUTES for ICGC
+import pcap_split
+import header_utils
+import json
+import CGHWSI
+
+ANALYSIS_TEMPLATE_FILENAME='analysis.pawg_template.xml'
+
+basedir = os.path.abspath(os.path.dirname( __file__ ))
+default_logger = logging.getLogger(name='create_pawg_metadata')
+
+parser=OptionParser()
+parser.add_option("-u", action="store",type='string',dest="analysis_id",help="REQUIRED: original analysis_id (uuid) of the BAM to be submitted")
+parser.add_option("-c", action="store",type='string',dest="checksum",help="REQUIRED: MD5 checksum of BAM to be submitted")
+parser.add_option("-f", action="store",type='string',dest="filename",help="REQUIRED: filename of BAM to be submitted, must be prefixed with \"PAWG.\"")
+parser.add_option("-p", action="store",type='string',dest="path_to_working_dir",default="./",help="OPTIONAL: path to working dir with should contain the BAM to be submitted and where the updated xmls will be placed, if not in the analysis_id directory")
+parser.add_option("-t", action="store",type='string',dest="new_normal_uuid",default=None,help="REQUIRED: new analysis uuid for the associated realigned normal (for use_cntl)")
+parser.add_option("-n", action="store",type='string',dest="new_uuid",default=None,help="OPTIONAL: new analysis uuid of this realigned bam")
+parser.add_option("-s", action="store",type='string',dest="specimen_file",default=os.path.join(basedir,'tcga_dcc_specimen_type.txt'),help="OPTIONAL: mapping file between TCGA sample id and ICGC sample name")
+parser.add_option("-d", action="store",type='string',dest="analysis_template",default=ANALYSIS_TEMPLATE_FILENAME,help="OPTIONAL: this specifies the filename of the analysis.xml template file for the metadata creation, the default is analysis.pawg_template.xml")
+
+(options,args) = parser.parse_args()
+ANALYSIS_ID=options.analysis_id
+CHECKSUM=options.checksum
+FILENAME=options.filename
+NEW_UUID=options.new_uuid
+NEW_NORMAL_UUID=options.new_normal_uuid
+SPECIMEN_FILE=options.specimen_file
+ANALYSIS_TEMPLATE_FILENAME=options.analysis_template
+
+ANALYSIS_CENTER='UCSC'
+TITLE='TCGA/ICGC PanCancer Specimen-Level Alignment for Specimen %s from Participant %s'
+PIPELINE_INFO_HEADER_BY_RG='participant_id|sample_id|target_sample_refname|aliquot_id|library|platform_unit|read_group_id|analysis_id|bam_file'
+
+
+if ANALYSIS_ID is None or CHECKSUM is None or FILENAME is None or NEW_NORMAL_UUID is None:
+    sys.stderr.write("MUST submit: the original TCGA source BAM's analysis_id(uuid), MD5 checksum, the associated normal bams new analysis uuid, and a filename\n")
+    sys.exit(-1)
+
+PATH_TO_WORKING=options.path_to_working_dir
+if options.path_to_working_dir=="./":
+    PATH_TO_WORKING="%s/%s" % (options.path_to_bam_file,ANALYSIS_ID)
+
+def run_command(command=str):
+    print "Running: %s" % (command)
+    run=Popen(["-c",command],stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
+    (stdout,stderr)=run.communicate()
+    if run.returncode != 0:
+        for line in stderr.split("\n"):
+            print "ERROR:\t"+line.rstrip()
+        sys.exit(-1)
+    return (stdout,stderr)
+
+#new json way of creating info
+def create_pipeline_info_hash(info_hash,bam_filename,rg):
+    pinfo = {}
+    pinfo['donor_id']=info_hash['submitter_donor_id']
+    pinfo['specimen_id']=info_hash['submitter_specimen_id']
+    pinfo['target_sample_refname']=info_hash['submitter_sample_id']
+ #       $pi->{'input_info'}{'analyzed_sample'} = $aliquot_id;
+    pinfo['analyzed_sample']=info_hash['submitter_sample_id']
+    pinfo['analysis_id']=info_hash['original_analysis_id']
+    pinfo['bam_file']=bam_filename
+    
+    pinfo['library']=rg['library']
+    pinfo['platform_unit']=rg['platform_unit']
+    
+    #pinfo['read_group_id']=rg['read_group_id']
+    
+    return {'read_group_id':rg['read_group_id'],"input_info":pinfo}
+
+#old pipes way of creating info
+def create_pipeline_info_pipes(info_hash,bam_filename,rg):
+    pinfo = []
+    
+    pinfo.append(info_hash['submitter_donor_id'])
+    pinfo.append(info_hash['submitter_specimen_id'])
+    pinfo.append(info_hash['submitter_sample_id'])
+    pinfo.append(info_hash['submitter_sample_id'])
+    pinfo.append(rg['library'])
+    pinfo.append(rg['platform_unit'])
+    pinfo.append(rg['read_group_id'])
+    pinfo.append(info_hash['original_analysis_id'])
+    pinfo.append(bam_filename)
+    
+    return '|'.join(pinfo)
+
+def extract_read_groups_from_bam_header(filename):
+    #@RG     ID:5a543e4e-ce20-11e3-98bb-205ab09f1d05 PM:Illumina HiSeq 2000  CN:BCM  PU:BCM:120725_SN580_0236_BD13P0ACXX_2   DT:2012-08-14T17:00:00Z SM:9b6cd038-dee8-47b3-bd30-9a361a1f39ae PI:     LB:WGS:BCM:IWG_TREN.B2-4102-11A-N_2pB   PL:ILLUMINA
+    read_group_id_matcher = re.compile("ID:([^\s]+)")
+    #pm_matcher = re.compile("PM:([^\t]+)")
+    platform_unit_matcher = re.compile("PU:([^\t]+)")
+    lib_matcher = re.compile("LB:([^\t]+)")
+    #pl_matcher = re.compile("PL:([^\t]+)")
+    matchers = [["read_group_id",read_group_id_matcher],["platform_unit",platform_unit_matcher],["library",lib_matcher]]
+    
+    (stdout,stderr)=run_command("samtools view -H %s | grep \"^@RG\"" % (filename))
+    print stdout
+    rgs={}
+    for line in stdout.split("\n"):
+        if len(line) < 1:
+            continue
+        line=line.rstrip()
+        rg={}
+        for (tag,matcher) in matchers:
+            m=matcher.search(line)
+            if m != None:
+                rg[tag]=m.group(1)
+        rgs[rg["read_group_id"]]=rg
+
+    return rgs
+
+    
+
+#NEED TO ALSO GET RGs from the bam header and do the proper mapping to get correct PIPELINE LABELS
+def extract_pipeline_sections_from_bam_header(filename):
+    #@PG ID:bwa  PN:bwa  VN:0.7.7-r441   CL:/opt/ICGC/bin/bwa mem -p -T 0 -R @RG\tID:BI:H12TD_1\tCN:BI\tPL:ILLUMINA\tPM:Illumina HiSeq 2000\tLB:WGS:BI:Solexa-173202\tPI:0\tSM:d8d5585d-32cd-4ac4-b410-a4122a17a558\tPU:BI:H12TDADXX130815_1_AATGTTCT\tDT:2013-08-15T04:00:00Z -t 1 /pancanfs/reference/genome.fa.gz -
+    #(stdout,stderr)=run_command(["samtools","view","-H",filename])
+    id_matcher = re.compile("ID:([^\s]+)")
+    pn_matcher = re.compile("PN:([^\t]+)")
+    #cl_matcher = re.compile("CL:[\w\/]+\/([^\t]+)")
+    cl_matcher = re.compile("CL:([^\t]+)")
+    version_matcher = re.compile("VN:([^\t]+)")
+    matchers = [["STEP_INDEX",id_matcher],["PROGRAM",pn_matcher],["VERSION",version_matcher],["NOTES",cl_matcher]]
+    bad_tab_matcher = re.compile("\\t")
+    bwa_matcher = re.compile("CL:[^\t]*bwa")
+    markdups_matcher = re.compile("ID:bammarkduplicates")
+    bamsort_matcher = re.compile("ID:bamsort")
+
+    (stdout,stderr)=run_command("samtools view -H %s | grep @PG" % (filename))
+    print stdout
+    #report=stdout.split("\n")
+    previous_step_idx="NIL"
+    pipe_sections=[]
+    #add in bam2fastq step, not in bam headers
+    e=xp.Element("PIPE_SECTION")
+    e.set("section_name","fastq_extract")
+    sube=xp.SubElement(e,"STEP_INDEX")
+    sube.text=("bamtofastq")
+    sube=xp.SubElement(e,"PREV_STEP_INDEX")
+    sube.text=("NIL")
+    sube=xp.SubElement(e,"PROGRAM")
+    sube.text=("bamtofastq")
+    sube=xp.SubElement(e,"VERSION")
+    sube.text=("0.0.148")
+    sube=xp.SubElement(e,"NOTES")
+    sube.text=("[NOTE: this is a single generic example command, bamtofasq was actually run for all individual read group bams] bamtofastq T=bamtofastq_tmp S=single.fq O=unmatched_1.fq O2=unmatched_2.fq exclude=QCFAIL,SECONDARY,SUPPLEMENTARY collate=1 tryoq=1 filename=single_read_group.bam")
+    pipe_sections.append(e)
+
+    for line in stdout.split("\n"):
+        if len(line) < 1:
+            continue
+        line=line.rstrip()
+        #convert what are supposed to be tabs to spaces (inside commands)
+        BAD_TABS=False
+        if bad_tab_matcher.search(line):
+            line=line.replace("\\t","    ")
+            BAD_TABS=True
+        # abit hacky because we assume bwa but we need to know if this is an alignment section
+        e=xp.Element("PIPE_SECTION")
+        if bwa_matcher.search(line) != None:
+            previous_step_idx="bamtofastq"
+            e.set("section_name","mapping")
+        if markdups_matcher.search(line) != None:
+            e.set("section_name","mark_duplicates")
+            previous_step_idx="bamsort"
+        if bamsort_matcher.search(line) != None:
+            e.set("section_name","bam_sort")
+        index=0
+        for matcher_ in matchers:
+            (tag,matcher)=matcher_
+            m=matcher.search(line)
+            if(m != None):
+                t=xp.SubElement(e,tag)
+                info = m.group(1)
+                #put back bad tabs
+                if BAD_TABS:
+                    info=info.replace("    ","\\t")
+                if tag == 'STEP_INDEX' and previous_step_idx == "bamsort":
+                    info = 'markduplicates'
+                if tag == 'NOTES' and previous_step_idx == "markduplicates":
+                    info_ = "[NOTE: bammarkduplicates is one of the programs in the biobambam BAM processing package and in addition to marking duplicates it merges all individual read group bams into one final bam] %s" % info
+                    info = info_
+                t.text=(info)
+                #put in the previous pointer tag if this is the first (STEP_INDEX) tag for this PIPE_SECTION
+                if index == 0:
+                    t2=xp.SubElement(e,"PREV_STEP_INDEX")
+                    t2.text=(previous_step_idx)
+                    previous_step_idx=t.text
+                index = index + 1
+        pipe_sections.append(e)
+    #foreach ps in pipe_sections
+    return pipe_sections
+                     
+
+
+def process_analysis_xml(original_uuid,filename,checksum,path):
+    f=filename.split(r'.')
+    readgroups=extract_read_groups_from_bam_header("%s/%s" % (path,filename))
+    #data_block_name='.'.join(f[:len(f)-1])
+    
+    parser = xp.XMLParser(remove_blank_text=True)
+    tree_orig=xp.parse("./%s/analysis.xml" % (original_uuid),parser)
+    root_orig=tree_orig.getroot()
+    
+    tree_new=xp.parse("%s/%s"%(os.path.dirname(__file__),ANALYSIS_TEMPLATE_FILENAME),parser)
+    root_new=tree_new.getroot()
+    #6) (optional) update ICGC specific ANALYSIS_ATTRIBUTES
+    (icgc_attributes,icgc_infohash)=add_icgc_specific_metadata(xp,root_new) 
+    sample_id = icgc_infohash["submitter_specimen_id"]
+    participant_id = icgc_infohash["submitter_donor_id"]
+    now=datetime.datetime.today().isoformat() 
+    #need to:
+    #0) update the ANALYSIS attributes:
+
+    analysis_=root_new.find("ANALYSIS")
+    analysis_.set('alias',filename) 
+    analysis_.set('analysis_date',now) 
+
+    #update title and description with sample and participant 
+    title=root_new.find("ANALYSIS/TITLE")
+    title.text = title.text.replace("SAMPLE1",sample_id)
+    title.text = title.text.replace("PARTICIPANT1",participant_id)
+    desc=root_new.find("ANALYSIS/DESCRIPTION")
+    desc.text = desc.text.replace("SAMPLE1",sample_id)
+    desc.text = desc.text.replace("PARTICIPANT1",participant_id)
+
+    #1) update RUN_LABELS so we're consistent with the RUN metadata (the sequencing isn't changing)
+    run_labels=root_new.find("ANALYSIS/ANALYSIS_TYPE/REFERENCE_ALIGNMENT/RUN_LABELS")
+    run_labels.clear()
+    for run_label in root_orig.iter('RUN'):
+       run_labels.append(run_label)  
+    #2) update TARGETS so we're consistent with the sample metadata (thats not changing)
+    targets = root_new.find('ANALYSIS/TARGETS')
+    targets.clear()
+    for target in root_orig.iter('TARGET'):
+       targets.append(target)
+       #only expect one
+       data_block_name=target.get("refname")
+    #commented out, only Broad(?) does this, so it will break on other centers' xml
+    #identifiers=root_orig.find("ANALYSIS/TARGETS/IDENTIFIERS")
+    #targets.append(identifiers) 
+
+    #3) update data_block names with filename sans extension
+    data_block = root_new.find('ANALYSIS/DATA_BLOCK')
+    data_block.set('name',data_block_name)
+    for seq in root_new.iter('SEQUENCE'):
+        seq.set('data_block_name',data_block_name) 
+    #4) update FILES block with specific file info
+    file = root_new.find('ANALYSIS/DATA_BLOCK/FILES/FILE')
+    file.set('checksum',checksum)
+    file.set('filename',filename)
+    #5) update PIPELINE section:
+    pipe_sections=extract_pipeline_sections_from_bam_header("%s/%s" % (path,filename))
+    pipeline=root_new.find("ANALYSIS/ANALYSIS_TYPE/REFERENCE_ALIGNMENT/PROCESSING/PIPELINE")
+    pipeline.clear()
+    for pipe_section in pipe_sections:
+       pipeline.append(pipe_section)
+     
+    attributes=root_new.find("ANALYSIS/ANALYSIS_ATTRIBUTES")
+    pinfo = []
+    for (read_group_id,rg) in readgroups.iteritems():
+        pinfo.append(create_pipeline_info_hash(icgc_infohash,filename,rg))
+        
+    e=xp.Element("ANALYSIS_ATTRIBUTE")
+    k=xp.SubElement(e,"TAG")
+    k.text="pipeline_input_info"
+    k=xp.SubElement(e,"VALUE")
+    #k.text=json.dumps({"pipeline_input_info":pinfo},sort_keys=True)
+    k.text=json.dumps({"pipeline_input_info":pinfo},sort_keys=False)
+    attributes.append(e)
+    #for (read_group_id,rg) in readgroups.iteritems():
+    #    icgc_pipeline_fields = create_pipeline_info(icgc_infohash,filename,rg)
+    #    e=xp.Element("ANALYSIS_ATTRIBUTE")
+    #    k=xp.SubElement(e,"TAG")
+    #    k.text="pipeline_input_info:%s" % (PIPELINE_INFO_HEADER_BY_RG)
+    #    k=xp.SubElement(e,"VALUE")
+    #    k.text=icgc_pipeline_fields
+    #    attributes.append(e)
+    
+    #final: write out new analysis.xml
+    st=xp.tostring(root_new,pretty_print=True)
+    
+    afout=open("./%s/analysis.new.xml" % (original_uuid),"w")
+    afout.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+    afout.write(st+"\n") 
+    afout.close()
+
+def add_icgc_specific_metadata(xp,root): 
+    #get ICGC specific values for specimen (sample) names
+    specimen_dict=pcap_split.parse_specimen_dict(SPECIMEN_FILE)
+    #get header_utils to give us back an rg_dict with empty values, we only care about the keys when we pass it to header_utils.create_header 
+    #will generate a warning in the log file, this is fine
+    dummy_rg_line = ""
+    rg_dict=header_utils.get_read_group_info(dummy_rg_line,logger=default_logger)
+    dcc_md = header_utils.parse_cghub_metadata(ANALYSIS_ID, logger=default_logger)
+    (icgc_type, sample_class) = specimen_dict.get(dcc_md["sample_type"], ("unknown", "unknown"))
+    #icgc needs to track the accociated Normal BAM's new analyis uuid
+    dcc_md['use_cntl']=str(NEW_NORMAL_UUID)
+    #however, if this is a normal bam, this should be passed in as "N/A"
+    if sample_class == 'normal':
+        dcc_md['use_cntl']="N/A"
+    temp_header_file = header_utils.create_header(PATH_TO_WORKING, dcc_md, rg_dict, specimen_dict, logger=default_logger)
+    #now that we have our fields mapped to the correct ICGC field names, put them into the analysis xml as ANALYSIS_ATTRIBUTES
+    attributes=root.find("ANALYSIS/ANALYSIS_ATTRIBUTES")
+    if temp_header_file is not None:
+        info_hash = {'original_analysis_id' : str(ANALYSIS_ID)}
+        with open(temp_header_file) as h:
+            for line in h:
+                res = re.search(r'^@CO\t([^:]+):(.*)$', line)
+                if res:
+                    info_hash[res.group(1)] = res.group(2)
+        for key, value in info_hash.items():
+            e=xp.Element("ANALYSIS_ATTRIBUTE")
+            k=xp.SubElement(e,"TAG")
+            k.text=key
+            k=xp.SubElement(e,"VALUE")
+            k.text=value
+            attributes.append(e)
+    return (attributes,info_hash)
+
+def main():
+    sys.stdout.write("Processing uuid: %s\n" % ANALYSIS_ID)
+
+    if os.path.exists( ANALYSIS_ID ):
+        shutil.rmtree( ANALYSIS_ID )
+    data=CGHWSI.retrieve_analysis_attributes_for_uuid(ANALYSIS_ID)
+    error=CGHWSI.split_analysis_attributes(data,ANALYSIS_ID)
+    
+    run_command("rsync -av %s/analysis.xml %s/analysis.xml.orig" % (ANALYSIS_ID,ANALYSIS_ID))
+    process_analysis_xml(ANALYSIS_ID,FILENAME,CHECKSUM,PATH_TO_WORKING)
+    run_command("cat %s/analysis.new.xml | egrep -v -e '<!--' > %s/analysis.xml" % (ANALYSIS_ID,ANALYSIS_ID))
+    
+    #if this analysis id dir is already present under the working path, then delete it and move the latest one
+    #the assumption is that if we're running this script and these dirs still exist, they should be deleted and recreated
+    if os.path.exists( os.path.join(PATH_TO_WORKING,ANALYSIS_ID) ):
+        shutil.rmtree( os.path.join(PATH_TO_WORKING,ANALYSIS_ID) )
+
+    os.rename(ANALYSIS_ID,os.path.join(PATH_TO_WORKING,ANALYSIS_ID))
+
+    #create new uuid and dir:
+    if NEW_UUID is not None:
+        nuuid = str(uuid.UUID(NEW_UUID))
+    else:
+        nuuid = str(uuid.uuid4())
+   
+    #get rid of this dir if it already exists 
+    if os.path.exists( os.path.join(PATH_TO_WORKING,nuuid) ):
+        shutil.rmtree( os.path.join(PATH_TO_WORKING,nuuid) )
+
+    #run_command("mkdir -p %s/%s" % (PATH_TO_WORKING,nuuid))
+    os.mkdir(os.path.join(PATH_TO_WORKING,nuuid))
+    run_command("rsync -av %s/%s/*.xml %s/%s/" % (PATH_TO_WORKING,ANALYSIS_ID,PATH_TO_WORKING,nuuid))
+    #run_command("ln -f -s %s/%s %s/%s/" % (PATH_TO_WORKING,FILENAME,PATH_TO_WORKING,nuuid))
+    os.symlink(os.path.relpath(os.path.join(PATH_TO_WORKING,FILENAME), os.path.join(PATH_TO_WORKING,str(nuuid))), os.path.join(PATH_TO_WORKING,str(nuuid),FILENAME))
+    #outf = open("%s/%s/trans.map"%(PATH_TO_WORKING,nuuid),"w")
+    outf = open( os.path.join(PATH_TO_WORKING,nuuid,"trans.map"), "w")
+    outf.write("%s\t%s\t%s\n"%(ANALYSIS_ID,nuuid,NEW_NORMAL_UUID))
+    outf.close()
+	
+
+if __name__ == '__main__':
+    main()

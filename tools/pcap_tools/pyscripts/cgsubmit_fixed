@@ -1,0 +1,1484 @@
+#!/usr/bin/python
+
+"""
+=========================================================================
+cgsubmit
+
+    Copyright (c) 2011-2012, Annai Systems, Inc.
+    All rights reserved.
+
+    cgsubmit is a cghub webservices client responsible for the 
+    submission of metadata to the cghub server for validation or 
+    in preparation for an upload by GeneTorrent.
+
+    Revision History:
+        9-Apr-2012 v3.0.0:    Rewrite for improved command line
+                              parsing, error handling, curl control 
+                              and code reuse.
+                                
+
+-------------------------------------------------------------------------
+"""
+
+CGSUBMIT_VERSION = "3.1.1"
+import sys, os
+import re
+myBinDir = os.path.normpath(os.path.dirname(sys.argv[0]))
+sys.path.append(myBinDir + "../lib/python")
+
+#
+# Check the python version for compatability.  Python 3 is not
+# backward compatible.   Need to get sys to check the version.
+# But, delay the remaining imports because we'd rather spit
+# out a version error than an import error if using an old
+# interpreter that doesn't have the necessary modules.
+#
+try:
+    import os
+    import sys
+except:
+    # Nothing we can do here
+    print "Unable to verify Python version"
+    raise
+
+if sys.version_info[0] != 2 or sys.version_info[1] < 6:
+    sys.stderr.write("%s requires Python version 2.6 or 2.7\n" % os.path.basename(sys.argv[0]))
+    sys.exit(1)
+
+#
+# Now get the rest of our required modules
+#
+try:
+    from    optparse    import OptionParser
+    from    subprocess  import Popen, PIPE
+    import  traceback 
+    import  datetime
+    from    collections import defaultdict
+    from    xml.dom     import minidom, Node
+    from    xml.etree   import ElementTree
+
+except Exception, (err):
+    sys.stderr.write("Can't find required Python module (%s)\n" % (err))
+    sys.exit(1)
+
+#
+# Set up some convenience globals
+#
+DEBUG                   = 0
+CGHUB_DEFAULT_SERVER    = 'https://cghub.ucsc.edu'
+CGHUB_WSIROOT           = '/cghub/metadata/analysis'  
+CGHUB_WSIBASE_VALIDATE  = '/validate'
+CGHUB_WSIBASE_SUBMIT    = '/submit'
+CGHUB_WSIUPLOAD         = '/cghub/data/analysis/upload'
+C_WIDTH                 = 32
+L_WIDTH                 = 76
+Log                     = None
+
+HTTP_OK                 = 200
+
+
+class CGHubException(Exception):
+    """ =================================================================
+        CGHubException
+
+        Exception to indicate an error returned by the CGHub WSI
+        =================================================================
+    """
+    pass
+
+class CurlException(Exception):
+    """ =================================================================
+        CGHubException
+
+        Exception to indicate a curl error
+        =================================================================
+    """
+    pass
+
+class CGHubXMLException(Exception):
+    """ =================================================================
+        CGHubXMLException
+
+        Exception to indicate that we couldn't parse one of the XML
+        files
+        =================================================================
+    """
+    pass
+
+
+class Logger:
+    """ =================================================================
+        Logger
+        
+        Logging object used to output various messages, warnings and 
+        errors in a consistent format. 
+        =================================================================
+    """
+    def __init__(self, column_width):
+        """ -----------------------------------------------------------------
+            Constructor
+            -----------------------------------------------------------------
+        """
+        self.verbose = False
+        self.errorstats = defaultdict(int)
+        self.c_width = column_width
+
+    def setVerbose(self, verbose):
+        """ -----------------------------------------------------------------
+            Set verbose mode
+            -----------------------------------------------------------------
+        """
+        self.verbose = verbose
+
+    def Verbose(self):
+        """ -----------------------------------------------------------------
+            Get verbose mode value
+            -----------------------------------------------------------------
+        """
+        return self.verbose 
+
+    def debug(self, msg):
+        if DEBUG:  
+            sys.stderr.write("{0} Debug: {1}.\n".format(datetime.datetime.now(), msg) )
+
+    def status(self, msg):
+        """ -----------------------------------------------------------------
+            Print a status message to the terminal.  These are intended
+            to be temporary messages that get erased, so should not
+            have a trailing newline.
+            -----------------------------------------------------------------
+        """
+
+        if not sys.stdout.isatty():
+            return 0
+        msglen = len(msg)
+        sys.stdout.write(msg)
+        sys.stdout.flush()
+        return msglen
+
+    def clearStatus(self, msglen):
+        """ -----------------------------------------------------------------
+            Clear a status message.   msglen is the value returned by
+            self.status() above.
+            -----------------------------------------------------------------
+        """
+
+        if sys.stdout.isatty():
+            sys.stdout.write('\r' + msglen * ' ' + '\r')
+            sys.stdout.flush()
+
+    def writeE(self, msg, nonewline=False):
+        """ -----------------------------------------------------------------
+            Report a generic message to stderr
+            -----------------------------------------------------------------
+        """
+        if not nonewline:
+            msg = msg + "\n"
+        sys.stderr.write(msg)
+
+    def messageV(self, msg):
+        """ -----------------------------------------------------------------
+            Print a message in verbose mode
+            -----------------------------------------------------------------
+        """
+        if self.verbose:
+            print msg
+
+    def warningV(self, msg):
+        """ -----------------------------------------------------------------
+            Report a warning in verbose mode
+            -----------------------------------------------------------------
+        """
+        if self.verbose:
+            sys.stderr.write("++ Warning: {0}.\n".format(msg) )
+
+    def notice(self, msg):
+        """ -----------------------------------------------------------------
+            Report a generic notice
+            -----------------------------------------------------------------
+        """
+        sys.stderr.write("## NOTICE: {0}.\n".format(msg) )
+
+    def error(self, type_str, err):
+        """ -----------------------------------------------------------------
+            Report a generic error 
+            -----------------------------------------------------------------
+        """
+        sys.stderr.write("## {0}: {1}.\n".format(type_str, err) )
+
+    def execError(self, err, contMsg=False):
+        """ -----------------------------------------------------------------
+            Report a non-fatal execution error 
+            -----------------------------------------------------------------
+        """
+        err_msg = err
+        if contMsg:
+            err_msg = "%s.  Continuing" % (err_msg)
+
+        sys.stderr.write("\n")
+        self.error("Error", err_msg)
+        sys.stderr.write("\n")
+
+    def fatalError(self):
+        """ -----------------------------------------------------------------
+            Silently exit with an error status
+            -----------------------------------------------------------------
+        """
+        sys.exit(1)
+
+    def fatalExecError(self, err, doExit=True):
+        """ -----------------------------------------------------------------
+            Report a fatal execution error to stderr and exit
+            -----------------------------------------------------------------
+        """
+        sys.stderr.write("\n")
+        self.error("Error", err)
+        sys.stderr.write("\n")
+        if (doExit):
+            sys.exit(1)
+
+    def fatalOptError(self, parser, err):
+        """ -----------------------------------------------------------------
+            Report a fatal option parsing error to stderr and exit
+            -----------------------------------------------------------------
+        """
+        sys.stderr.write("\nError: %s.\n\n" % (err))
+        parser.print_help()
+        sys.exit(1)
+
+    def parseWarning(self, msg):
+        """ -----------------------------------------------------------------
+            Dump out an XML parsing error and increment the error
+            count for use in the summary stats.
+            -----------------------------------------------------------------
+        """
+        self.errorstats["warnings"] += 1
+        self.warningV(msg)
+
+    def parseError(self, msg):
+        """ -----------------------------------------------------------------
+            Dump out an XML parsing error and increment the error
+            count for use in the summary stats.
+            -----------------------------------------------------------------
+        """
+        self.errorstats["errors"] += 1
+        self.error("Parse Error", msg)
+
+    def getParseWarningCount(self):
+        """ -----------------------------------------------------------------
+            Return the warning count
+            -----------------------------------------------------------------
+        """
+        return self.errorstats["warnings"]
+
+    def getParseErrorCount(self):
+        """ -----------------------------------------------------------------
+            Return the error count
+            -----------------------------------------------------------------
+        """
+        return self.errorstats["errors"]
+
+    def DumpHeader(self, attrs):
+        """ -----------------------------------------------------------------
+            Dump out a header that describes this query execution
+            -----------------------------------------------------------------
+        """
+
+        print ""
+        print L_WIDTH * "="
+        ofs=4
+        width=self.c_width-ofs
+        for attr in attrs:
+            print  ofs * " " + "{0:{1}} : {2}" . format (attr[0], width, attr[1])
+        self.Separator("-")
+
+    def ReportFinalStatus(self, opDescr, opSuccess):
+        """ -----------------------------------------------------------------
+            Dump out a final status message and exit on failure
+            -----------------------------------------------------------------
+        """
+        if opSuccess:
+            print "%s Succeeded."%(opDescr)
+        else:
+            print "## %s Failed."%(opDescr)
+        self.Separator("=")
+
+        if not opSuccess:
+            self.fatalError()
+
+    def Separator(self, char, stream=sys.stdout):
+        """ -----------------------------------------------------------------
+            Print a separator line
+            -----------------------------------------------------------------
+        """
+        print >> stream, L_WIDTH * char
+
+class CGObject:
+    """ =================================================================
+        CGObject
+        
+        Base CGObject object downloaded from cghub.   This does the 
+        actual work of parsing an xml input file into an element tree.
+        =================================================================
+    """
+    
+    #
+    # Tuple positions for the parser definition fields 
+    #
+    PR_PATH =       0   # Tag name
+    PR_PRINT =      1   # Print tag name when found?
+    PR_TITLE =      2   # Title string, or None
+    PR_INDENT =     3   # Indentation level
+
+    def __init__(self, xmlfile, log):
+        """ -----------------------------------------------------------------
+            Given an xml file, load it into an element tree for further
+            parsing.
+            -----------------------------------------------------------------
+        """
+        #
+        # Load the XML into an Element Tree
+        #
+        try:
+            self.tree = ElementTree.parse(xmlfile)
+        except:
+            raise CGHubXMLException("Unable to parse XML file '%s'"%(xmlfile))
+
+        self.log = log
+
+    def __del__(self):
+        """ -----------------------------------------------------------------
+            Is there anything to cleanup in the elementTree?
+            -----------------------------------------------------------------
+        """
+        pass
+
+    def columnize(self, str, indent, colwidth):
+        """ -----------------------------------------------------------------
+            Given a string, attempt to break it into a column with the 
+            passed indent and column width.  Note that the first line will 
+            not be indented.   This is similar to the textwrap module, but 
+            customized to work better with our formatting style.
+            -----------------------------------------------------------------
+        """
+    
+        idx = 0
+        wsidx = -1
+        width = 0
+
+        while True:
+            #
+            # Are we at the end of the string?
+            #
+            if idx >= len(str):
+                break
+
+            if str[idx] == '\n':
+                # 
+                # Respect any newlines we find by just forcing a
+                # line break
+                #
+                wsidx = idx
+                width = colwidth 
+            elif str[idx] == ' ':
+                #
+                # Keep track of the last space we saw as we may
+                # need to use that location as our line break
+                #
+                wsidx = idx;
+
+            idx = idx+1
+            width = width+1
+
+            if (width >= colwidth):
+                #
+                # Okay, we've exceeded the column width.  Go back
+                # to the last whitespace and insert a newline
+                # followed by the proper indentation, and repeat.
+                #
+                if wsidx > 0:
+                    str = str[:wsidx] + "\n" + " " * indent + str[wsidx+1:]
+                    idx = idx + indent
+                    wsidx = -1
+                    width = 0
+        return str
+
+    def GetAttrs_default(self, tag, node):
+        """ -----------------------------------------------------------------
+            Default function to format the attributes for the
+            passed XML node.  By default, we don't assume any
+            attributes.
+            -----------------------------------------------------------------
+        """
+        return ""
+
+    def ElementAttrs(self, tag, node):
+        """ -----------------------------------------------------------------
+            Parse attributes for the current node.  This is done
+            by looking for a function named GetAttrs_<Tag>.  If
+            not found, then GetAttrs_default() is called.  See
+            GetAttrs_result() for an example of an element-specific 
+            function.
+            -----------------------------------------------------------------
+        """
+        return getattr(self, 'GetAttrs_'+tag,self.GetAttrs_default)(tag, node)
+
+    def Action_default(self, tag, node):
+        """ -----------------------------------------------------------------
+            Default function to perform any element-specific actions
+            for the passed XML node.  By default, we assume no action.
+            attributes.
+            -----------------------------------------------------------------
+        """
+        pass
+
+    def ElementAction(self, tag, node):
+        """ -----------------------------------------------------------------
+            Do any element-specific processing for the current tag by 
+            looking for a function named Action_<Tag>.  If not found, 
+            then Action_default() is called.  See Action_analysis_data_uri() 
+            for an example of an element-specific function.
+            -----------------------------------------------------------------
+        """
+        return getattr(self, 'Action_'+tag,self.Action_default)(tag, node)
+
+    def Print_default(self, indent, title, node, stream):
+        """ -----------------------------------------------------------------
+            Default function to perform any element-specific printing
+            for the passed XML node.   By default, we print in a two
+            column format with a colon separator.   The width of the 
+            left column is determined by C_WIDTH and the width of the
+            right column is the remainder up to L_WIDTH.
+            -----------------------------------------------------------------
+        """
+        #
+        # Before printing anything, make sure we've actually got a
+        # node with some text.
+        #
+
+        text = ''
+        if node.text:
+            text = node.text.strip()
+
+        if len(text) == 0:
+            return
+
+        colwidth = L_WIDTH - indent
+
+        if title:
+            width      = C_WIDTH - indent
+            title_str  = " " * indent + "{title:{width}} :" . format(title=title, width=width)
+            print >> stream, title_str,
+            indent = len(title_str) + 1
+
+        print >> stream, self.columnize(text, indent, colwidth - indent)
+
+    def ElementPrint(self, indent, title, node, stream):
+        """ -----------------------------------------------------------------
+            Do any element-specific printing for the current tag by 
+            looking for a function named Print <Tag>.  If not found, 
+            then Print_default() is called.  See Action_analysis_data_uri() 
+            for an example of an element-specific function.
+            -----------------------------------------------------------------
+        """
+        return getattr(self, 'Print_'+node.tag,self.Print_default)(indent, title, node, stream)
+
+    def doTraverse(self, objectPR, stream=sys.stdout):
+        """ -----------------------------------------------------------------
+            Using the xpaths in the passed list, locate the corresponding
+            nodes in our tree and print the contents to stdout.
+            -----------------------------------------------------------------
+        """
+
+        visited = []
+
+        for xptuple in objectPR:
+
+            xpath    = xptuple[CGObject.PR_PATH]
+            doprint  = xptuple[CGObject.PR_PRINT]
+            title    = xptuple[CGObject.PR_TITLE]
+            indent   = 4 * xptuple[CGObject.PR_INDENT] 
+
+            for node in self.tree.findall(xpath):
+                #
+                # Allow for simple wildcards that may overlap with more specific
+                # paths.   Of course, this means that order is important.
+                #
+                if node in visited:
+                    continue
+
+                if doprint:
+                    title_str=title
+                    if title and title == "*":
+                        title_str = node.tag.capitalize()
+
+                    self.ElementPrint(indent, title_str, node, stream)
+
+                #
+                # Add to visited list even if we didn't print it.  This allows
+                # for unprinted exclusions.
+                #
+                visited.append(node)
+                    
+class CGError(CGObject):
+    """ =================================================================
+        CGError
+        
+        Manage the CGHUB_error object downloaded from cghub HTTP
+        error messages
+        =================================================================
+    """
+    #
+    # Parser definition structure for the CGHUB_Error object.  Determines 
+    # which XML tags we're interested in parsing/printing.   To parse a new 
+    # tag, add it at the appropriate nesting level below.
+    #
+    # N.B. If you change the name of an existing tag, you must also check 
+    #      to see if it has a custom GetAttrs_<tag> or Action_<tag> function, 
+    #      and update the name accordingly.
+    #
+    rootObjectPR = [
+        # TagName           Print      Heading          Indent
+        ("./usermsg",        True,       None,                1),
+        ("./subsystem",      True,       "Subsystem",         1),
+        ("./errnum",         True,       "Error Number",      1),
+        ("./effect",         True,       "Result",            1),
+        ("./remediation",    True,       "Remediation",       1),
+    ]
+
+
+    def __init__(self, opname, httpcode, xmlfile, log):
+        """ -----------------------------------------------------------------
+            In addition to the generic CGObject initialization, checks the
+            root node to ensure that it's a CGHUB_Error object.
+            -----------------------------------------------------------------
+        """
+
+        CGObject.__init__(self, xmlfile, log)
+
+        root = self.tree.getroot()
+        if root is None or not root.tag == "CGHUB_error":
+            raise ValueError("Invalid CGHUB_error tree")
+        self.httpcode = httpcode
+        self.opname = opname
+
+    def Print_usermsg(self, indent, title, node, stream):
+        """ -----------------------------------------------------------------
+            Custom print routine for the usermsg tag.   
+            -----------------------------------------------------------------
+        """
+        if node != None and node.text:
+            text = node.text.strip()
+        else:
+            text = "The %s failed for an unknown reason."%(self.opname.lower())
+
+        errstr = "## %s Failed"%(self.opname)
+        if self.httpcode:
+            errstr = "%s (HTTP Status Code %s)"%(errstr, self.httpcode)
+
+        print >> stream, "\n%s\n"%(errstr)
+        print >> stream, self.columnize(text, 0, 72)
+
+    def printOptional(self, indent, key, value):
+        """ -----------------------------------------------------------------
+            Prints out an optional key/value pair.  Noop if the value is
+            not defined.
+            -----------------------------------------------------------------
+        """
+        if not value:
+            return
+
+        width = C_WIDTH - indent
+        self.log.writeE(" " * indent + "{0:{1}} : {2}" . format(key, width, value))
+
+    def getStatus(self, statusPath):
+        """ -----------------------------------------------------------------
+            Parses a status tag from the CGHUB_Error.   Returns True
+            if the status indicates success, False otherwise.
+            -----------------------------------------------------------------
+        """
+
+        node = self.tree.find(statusPath)
+        if node == None or node.text == None:
+            #
+            # TODO: Is it safe to assume that if we didn't receive
+            #       any status, then it was successful?
+            #
+            return True
+
+        return node.text.upper() == "OK"
+
+    def ParseErrorSummary(self, indent, summaryPath, summaryDescr):
+        """ -----------------------------------------------------------------
+            Parses the top level status in the CGHUB_error, e.g.
+                <CGHUB_error>
+                    <submission_set>
+                        <files>
+                            <status>
+            -----------------------------------------------------------------
+        """
+        #
+        # Was there a top level error reported for this type of validation?
+        #
+        ok = self.getStatus("%s/status"%(summaryPath))
+
+        width = C_WIDTH - indent
+
+        if ok:
+            msg = "Succeeded"
+        else:
+            msg = "Failed (details below)"
+
+        self.log.writeE( " " * indent + "{0:{1}} : {2}" . format (summaryDescr, width, msg))
+        return ok
+
+    def ParseErrorDetail(self, indent, detailPath, detailDescr):
+        """ -----------------------------------------------------------------
+            Parses the detail level status in the CBHub_error, e.g.
+                <CGHUB_error>
+                    <submission_set>
+                        <files>
+                            <details>
+                                <analysis>
+                                    <status>
+            Returns None if the status indicates success, otherwise
+            returns a list of error objects to be further parsed.
+            -----------------------------------------------------------------
+        """
+        #
+        # Was there an error reported for this type of validation?
+        #
+        title = "%s"%(detailDescr)
+        errors = None
+        width = C_WIDTH - indent
+
+        ok = self.getStatus("%s/status"%(detailPath))
+
+        if ok:
+            msg = "Succeeded" 
+        else:
+            errors = self.tree.findall("%s/errors/error"%(detailPath))
+            msg = "Failed (%s errors found)"%(len(errors))
+
+        self.log.writeE("\n" + " " * indent + "{0:{1}} : {2}" . format (title, width, msg))
+        return errors
+
+    def ParseErrors(self, indent, errors):
+        """ -----------------------------------------------------------------
+            Loops through the passed list of error objects and prints
+            out the details.
+            -----------------------------------------------------------------
+        """
+        #
+        # Found some errors.   Print the details
+        #
+        idx = 1
+        width = 72 - indent
+        subindent = indent + 4
+
+        for error in errors:
+            text  = error.text
+            exp   = error.attrib.get("expected")
+            act   = error.attrib.get("received")
+            xpath = error.attrib.get("xpath")
+            line  = error.attrib.get("line")
+            if line:
+                extrainfo = "line %s"%(line)
+            else:
+                extrainfo = "XML parsing failure"
+
+            title = "Error %d, %s"%(idx, extrainfo)
+
+            self.log.writeE(" " * indent + "%s:"%(title))
+            self.log.writeE(" " * subindent + "%s"%(self.columnize(text, subindent, width)))
+            self.printOptional(subindent, "XPath", xpath)
+            self.printOptional(subindent, "Expected", exp)
+            self.printOptional(subindent, "Received", act)
+
+            idx = idx + 1
+
+    def Parse(self):
+        """ -----------------------------------------------------------------
+            Parse a CGHUB_error object.
+            -----------------------------------------------------------------
+        """
+
+        indent = 4
+        #
+        # First, dump out the generic top level information
+        #
+        self.doTraverse(self.rootObjectPR, stream=sys.stderr)
+
+        detailErrors=[]
+
+        #
+        # Now look at the top level status indicators so that we can
+        # summarize any errors
+        #
+        for errorType, errorDescr in [ ("files",      "File" ),
+                                       ("references", "Reference" ) ]:
+            #
+            # Path to the top node for the current error type
+            # E.g. /submission_set/files
+            #
+            path  = "./submission_set/%s"%errorType
+
+            if self.ParseErrorSummary(indent, path, "%s Validation"%(errorDescr)):
+                # Top level status indicated no errors of this type
+                continue
+
+            detailErrors.append((path, errorDescr))
+        
+
+        #
+        # If we collected any errors during the summary phase, parse them
+        # here.
+        #
+        if detailErrors:
+            self.log.Separator("-", stream=sys.stderr)
+
+        for path, errorDescr in detailErrors:
+
+            self.log.writeE("\n%s Validation Details:"%(errorDescr))
+
+            #
+            # Top level roll up indicated errors below, so dig into
+            # the details
+            # E.g. /submission_set/files/details
+            #
+            detailRoot = "%s/details"%(path)
+            details = self.tree.findall("%s/*"%(detailRoot))
+            if not details:
+                # Should this be an error?
+                continue
+
+            #
+            # Loop over each detail type we found, and look for any
+            # errors within it
+            # E.g. /submission_set/files/details/analysis
+            #
+            for detail in details:
+
+                detailPath = "%s/%s" % (detailRoot, detail.tag)
+                detailDescr = detail.tag.capitalize()
+
+                errors = self.ParseErrorDetail(indent, detailPath, "%s %s"%(detailDescr, errorDescr))
+                if not errors:
+                    # Odd, no details even though the summary indicated an error
+                    continue
+
+                self.ParseErrors(indent + 4, errors)
+
+        self.log.Separator("-", stream=sys.stderr)
+
+class CGMeta:
+    """ =================================================================
+        CGMeta
+        
+        Object to parse a metadata XML file.     Ideally, this would
+        be derived from CGObject, but only in the case of the metadata
+        files, we want to be able to create the object without actually
+        parsing it.
+        =================================================================
+    """
+
+    def __init__(self, xmlfile, metatype):
+        """ -----------------------------------------------------------------
+            Given an xml file, store it's name for future parsing.
+            -----------------------------------------------------------------
+        """
+        if not xmlfile or not metatype:
+            raise ValueError("Missing required attributes for CGMeta object")
+
+        self.xmlfile = xmlfile
+        self.metatype = metatype
+
+    def Parse(self):
+        """ -----------------------------------------------------------------
+            Parse the XML file into an element tree 
+            -----------------------------------------------------------------
+        """
+        try:
+            self.tree = ElementTree.parse(self.xmlfile)
+        except:
+            raise CGHubXMLException("Unable to parse XML metadata file '%s'"%(self.xmlfile))
+
+    def GetFilename(self):
+        """ -----------------------------------------------------------------
+            Return the path to the xml file that we parsed
+            -----------------------------------------------------------------
+        """
+        return self.xmlfile
+
+    def GetMetaType(self):
+        """ -----------------------------------------------------------------
+            Return the metadata attribute of the xml file that we parsed
+            -----------------------------------------------------------------
+        """
+        return self.metatype
+
+    def collectAttributes(self, xpath, attrNames, attrDict):
+        """ -----------------------------------------------------------------
+            Given a path to an object and a list of desired attributes,
+            return a dictionary containing the attribute/value pairs
+            that were found.
+            -----------------------------------------------------------------
+        """
+    
+        node = self.tree.find(xpath.upper())
+        if node is None:
+            node = self.tree.find(xpath.lower())
+    
+        if node is None:
+            return
+    
+        for attrib in attrNames:
+            value = node.get(attrib)
+            if value:
+                #
+                # Note that any existing value for the same attribute
+                # will be overwritten
+                #
+                attrDict[attrib] = value
+    
+    def CollectAnalysisInfo(self, attrNames, analysisDict):
+        """ -----------------------------------------------------------------
+            Collect a set of desired attributes from an ANALYSIS node.
+            -----------------------------------------------------------------
+        """
+    
+        self.collectAttributes("./ANALYSIS", attrNames, analysisDict)
+    
+    def CollectFiles(self, filedict):
+        """ -----------------------------------------------------------------
+            Build a dictionary containing all of the file objects 
+            that are found in the tree.  The entries are indexed by
+            filename, with the node as the value.    This function
+            is intended to be called for multiple XML files, 
+            to build a consolidated list of unique files.
+            -----------------------------------------------------------------
+        """
+    
+        xpath = ".//DATA_BLOCK/FILES/FILE"
+    
+        #
+        # Locate all of the file nodes
+        #
+        files = self.tree.findall(xpath.upper())
+        if not files:
+            files = self.tree.findall(xpath.lower())
+
+        if not files:
+            return
+        
+        #
+        # For each node, get the filename attribute, and use it as
+        # the dictionary key to determine if we've seen this file 
+        # before.  If yes, make sure the file attributes match.
+        # If they don't, issue a warning.
+        # 
+        for file in files:
+            filename = file.get("filename")
+            if not filename:
+                continue
+    
+            existingfile = filedict.get(filename)
+            if existingfile == None:
+                filedict[filename] = file
+            else:
+                for attr in ["checksum", "filetype"]:
+                    exval = existingfile.get(attr)
+                    newval = file.get(attr)
+                    if exval != newval:
+                        Log.notice("During manifest generation, detected attribute mismatch for\nattribute '%s' on file '%s'"%(attr, filename))
+
+class CGHubSubmit:
+    """ =================================================================
+        CGHubSubmit
+        
+        Class to perform a single CGHub submit 
+
+        Basic Usage:
+            CGHubSubmit()     - Instantiate the submit object
+            DumpHeader()      - Dump out the execution parameters
+            Validate()        - Send a metadata validation request
+                or
+            Submit()          - Send a metadata submission request and 
+                                if successful, generate a manifest
+            DumpFooter()      - Dump out the execution results
+        =================================================================
+    """
+
+    def __init__(self, opname, server, analysis_dir, metafiles, certificate=None, outxml=None, insecure=False):
+        """ -----------------------------------------------------------------
+            Initialize the instance variables
+            -----------------------------------------------------------------
+        """
+        self.opname = opname
+        self.server = server
+        self.analysis_dir = analysis_dir
+        self.uuid = os.path.basename(self.analysis_dir)
+        self.certificate = certificate
+        self.outxml = outxml
+        self.insecure = insecure
+        try:
+            self.myname = os.path.basename(sys.argv[0])
+        except:
+            self.myname = "cgsubmit"
+        #hacking around this stupid idea of trying to create a top level cgsubmit dir in /tmp
+        #self.tmproot = os.path.join("/", "tmp", self.myname)
+        self.tmproot = os.path.join("/", "tmp")
+        self.tmppid = None
+        self.tmpdir = None
+
+        #
+        # Create the top level temporary directory.  Permissions need
+        # to allow anyone to write, since it's shared by all instances
+        # of cgsubmit.
+        #
+        try:
+            if not os.path.exists(self.tmproot):
+                os.makedirs(self.tmproot)
+                os.chmod(self.tmproot, 0777)
+        except Exception,e:
+            Log.fatalExecError("Failed to create top level temporary directory '%s': %s"%(self.tmproot, e))
+
+        #
+        # Now create our private directory for any temporary artifacts.  This will
+        # get removed by the destructor.
+        #
+        try:
+            self.tmppid = os.path.join(self.tmproot, "%d"%os.getpid())
+            self.tmpdir = os.path.join(self.tmppid, self.uuid)
+            if not os.path.exists(self.tmpdir):
+                os.makedirs(self.tmpdir)
+                os.chmod(self.tmpdir, 0755)
+        except Exception,e:
+            Log.fatalExecError("Failed to create temporary directory '%s': %s"%(self.tmpdir, e))
+
+        #
+        # Build the list of metadata objects found in the
+        # analysis directory
+        #
+        self.metaobjs = []
+        for metaname, metatype, required in metafiles:
+            pathname = os.path.join(self.analysis_dir, metaname)
+            if not os.path.exists(pathname):
+                if required:
+                    Log.fatalExecError("Metadata file '%s' does not exist"%(pathname))
+                else:
+                    continue
+            else:
+                self.metaobjs.append(CGMeta(pathname, metatype))
+                Log.messageV("@@ Loading metadata input file %s\n"%(pathname))
+                
+
+    def __del__(self):
+        """ -----------------------------------------------------------------
+            Destructor for the CGHubSubmit class.  Cleans up any temporary
+            files or directories that we created.
+            -----------------------------------------------------------------
+        """
+        try:
+            pass
+            #
+            # First, clean up any files we created 
+            #
+            if self.tmpdir and os.path.exists(self.tmpdir):
+                for tmproot, dirs, files in os.walk(self.tmpdir, topdown=False):
+                    for tmpf in files:
+                        os.unlink(os.path.join(tmproot, tmpf))
+            
+            # Then remove any empty directories all the way up to the
+            # top of our temporary tree
+            #
+            if self.tmppid and os.path.exists(self.tmppid):
+                for tmproot, dirs, files in os.walk(self.tmppid, topdown=False):
+                    os.rmdir(tmproot)
+            
+            # Finally, if the temp root is empty, remove it
+            # (actually in this hacked version, leave this as its /tmp
+            #os.rmdir(self.tmproot)
+
+        except:
+            # Did our best
+            pass
+
+    def parseHTTPCode(self, str):
+        """ -----------------------------------------------------------------
+            Utility function to convert an string to an http return code.
+            Raises ValueError() if the string can not be converted.
+            -----------------------------------------------------------------
+        """
+        try:
+            return int(str)
+        except:
+            raise ValueError("Invalid http return code '%s'"%(str))
+
+    def dumpRawFile(self, infile):
+        """ -----------------------------------------------------------------
+            Given an input file, dump its contents to stderr
+            -----------------------------------------------------------------
+        """
+        fd = open(infile)
+        
+        line = fd.readline()
+        while (line and line != ""):
+            Log.writeE("    " + line, nonewline=True)
+            line = fd.readline()
+
+        fd.close()
+
+    def DumpHeader(self):
+        """ -----------------------------------------------------------------
+            Dump the execution header for this operation.
+            -----------------------------------------------------------------
+        """
+
+        insecuremap = { True : "Disabled", False : "Enabled" }
+        attrs = [ ("%s Version"%(self.myname),  CGSUBMIT_VERSION),
+                  ("CGHub Server",              self.server),
+                  ("Request Type",              self.opname.capitalize()),
+                  ("Analysis Directory",        self.analysis_dir),
+                  ("UUID",                      self.uuid),
+                  ("SSL Certificate Checking",  insecuremap[self.insecure]),
+                  ("Output File",               self.outxml) ]
+
+        if self.certificate:
+            attrs.append(("Credential File", self.certificate))
+
+        Log.DumpHeader(attrs)
+
+    def DumpFooter(self, success):
+        """ -----------------------------------------------------------------
+            Dump out the execution results in the form of a footer.
+            -----------------------------------------------------------------
+        """
+        Log.ReportFinalStatus("Metadata %s"%(self.opname), success)
+
+
+    def doPost(self, url, certificate=None):
+        """ -----------------------------------------------------------------
+            Send the validate/submit POST request to the cghub server.
+            The type of request is determined by the passed url.
+            -----------------------------------------------------------------
+        """
+
+        #
+        # We don't know how much xml/html data will come back from
+        # the server, so we write it to a file instead of a pipe.
+        # If the user has requested a copy of the data, we just
+        # use their file, otherwise, we create a temporary one.
+        #
+        if self.outxml:
+            outfile = self.outxml
+        else:
+            outfile  = os.path.join(self.tmpdir, "cghubout.xml") 
+
+        #
+        # TODO: Really need to convert this to use urllib2.  We'll
+        #       do that in the next phase to minimize collateral
+        #       damage.
+        #
+
+        #       
+        # Base curl command, which:
+        #    - Validates certificates
+        #    - Writes the HTTP status code to stdout
+        #    - Writes the downloaded content to outfile
+        curlcmd = ['curl', 
+                   '-w', '%{http_code}',
+                   '-o', outfile]
+
+        #
+        # Has the user disabled SSL certificate checks?
+        #
+        if self.insecure:
+            curlcmd += ['-k']
+
+        #
+        # Add the meta files to the post
+        #
+        for m in self.metaobjs:
+            curlcmd = curlcmd + \
+                      ['-F', '%s=@%s'%(m.GetMetaType(), m.GetFilename())]
+
+        #
+        # If we have a certificate file, add it now
+        #
+        if certificate:
+            curlcmd = curlcmd + \
+                      ['-F', 'token=<%s'%(certificate)]
+
+        # 
+        # Finally, add the url to the end
+        #
+        curlcmd = curlcmd + [url]
+
+        #
+        # And execute the curl command.  stdout (the http status
+        # code) and stderr (the curl error output) will go to
+        # pipes.   The html/xml response will go to a file for
+        # further processing. 
+        #
+        Log.messageV("@@ Executing '%s'\n"%(" ".join(curlcmd)))
+
+        curlp = Popen(curlcmd, stdout=PIPE, stderr=PIPE)
+        stdoutStr, stderrStr = curlp.communicate()
+        retcode = curlp.wait()
+        
+        #
+        # Figure out whether the submission succeeded or failed
+        #
+        success = False
+        if retcode == 0:
+            #
+            # An exit code of 0 means that the curl POST succeeded, 
+            # so we then need to determine whether the WSI request 
+            # succeeded or failed based on the HTTP status code.
+            #
+            httpcode = self.parseHTTPCode(stdoutStr)
+            if httpcode == HTTP_OK:
+                success = True
+            else:
+                #
+                # Any HTTP error should come with a standard CGHub
+                # error XML, so try to parse it.
+                #
+                try:
+                    ce = CGError(self.opname, httpcode, outfile, Log)
+                    ce.Parse()
+                except CGHubXMLException:
+                    Log.execError("Unrecognized error received from server")
+                    self.dumpRawFile(outfile)
+                #
+                # Let the caller know that we got a cghub error
+                #
+                raise CGHubException("CGHub server returned an error")
+        else:
+            #
+            # curl exitted with a non-0 status
+            #
+            if retcode == 60:
+                #
+                # Peer certificate cannot be authenticated with known CA certificates.
+                # We print our own error here because the curl error is very long and
+                # specific in this case.
+                #
+                Log.execError("The SSL certificate on %s cannot be authenticated"%(self.server))
+            else:
+                #
+                # All other errors
+                #
+                Log.execError("Problem posting %s request to %s" % (self.opname.lower(), self.server))
+                Log.writeE(stderrStr)
+            raise CurlException("Curl command failed")
+
+    def Validate(self):
+        """ -----------------------------------------------------------------
+            Send a validation request to the cghub server
+            -----------------------------------------------------------------
+        """
+        validate_url = "%s%s%s"%(self.server,
+                                 CGHUB_WSIROOT, 
+                                 CGHUB_WSIBASE_VALIDATE)
+
+        self.doPost(validate_url)
+
+    def buildManifest(self):
+        """ -----------------------------------------------------------------
+            Build a manifest XML structure by looping over each of our
+            metadata files, collecting the list of referenced files as
+            well a the analysis attributes.
+            -----------------------------------------------------------------
+        """
+    
+        upload_url = "%s%s/%s"%(self.server, 
+                                CGHUB_WSIUPLOAD, 
+                                self.uuid)
+        #
+        # Setup dictionaries for the info we're collecting
+        #
+        rootdict = {}
+        rootdict["xmlns:xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
+        rootdict["xsi:noNamespaceSchemaLocation"] = "GeneTorrentManifest.xsd"
+        rootdict["submission_date"] = datetime.datetime.utcnow().isoformat()
+        rootdict["created_by"] = "%s %s"%(self.myname, CGSUBMIT_VERSION)
+
+        serverdict = {}
+        serverdict["submission_uri"] = upload_url
+        serverdict["server_path"] = self.uuid
+
+        filedict = {}
+
+        #
+        # Create the basic nodes
+        #
+        root        = ElementTree.Element("SUBMISSION")
+        serverNode  = ElementTree.SubElement(root, "SERVER_INFO")
+        filesNode   = ElementTree.SubElement(root, "FILES")
+
+        #
+        # Collect the necessary info from the various submission XML files
+        #
+        for metaobj in self.metaobjs:
+            metaobj.Parse()
+            metaobj.CollectAnalysisInfo(["center_name", "alias"], rootdict)
+            if re.compile("analysis.xml$",re.I).search(metaobj.xmlfile) != None:
+            	metaobj.CollectFiles(filedict)
+
+        #
+        # Add the collected root attributes
+        #
+        for attrib, value in rootdict.items():
+            root.set(attrib, value)
+
+        #
+        # Add the server attributes
+        #
+        for attrib, value in serverdict.items():
+            serverNode.set(attrib, value)
+
+        #
+        # Add the file nodes
+        #
+        for filename, file in filedict.items():
+            ElementTree.SubElement(filesNode, file.tag, file.attrib)
+
+        #
+        # Now run the xml through the minidom pretty routine
+        # to get newlines, and indentation.
+        #
+        raw_string = ElementTree.tostring(root)
+        reparsed = minidom.parseString(raw_string)
+        return reparsed.toprettyxml(indent="  ", encoding='utf-8')
+
+
+    def GenerateManifest(self):
+        """ -----------------------------------------------------------------
+            Generate a manifest file for GeneTorrent, based upon the
+            content of the metadata files.
+            -----------------------------------------------------------------
+        """
+
+        mfile = os.path.join(self.analysis_dir, "manifest.xml")
+        Log.messageV("@@ Building manifest file %s\n"%(mfile))
+
+        try:
+            manifest = self.buildManifest()
+
+            mfd = open(mfile, "w")
+            mfd.write(manifest)
+            mfd.close()
+            return True
+        except Exception, err:
+            Log.fatalExecError("Failed to create manifest '%s': %s"%(mfile, err))
+
+    def Submit(self):
+        """ -----------------------------------------------------------------
+            Send a submission request to the cghub server
+            -----------------------------------------------------------------
+        """
+        submit_url = "%s%s%s/%s"%(self.server, 
+                                  CGHUB_WSIROOT, 
+                                  CGHUB_WSIBASE_SUBMIT, 
+                                  self.uuid)
+
+        self.doPost(submit_url, self.certificate)
+
+
+
+def main():
+    """ -----------------------------------------------------------------
+        Main cgsubmit function.   Parses the command line options
+        and then performs the requested validation/submission.
+        -----------------------------------------------------------------
+    """
+
+    global Log
+
+    #
+    # Setup globals
+    #
+    Log = Logger(C_WIDTH)
+
+    #
+    # Parse the command line options
+    #
+    parser = OptionParser()
+
+    parser = OptionParser(usage='%prog [options]', 
+                          version='%prog version '+CGSUBMIT_VERSION+' (c) 2012 Annai Systems, Inc. All rights reserved.')
+
+    parser.add_option('-u', '--uuid',
+                      action='store', type='string', dest='analysis_dir',
+                      help='path name to analysis directory')
+
+    parser.add_option('-o', '--output-xml', 
+                      action='store', type='string', dest="out_file", 
+                      help="file in which to store raw XML output.")
+
+    parser.add_option('-s', '--server', 
+                      action='store', type='string', dest="server", 
+                      help="CGHub server location, e.g. https://cghub.ucsc.edu")
+
+    parser.add_option('-c', '--credential', 
+                      action='store', type='string', dest="credential", 
+                      help="file containing the CGHub credential; not required with the --validate-only option")
+
+    parser.add_option('-k', '--insecure', 
+                      action="store_true", default=False, dest="insecure", 
+                      help="disable certificate checking for SSL connections")
+
+    parser.add_option('-v', '--verbose', 
+                      action="store_true", default=False, dest="verbose", 
+                      help="enable verbose output")
+
+    parser.add_option('',   '--validate-only',
+                      action="store_true", default=False, dest='validate_only', 
+                      help='use this if only validation is to be done.')
+  
+    (options, args) = parser.parse_args()
+
+    analysis_dir = options.analysis_dir
+
+    server = CGHUB_DEFAULT_SERVER
+    if options.server:
+        server = options.server
+
+    Log.setVerbose(options.verbose)
+
+    #
+    # Analysis (uuid) directory options is mandatory
+    #
+    if not analysis_dir:
+        Log.fatalOptError (parser, "-u (or --uuid) option is required input")
+
+    #
+    # Make sure the directory exists
+    #
+    analysis_dir = os.path.abspath(analysis_dir)
+    uuid = os.path.basename(analysis_dir)
+
+    if not os.path.exists(analysis_dir):
+        Log.fatalExecError("UUID directory '%s' does not exist" % (analysis_dir))
+
+    if options.validate_only:
+        opname = "Validation"
+        #
+        # Validation does not use a certificate
+        #
+        if options.credential:
+            Log.fatalOptError(parser, "Certificate is for submission only")
+    else:
+        opname = "Submission"
+        #
+        # Submission requires a certificate
+        #
+        if not options.credential:
+            Log.fatalOptError(parser, "Certificate is required for submission")
+
+        #
+        # Make sure the certificate file is readable
+        #
+        if not os.path.exists(options.credential):
+            Log.fatalExecError("Certificate file '%s' does not exist" % options.credential)
+
+        if not os.access(options.credential, os.R_OK):
+            Log.fatalExecError("Certificate file '%s' is not readable" % options.credential)
+
+    #
+    # We'll also need to be able to write out the manifest
+    #
+    if not os.access(analysis_dir, os.W_OK):
+        Log.fatalExecError("UUID directory '%s' is not writable" % (analysis_dir))
+
+    mfile = os.path.join(analysis_dir, "manifest.xml")
+    if os.path.exists(mfile) and not os.access(mfile, os.W_OK):
+        Log.fatalExecError("Manifest file '%s' is not writable" % (mfile))
+
+    #
+    # Can we write to the output file?
+    #
+    if options.out_file:
+        wcheck = os.path.abspath(options.out_file)
+        if not os.path.exists(wcheck):
+            wcheck = os.path.dirname(wcheck)
+        if not os.access(wcheck, os.W_OK):
+            Log.fatalExecError("XML output file '%s' is not writable" % options.out_file)
+
+    #
+    # Okay, the command line options look reasonable.  Go ahead and
+    # get started.
+    #
+
+    #
+    # List of metadata files we're interested in.   The CGHubSubmit
+    # object will check for their existence.
+    #                Name               FileType            Required
+    #
+    metafiles =    [('analysis.xml',    'analysisxml',      True),
+                    ('run.xml',         'runxml',           False),
+                    ('experiment.xml',  'experimentxml',    False)]                                 
+    
+    cs = CGHubSubmit(opname, server, analysis_dir, metafiles, options.credential, options.out_file, options.insecure)
+
+    try:
+        cs.DumpHeader()
+
+        if options.validate_only:
+            cs.Validate()
+        else:
+            cs.Submit()
+
+        cs.GenerateManifest()
+        cs.DumpFooter(True)
+
+    except (CurlException, CGHubException), err: 
+
+        cs.DumpFooter(False)
+        Log.fatalErrorI()
+
+
+""" -----------------------------------------------------------------
+    True main
+    -----------------------------------------------------------------
+"""
+
+if __name__ == "__main__":    
+    try:
+        main()
+
+    except SystemExit, err:
+        #
+        # Exit from within the script
+        #
+        sys.exit(err)
+
+    except (KeyboardInterrupt, EOFError):
+        #
+        # Generic ^C/^D Handler so we don't spit out a python stack.
+        #
+        sys.stderr.write("\nKilled.\n")
+        sys.exit(1)
+
+    except IOError, err:
+        #
+        # Some kind of IO Error.  If it's a broken pipe (32), just 
+        # exit silently -- user probably quit out of more or some 
+        # other output processor.   Otherwise, try to spit out an 
+        # error.
+        #
+        if err.errno == 32:
+            sys.exit(0)
+        sys.stderr.write("\nIOError (%s)\n" % err)
+        sys.exit(1)
+
+    except:
+        #
+        # All other uncaught errors.   
+        #
+        sys.stderr.write("\nInternal Error:\n\n")
+        traceback.print_exc(file=sys.stderr)
+        sys.exit(1)
+

@@ -1,0 +1,81 @@
+<tool id="synapse_query" name="Synapse Query" version="3.0.1">
+	<description>Query Synapse</description>
+	<requirements>
+		<requirement type="package" version="1.0.3">synapseclient</requirement>
+	</requirements>
+	<command interpreter="python">synapse_galaxy_client.py query $script_file $query_file $outfile</command>
+	<request_param_translation>
+        <request_param galaxy_name="auth|sessionToken" remote_name="sessionToken" missing="" />
+    </request_param_translation>
+	<inputs>
+		<conditional name="auth">
+			<param name="method" type="select" label="Authentication Method">
+				<option value="openid">OpenID</option>
+				<option value="password">Password</option>
+				<option value="apikey">API Key</option>
+			</param>
+			<when value="openid">
+				<param name="sessionToken" type="text" size="90" label="SessionToken" help="Log in via OpenID using the Link in the help section"/>
+			</when>
+			<when value="password">
+				<param name="user" type="text" size="90" label="Username">
+					<sanitizer>
+						<valid initial="string.printable"/>
+					</sanitizer>
+				</param>
+				<param name="pass" type="text" size="90" label="Password" help="If you have a sessionToken, you don't have to enter your password">
+					<sanitizer>
+						<valid initial="string.printable"/>
+					</sanitizer>
+				</param>
+			</when>
+			<when value="apikey">
+				<param name="user" type="text" size="90" label="Username">
+					<sanitizer>
+						<valid initial="string.printable"/>
+					</sanitizer>
+				</param>
+				<param name="apikey" type="text" size="90" label="APIKey" help="Synapse API Key"/>
+			</when>
+		</conditional>
+		<param name="query" type="text" area="True" size="5x35" label="Query">
+			<sanitizer>
+				<valid initial="string.printable"/>
+			</sanitizer>
+		</param>
+		<param name="stall" type="hidden" required="True"/>
+	</inputs>
+	<outputs>
+		<data format="tabular" name="outfile" />
+	</outputs>
+	<configfiles>
+		<configfile name="script_file">#if $auth.method == 'openid'
+token
+$auth.sessionToken
+#else if $auth.method == 'apikey'
+apikey
+$auth.user
+$auth.apikey
+#else
+password
+$auth.user
+$auth.pass
+#end if
+</configfile>
+	<configfile name="query_file">$query</configfile>
+	</configfiles>
+		<help>
+
+Login via OpenID |location_link|.
+
+.. |location_link| raw:: html
+
+   &lt;a href="https://synapse.sagebase.org/Portal/openid?OPEN_ID_PROVIDER=GOOGLE&amp;RETURN_TO_URL=${host_url}?tool_id=synapse_query&amp;" target="_blank"&gt;at Synapse&lt;/a&gt;
+
+Example Query:
+
+select * from entity where parentId=="syn300013"
+
+	</help>
+
+</tool>

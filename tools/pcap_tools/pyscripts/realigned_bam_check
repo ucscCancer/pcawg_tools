@@ -1,0 +1,277 @@
+#!/usr/bin/env python
+#does one or more checks on the realigned bam in comparison to the original bam to make sure new bam looks sane
+#this requires that both bams have associated .bai files in the same directory as the bam
+#the current check that has been implemented as of 4/26/2014 is a pearson correlation coef for the sum of mapped + unmapped
+#across all chromosomes/contigs in both files.  this will at least tell us if truncation has occurred (a few contigs/chromosomes have 0 read counts)
+
+import ConfigParser
+from optparse import OptionParser
+import os
+import sys
+import re
+import subprocess
+import math
+from subprocess import Popen
+from operator import itemgetter
+
+#PEARSON_CORR_MIN=0.9
+PEARSON_CORR_MIN=0.99
+#if the number of alignments *in the new file* is lower than the old, allow a fuzz up to  and includingthis %
+MAX_READ_COUNT_PERCENT_DIFF=0.05
+#check for MORE reads in the new one, if more than 20% of the old one, fail
+MAX_READ_COUNT_OVER_PERCENT_DIFF=0.20
+
+parser=OptionParser()
+parser.add_option("-o", action="store",type='string',dest="original_bam",help="REQUIRED: full path andfilename of original BAM")
+parser.add_option("-n", action="store",type='string',dest="new_bam",help="REQUIRED: full path andfilename of new realigned BAM")
+parser.add_option("-p", action="store",type='string',dest="output",help="REQUIRED: output directory for BAI files")
+
+(options,args) = parser.parse_args()
+ORIGINAL_BAM=options.original_bam
+NEW_BAM=options.new_bam
+OUTPUT_DIR=options.output
+
+if NEW_BAM is None or ORIGINAL_BAM is None or OUTPUT_DIR is None:
+    sys.stderr.write("MUST submit: the original TCGA source BAM and the re-aligned new BAM\n")
+    sys.exit(-1)
+
+def run_command(command=str):
+    print "Running: %s" % (command)
+    run=Popen(["-c",command],stdout=subprocess.PIPE,stderr=subprocess.PIPE,shell=True)
+    (stdout,stderr)=run.communicate()
+    if run.returncode != 0:
+        for line in stderr:
+            print "ERROR:\t"+line.rstrip()
+        sys.exit(-1)
+    return (stdout,stderr)
+
+def run_flagstat(bam_file):
+	(fs_output,stderr)=run_command("samtools flagstat %s" % bam_file)
+	return process_flagstat(fs_output)
+
+def process_flagstat(fs_output):
+#68629600 + 6562518 in total (QC-passed reads + QC-failed reads)
+#10054468 + 1517557 duplicates
+#67842739 + 5593779 mapped (98.85%:85.24%)
+#68629600 + 6562518 paired in sequencing
+#34314800 + 3281259 read1
+#34314800 + 3281259 read2
+#66854380 + 5314442 properly paired (97.41%:80.98%)
+#67196156 + 5353240 with itself and mate mapped
+#646583 + 240539 singletons (0.94%:3.67%)
+#301196 + 35316 with mate mapped to a different chr
+#260127 + 29485 with mate mapped to a different chr (mapQ>=5)
+	#track each field in each line of the fs output in a map, keyed by the first english word in the description (after the numbers)
+	fs_map={}
+	name_ctr=2
+	#fs_output=fs_output.replace("\\n","\n")
+	for line in fs_output.split("\n"):
+		line=line.rstrip()
+		if len(line) < 1:
+			continue
+		f=line.split()
+		#print line
+		if f[3] not in fs_map:
+			fs_map[f[3]]=[f[0],f[2]]
+		else:
+			fs_map["%s%s" % (f[3],name_ctr)]=[f[0],f[2]]
+	return fs_map
+
+def run_idxstats(bam_file,output_path,do_truncation):
+	(sam_output,stderr)=run_command("samtools idxstats %s" % bam_file)
+	return process_idxstats(sam_output,output_path,do_truncation)
+
+def process_idxstats(sam_output,output_path,do_truncation):
+	sam_map={}
+	sam_map["*"]=0
+	total_mapped=0
+	total_unmapped=0
+	total=0
+	TRUNCATE=None
+	chrs={}
+	autosomes={}
+	for i in range(23):
+		chrs[str(i)]=1
+		autosomes[str(i)]=1
+	del chrs['0']
+	del autosomes['0']
+	chrs['X']=1	
+	chrs['Y']=1	
+	chrs['MT']=1
+	chr_patt_prefix=re.compile("^chr[1-22XYMT]{2}$", re.I)
+	#chr_patt_char=re.compile("^[XY]$", re.I)
+	with open(output_path,"w") as outf:
+		for line in sam_output.split("\n"):
+			outf.write("%s\n" % (line))	
+			line=line.rstrip()
+			if len(line) < 1:
+				continue
+			#chr,chr len,mapped,unmapped
+			f=line.split()
+			chr = str(f[0]).upper()
+			mapped=int(f[2])
+			unmapped=int(f[3])
+			
+			#for testing purposes only	
+			#if do_truncation: #and chr == '1':
+			#	TRUNCATE=1
+			if TRUNCATE:
+				#mapped = mapped-(mapped/2)
+				#unmapped = unmapped+(unmapped/19)
+				mapped=0
+				#unmapped=0
+			TRUNCATE=None
+			#first check, make sure we have mapping reads on all chrs
+			if chr in chrs or chr_patt_prefix.search(chr) != None or chr == '*':
+				if mapped==0 and chr != '*':
+					sys.stderr.write("ERROR: one or more chromosomes have 0 mapped reads, chromosome %s\n" % (chr))
+					sys.exit(-1)
+				if unmapped==0 and chr == '*':
+					sys.stderr.write("ERROR: no fully unmapped reads\n" % (chr))
+					sys.exit(-1)
+			#adjust for the missing chromosomes in the original, but present in the newer one, 
+			#add their mapped + unmapped to the unmapped catchall chr="*"
+			if chr == "NC_007605" or chr == "HS37D5" or chr == "*":
+				sam_map["*"]=sam_map["*"]+mapped+unmapped
+			else:
+				if chr in autosomes: 
+					sam_map[int(chr)]=mapped+unmapped
+				else:
+					sam_map[chr]=mapped+unmapped
+
+			total_mapped=total_mapped+mapped
+			total_unmapped=total_unmapped+unmapped
+			total=total+mapped+unmapped
+
+	return (total,total_mapped,total_unmapped,sam_map)
+
+
+#from
+#http://stackoverflow.com/questions/3949226/calculating-pearson-correlation-and-significance-in-python/7939259#7939259
+def average(x):
+    assert len(x) > 0
+    return float(sum(x)) / len(x)
+
+def pearson_corr(x, y):
+    assert len(x) == len(y)
+    n = len(x)
+    assert n > 0
+    avg_x = average(x)
+    avg_y = average(y)
+    diffprod = 0
+    xdiff2 = 0
+    ydiff2 = 0
+    for idx in range(n):
+        xdiff = x[idx] - avg_x
+        ydiff = y[idx] - avg_y
+        diffprod += xdiff * ydiff
+        xdiff2 += xdiff * xdiff
+        ydiff2 += ydiff * ydiff
+
+    return diffprod / math.sqrt(xdiff2 * ydiff2)
+
+def extract_read_group_attributes_from_bam_header(filename):
+    #@RG     ID:5a543e4e-ce20-11e3-98bb-205ab09f1d05 PM:Illumina HiSeq 2000  CN:BCM  PU:BCM:120725_SN580_0236_BD13P0ACXX_2   DT:2012-08-14T17:00:00Z SM:9b6cd038-dee8-47b3-bd30-9a361a1f39ae PI:     LB:WGS:BCM:IWG_TREN.B2-4102-11A-N_2pB   PL:ILLUMINA
+    read_group_id_matcher = re.compile("ID:([^\s]+)")
+    #pm_matcher = re.compile("PM:([^\t]+)")
+    platform_unit_matcher = re.compile("PU:([^\t]+)")
+    lib_matcher = re.compile("LB:([^\t]+)")
+    center_matcher = re.compile("CN:([^\t]+)")
+    #pl_matcher = re.compile("PL:([^\t]+)")
+    matchers = [["read_group_id",read_group_id_matcher],["platform_unit",platform_unit_matcher],["library",lib_matcher],["center",center_matcher]]
+    
+    (stdout,stderr)=run_command("samtools view -H %s | grep \"^@RG\"" % (filename))
+    print stdout
+    rgs={}
+    pus={}
+    for line in stdout.split("\n"):
+        if len(line) < 1:
+            continue
+        line=line.rstrip()
+        rg={}
+        for (tag,matcher) in matchers:
+            m=matcher.search(line)
+            if m != None:
+                rg[tag]=m.group(1)
+                if tag == 'platform_unit':
+                    pus[rg[tag]]=1
+        rgs[rg["read_group_id"]]=rg
+    return pus
+
+def check_read_group_consistency(original_bam,new_bam):
+	#(pus1,centers1,libs1,ids1) = extract_read_group_attributes_from_bam_header(original_bam)
+	#(pus2,centers2,libs2,ids2) = extract_read_group_attributes_from_bam_header(new_bam)
+	pus1 = extract_read_group_attributes_from_bam_header(original_bam)
+	pus2 = extract_read_group_attributes_from_bam_header(new_bam)
+	
+	for pu in pus2:
+            pu_ = pu.split(":")
+            pu = pu_[-1]
+            #pu = pu.replace('_','.')
+            pus_1 = pu.split('_')
+            pus_2 = pu.split('.')
+            pu1 = '_'.join(pus_1)
+            pu1a = '.'.join(pus_1)
+            pu2 = '.'.join(pus_2)
+            pu2a = '_'.join(pus_2)
+            if pu1 not in pus1 and pu2 not in pus1 and pu1a not in pus1 and pu2a not in pus1:
+                sys.stderr.write("ERROR: platform unit %s or %s or %s or %s from realigned bam not present in original bam\n" % (pu1,pu2,pu1a,pu2a))
+                sys.exit(-1)
+                
+def main():
+    #orig_fs_map=run_flagstat(ORIGINAL_BAM)
+    #(fs_output,stderr)=run_command("cat %s" % ORIGINAL_BAM)
+    #orig_fs_map = process_flagstat(fs_output) 
+    #(fs_output,stderr)=run_command("cat %s" % NEW_BAM)
+    #new_fs_map = process_flagstat(fs_output) 
+    (total1,total_mapped1,total_unmapped1,orig_idxs) = run_idxstats(ORIGINAL_BAM,"%s/old_bam.idxstats"%(OUTPUT_DIR),False)
+    (total2,total_mapped2,total_unmapped2,new_idxs) = run_idxstats(NEW_BAM,"%s/new_bam.idxstats"%(OUTPUT_DIR),False)
+   
+    check_read_group_consistency(ORIGINAL_BAM,NEW_BAM)
+ 
+    #check total number
+    total_diff = total1-total2
+    total_diff_percent = (float(total_diff)/float(total1))
+    
+    #do the diff counts check on mapped reads   
+    diff = total_mapped1-total_mapped2
+    percent = (float(diff)/float(total1))
+    
+    sys.stdout.write("old=%d %d %d\n" % (total1,total_mapped1,total_unmapped1)) 
+    sys.stdout.write("new=%d %d %d\n" % (total2,total_mapped2,total_unmapped2)) 
+    sys.stdout.write("diff total=%d %s\n" % (total_diff,str(total_diff_percent))) 
+    sys.stdout.write("diff mapped=%d %s\n" % (diff,str(percent))) 
+
+    all_counts1=[]
+    all_counts2=[]
+
+    for chr in sorted(orig_idxs.keys()):
+        counts1=orig_idxs[chr]
+        all_counts1.append(int(counts1))
+
+    for chr in sorted(new_idxs.keys()):
+        counts2=new_idxs[chr]
+        all_counts2.append(int(counts2))	
+        #sys.stdout.write("%s + %s %s|||%s %s\n" % (chr,mapped1,unmapped1,mapped2,unmapped2))
+        #sys.stdout.write("%s %d %d\n" % (chr,counts1,counts2))
+
+    #only do correlation check if we have equal number of chrs/contigs (i.e. comparison between 36 and 37 where this is not true)
+    if len(all_counts1) == len(all_counts2):
+        pearson_corr_coef=pearson_corr(all_counts1,all_counts2)
+        sys.stdout.write("pearson=%s\n" % (str(pearson_corr_coef)))
+        if pearson_corr_coef < PEARSON_CORR_MIN:
+            sys.stderr.write("ERROR: Pearson Correlation Coefficient too low: %s < %s\n" % (str(pearson_corr_coef),str(PEARSON_CORR_MIN)))
+            sys.exit(-1)
+
+    if diff > 0 and percent > MAX_READ_COUNT_PERCENT_DIFF:
+        sys.stderr.write("ERROR: mapped read counts are less in new alignment (%d), and by more than %d%%: %s%%\n" % (diff,int(100*MAX_READ_COUNT_PERCENT_DIFF),str(100*percent)))
+        sys.exit(-1)
+    
+    if total_diff < 0 and abs(total_diff_percent) <= MAX_READ_COUNT_OVER_PERCENT_DIFF:
+        sys.stderr.write("WARNING: total read counts in realigned bam are MORE (by %d, %s%% increase), then in original bam but not greater than 5%%\n" % (abs(total_diff),str(float(100*abs(total_diff))/float(total1))))
+    if total_diff < 0 and abs(total_diff_percent) > MAX_READ_COUNT_OVER_PERCENT_DIFF:
+        sys.stderr.write("ERROR: total read counts in realigned bam are MORE (by %d, %s%% increase), then in original bam\n" % (abs(total_diff),str(float(100*abs(total_diff))/float(total1))))
+        sys.exit(-1)
+
+if __name__ == '__main__':
+    main()

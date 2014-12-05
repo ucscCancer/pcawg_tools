@@ -1,0 +1,27 @@
+<tool id="cghub_genetorrent" name="CGHub GeneTorrent" version="1.0.0">
+	<description>download BAM files from CGHub</description>
+	<requirements>
+		<container type="docker">genetorrent</container>
+	</requirements>
+	<command interpreter="python">
+genetorrent.py $uuid $outfile $outfile.dataset.dataset.id
+#if str($cred_file) != 'None':
+$cred_file
+#end if
+	</command>
+	<inputs>
+		<param name="uuid" type="text" size="50" label="Analysis ID"/>
+		<param name="cred_file" type="select" label="Download Credentials" optional="True">
+			<options from_file="cghub_credentials.loc">
+				<column name="name" index="0"/>
+				<column name="value" index="1"/>
+			</options>
+		</param>
+	</inputs>
+	<outputs>
+		<data name="outfile" format="bam" label="${uuid} BAM"/>
+	</outputs>
+	<help>
+Download BAM files from CGHub
+	</help>
+</tool>
