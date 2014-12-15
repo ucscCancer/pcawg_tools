@@ -45,7 +45,7 @@ snp.six.bed = SNP6.hg19.interval_list
 Output
 (sample.id).contamination.txt.firehose
 
-The value is by itself on a line.  A common cutoff we have used for TCGA is requiring the value to be <4.0 to 
+The value is by itself on a line.  A common cutoff we have used for TCGA is requiring the value to be &lt;4.0 to 
 pass.  Example output files are given in PCAWG-BLCA-US-S-TCGA-BT-A20T-01A-11D-A14W-08.*
 
 
