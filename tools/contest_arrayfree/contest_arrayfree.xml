@@ -1,0 +1,59 @@
+<tool id="contest_arrayfree" name="contest_arrayfree" version="1.0.0">
+    <description>contamination estimate</description>
+    <requirements>
+        <container type="docker">contest_arrayfree</container>
+    </requirements>
+    <command>
+java -Djava.io.tmpdir=./ -Xmx2g 
+-jar /opt/Queue-1.4-437-g6b8a9e1-svn-35362.jar 
+-S /opt/ContaminationPipeline.scala 
+--reference ${reference} --output contest
+--bamfile ${tumor_bam}
+-nbam ${normal_bam}
+--popfile ${popfile}
+--arrayinterval ${array_interval}
+--interval ${interval}
+-run -memory 2
+    </command>
+
+    <inputs>
+        <param format="bam"   type="data" name="tumor_bam"      label="Tumor BAM" help="" />
+        <param format="bam"   type="data" name="normal_bam"     label="Tumor BAM" help="" />
+        <param format="fasta" type="data" name="reference"      label="Reference Genome" />
+        <param format="vcf"   type="data" name="popfile"        label="Population Haplotype VCF" />
+        <param format="bed"   type="data" name="interval"       label="Gene Intervals" />
+        <param format="txt"   type="data" name="array_interval" label="Gene Intervals" />
+    </inputs>
+
+    <outputs>
+        <data format="txt" name="output" label="ContEst output" from_work_dir="contest.out"/>
+    </outputs>
+
+    <help>
+
+reference.file = human_g1k_v37_decoy.fasta
+intervals = gaf_20111020+broad_wex_1.1_hg19.bed
+sample.id = (identifier string for the sample)
+clean.bam.file = (input tumor bam file)
+normal.bam = (input normal bam file)
+genotypes.vcf = none
+pop.vcf = hg19_population_stratified_af_hapmap_3.3.fixed.vcf
+force.array.free = true
+snp.six.bed = SNP6.hg19.interval_list
+
+
+Output
+(sample.id).contamination.txt.firehose
+
+The value is by itself on a line.  A common cutoff we have used for TCGA is requiring the value to be <4.0 to 
+pass.  Example output files are given in PCAWG-BLCA-US-S-TCGA-BT-A20T-01A-11D-A14W-08.*
+
+
+    </help>
+
+    <tests>
+        <test>
+        </test>
+    </tests>
+
+</tool>
