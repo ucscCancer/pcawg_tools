@@ -26,7 +26,7 @@
 		-m $min_flank
 		-e $epsilon
 		-o $output
-		--procs 4
+		--procs \${GALAXY_SLOTS:-4}
 	</command>
 
 	<inputs>

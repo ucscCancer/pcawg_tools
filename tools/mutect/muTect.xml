@@ -19,6 +19,7 @@
 --coverage_file coverage.wig.txt
 --vcf mutations.vcf
 --workdir ./
+--ncpus \${GALAXY_SLOTS:-4}
     </command>
 
     <inputs>

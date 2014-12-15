@@ -23,6 +23,8 @@
 			--number_of_threads $options_runtime.number_of_threads
 			--window_size $options_runtime.window_size
 			--number_of_procs $options_runtime.number_of_procs
+		#else
+			--number_of_procs \${GALAXY_SLOTS:-4}
 		#end if
 		<!-- Parameters affecting which structural variants are reported -->
 		#if str($options_which.options_which_selector) == "yes":
