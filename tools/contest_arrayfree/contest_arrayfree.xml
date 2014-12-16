@@ -3,18 +3,7 @@
     <requirements>
         <container type="docker">contest_arrayfree</container>
     </requirements>
-    <command>
-java -Djava.io.tmpdir=./ -Xmx2g 
--jar /opt/Queue-1.4-437-g6b8a9e1-svn-35362.jar 
--S /opt/ContaminationPipeline.scala 
---reference ${reference} --output contest
---bamfile ${tumor_bam}
--nbam ${normal_bam}
---popfile ${popfile}
---arrayinterval ${array_interval}
---interval ${interval}
--run -memory 2
-    </command>
+    <command interpreter="base">$runscript</command>
 
     <inputs>
         <param format="bam"   type="data" name="tumor_bam"      label="Tumor BAM" help="" />
@@ -28,6 +17,29 @@ java -Djava.io.tmpdir=./ -Xmx2g
     <outputs>
         <data format="txt" name="output" label="ContEst output" from_work_dir="contest.out"/>
     </outputs>
+    
+    <configfiles>
+        <configfile name="runscript">#!/bin/bash
+
+ln -s ${tumor_bam} tumor.bam
+ln -s ${tumor.metadata.bam_index} tumor.bam.bai
+ln -s ${normal_bam} normal.bam
+ln -s ${normal.metadata.bam_index} normal.bam.bai
+ln -s ${reference} reference.fa
+
+java -Djava.io.tmpdir=./ -Xmx2g 
+-jar /opt/Queue-1.4-437-g6b8a9e1-svn-35362.jar 
+-S /opt/ContaminationPipeline.scala
+--reference reference.fa --output contest
+--bamfile tumor.bam
+-nbam normal.bam
+--popfile ${popfile}
+--arrayinterval ${array_interval}
+--interval ${interval}
+-run -memory 2
+            
+        </configfile>
+    </configfiles>
 
     <help>
 
