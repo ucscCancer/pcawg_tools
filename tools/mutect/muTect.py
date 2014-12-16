@@ -37,13 +37,17 @@ def cmds_runner(cmds, cpus):
     p = Pool(cpus)
     values = p.map(cmd_caller, cmds, 1)
 
-def call_cmd_iter(java, mutect, ref_seq, block_size, tumor_bam, normal_bam, output_base, cosmic, dbsnp):
+def call_cmd_iter(java, mutect, ref_seq, block_size, tumor_bam, normal_bam, output_base, cosmic, dbsnp, contamination):
 
     """
     --cosmic $args.cosmic
     --dbsnp $args.dbsnp
     """
-    
+
+    contamination_line = ""
+    if contamination is not None:
+        contamination_line = "--fraction_contamination %s" % (contamination)
+
     template = Template("""
 ${JAVA}
 -Xmx2g -XX:ParallelGCThreads=2 -jar ${MUTECT}
@@ -55,6 +59,7 @@ ${JAVA}
 --out ${OUTPUT_BASE}.${BLOCK_NUM}.out
 ${COSMIC_LINE}
 ${DBSNP_LINE}
+${CONTAMINATION_LINE}
 --coverage_file ${OUTPUT_BASE}.${BLOCK_NUM}.coverage
 --vcf ${OUTPUT_BASE}.${BLOCK_NUM}.vcf
 """.replace("\n", " "))
@@ -66,7 +71,7 @@ ${DBSNP_LINE}
         dbsnp_line = ""
         if dbsnp is not None:
             dbsnp_line = "--dbsnp %s" % (dbsnp)
-                    
+
         cmd = template.substitute(
             dict(
                 JAVA=java,
@@ -78,21 +83,22 @@ ${DBSNP_LINE}
                 NORMAL_BAM=normal_bam,
                 OUTPUT_BASE=output_base,
                 COSMIC_LINE=cosmic_line,
-                DBSNP_LINE=dbsnp_line
+                DBSNP_LINE=dbsnp_line,
+                CONTAMINATION_LINE=contamination_line
         )
         yield cmd, "%s.%s.vcf" % (output_base, i)
 
-            
-        
+
+
 def run_mutect(args):
-    
+
     workdir = tempfile.mkdtemp(dir=args['workdir'], prefix="mutect_work_")
 
     tumor_bam = os.path.join(workdir, "tumor.bam")
     normal_bam = os.path.join(workdir, "normal.bam")
     os.symlink(os.path.abspath(args["input_file:normal"]), normal_bam)
     os.symlink(os.path.abspath(args['input_file:tumor']),  tumor_bam)
-    
+
     if args['input_file:index:normal'] is not None:
         os.symlink(os.path.abspath(args["input_file:index:normal"]), normal_bam + ".bai")
     elif os.path.exists(os.path.abspath(args["input_file:normal"]) + ".bai"):
@@ -106,16 +112,24 @@ def run_mutect(args):
         os.symlink(os.path.abspath(args["input_file:tumor"]) + ".bai", tumor_bam + ".bai")
     else:
         subprocess.check_call( ["/usr/bin/samtools", "index", tumor_bam] )
-    
+
     ref_seq = os.path.join(workdir, "ref_genome.fasta")
     ref_dict = os.path.join(workdir, "ref_genome.dict")
     os.symlink(os.path.abspath(args['reference_sequence']), ref_seq)
     subprocess.check_call( ["/usr/bin/samtools", "faidx", ref_seq] )
-    subprocess.check_call( [args['java'], "-jar", 
-        args['dict_jar'], 
-        "R=%s" % (ref_seq), 
+    subprocess.check_call( [args['java'], "-jar",
+        args['dict_jar'],
+        "R=%s" % (ref_seq),
         "O=%s" % (ref_dict)
     ])
+
+    contamination = None
+    if args.fraction_contamination is not None:
+        contamination = args.fraction_contamination
+    if args.fraction_contamination_file is not None:
+        with open(args.fraction_contamination_file) as handle:
+            line = handle.readline()
+            contamination = line.split()[0]
 
     cmds = list(call_cmd_iter(ref_seq=ref_seq,
         java=args['java'],
@@ -126,6 +140,7 @@ def run_mutect(args):
         output_base=os.path.join(workdir, "output.file"),
         cosmic=args['cosmic'],
         dbsnp=args['dbsnp']
+        contamination = contamination
         )
     )
 
@@ -139,7 +154,7 @@ def run_mutect(args):
         for record in vcf_reader:
             vcf_writer.write_record(record)
     vcf_writer.close()
-    
+
     if not args['no_clean']:
         shutil.rmtree(workdir)
 
@@ -160,6 +175,8 @@ if __name__ == "__main__":
     parser.add_argument("--dbsnp")
     parser.add_argument("--out")
     parser.add_argument("--coverage_file")
+    parser.add_argument("--fraction_contamination", default=None)
+    parser.add_argument("--fraction_contamination-file", default=None)
     parser.add_argument("--vcf", required=True)
     parser.add_argument("--no-clean", action="store_true", default=False)
     parser.add_argument("--java", default="/usr/bin/java")
@@ -170,4 +187,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     run_mutect(vars(args))
-
