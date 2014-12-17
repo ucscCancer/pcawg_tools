@@ -124,10 +124,10 @@ def run_mutect(args):
     ])
 
     contamination = None
-    if args.fraction_contamination is not None:
-        contamination = args.fraction_contamination
-    if args.fraction_contamination_file is not None:
-        with open(args.fraction_contamination_file) as handle:
+    if args["fraction_contamination"] is not None:
+        contamination = args["fraction_contamination"]
+    if args["fraction_contamination_file"] is not None:
+        with open(args["fraction_contamination_file"]) as handle:
             line = handle.readline()
             contamination = line.split()[0]
 
@@ -139,7 +139,7 @@ def run_mutect(args):
         normal_bam=normal_bam,
         output_base=os.path.join(workdir, "output.file"),
         cosmic=args['cosmic'],
-        dbsnp=args['dbsnp']
+        dbsnp=args['dbsnp'],
         contamination = contamination
         )
     )
