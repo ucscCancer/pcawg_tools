@@ -3,28 +3,28 @@
     <requirements>
         <container type="docker">contest_arrayfree</container>
     </requirements>
-    <command interpreter="base">$runscript</command>
-
+    <command interpreter="bash">$runscript</command>
     <inputs>
         <param format="bam"   type="data" name="tumor_bam"      label="Tumor BAM" help="" />
-        <param format="bam"   type="data" name="normal_bam"     label="Tumor BAM" help="" />
+        <param format="bam"   type="data" name="normal_bam"     label="Normal BAM" help="" />
         <param format="fasta" type="data" name="reference"      label="Reference Genome" />
         <param format="vcf"   type="data" name="popfile"        label="Population Haplotype VCF" />
-        <param format="bed"   type="data" name="interval"       label="Gene Intervals" />
-        <param format="txt"   type="data" name="array_interval" label="Gene Intervals" />
+        <param format="bed"   type="data" name="interval"       label="Gene BED File" />
+        <param format="txt"   type="data" name="array_interval" label="Array Platform Intervals" />
     </inputs>
-
+    
     <outputs>
-        <data format="txt" name="output" label="ContEst output" from_work_dir="contest.out"/>
+        <data format="txt" name="output_table" label="ContEst output table" from_work_dir="contest"/>
+        <data format="txt" name="output_value" label="ContEst output value" from_work_dir="contest.firehose"/>
     </outputs>
     
     <configfiles>
         <configfile name="runscript">#!/bin/bash
 
 ln -s ${tumor_bam} tumor.bam
-ln -s ${tumor.metadata.bam_index} tumor.bam.bai
+ln -s ${tumor_bam.metadata.bam_index} tumor.bam.bai
 ln -s ${normal_bam} normal.bam
-ln -s ${normal.metadata.bam_index} normal.bam.bai
+ln -s ${normal_bam.metadata.bam_index} normal.bam.bai
 ln -s ${reference} reference.fa
 
 java -Djava.io.tmpdir=./ -Xmx2g 
@@ -41,6 +41,9 @@ java -Djava.io.tmpdir=./ -Xmx2g
         </configfile>
     </configfiles>
 
+    <stdio>
+        <exit_code range="1:" level="fatal" />
+    </stdio>
     <help>
 
 reference.file = human_g1k_v37_decoy.fasta
@@ -57,7 +60,7 @@ snp.six.bed = SNP6.hg19.interval_list
 Output
 (sample.id).contamination.txt.firehose
 
-The value is by itself on a line.  A common cutoff we have used for TCGA is requiring the value to be &lt;4.0 to 
+The value is by itself on a line.  A common cutoff we have used for TCGA is requiring the value to be &lt;4.0 to
 pass.  Example output files are given in PCAWG-BLCA-US-S-TCGA-BT-A20T-01A-11D-A14W-08.*
 
 
