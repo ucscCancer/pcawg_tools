@@ -1,0 +1,45 @@
+<tool id="gatk_bqsr" name="GATK BQSR" version="1.0.0">
+    <description>base quality score recalibration</description>
+    <requirements>
+        <container type="docker">gatk</container>
+    </requirements>
+    <command interpreter="bash">$runscript</command>
+    <inputs>
+        <param format="bam"   type="data" name="input_bam"      label="Input BAM" help="" />
+        <param format="fasta" type="data" name="reference"      label="Reference Genome" />
+    </inputs>
+    
+    <outputs>
+        <data format="txt" name="output_report" label="BQSR Report" from_work_dir="recalibration_report.grp"/>
+        <data format="bam" name="output_bam" label="BQSR BAM" from_work_dir="output.bam"/>
+    </outputs>
+    
+    <configfiles>
+        <configfile name="runscript">#!/bin/bash
+ln -s ${input_bam} input.bam
+ln -s ${reference} reference.fasta
+samtools faidx reference.fasta
+java -jar /opt/picard/CreateSequenceDictionary.jar R=reference.fasta O=reference.dict
+
+java -jar /opt/GenomeAnalysisTK.jar \
+-T PrintReads \
+-R reference.fasta \
+-I input.bam \
+-BQSR recalibration_report.grp \
+-o output.bam
+        </configfile>
+    </configfiles>
+    
+    <stdio>
+        <exit_code range="1:" level="fatal" />
+    </stdio>
+    <help>
+        
+    </help>
+    
+    <tests>
+        <test>
+        </test>
+    </tests>
+    
+</tool>
