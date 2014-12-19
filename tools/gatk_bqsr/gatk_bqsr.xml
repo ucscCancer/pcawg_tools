@@ -6,32 +6,57 @@
     <command interpreter="bash">$runscript</command>
     <inputs>
         <param format="bam"   type="data" name="input_bam"      label="Input BAM" help="" />
+        <param format="vcf"   type="data" name="known_sites"    label="Known SNP sites VCF" />
         <param format="fasta" type="data" name="reference"      label="Reference Genome" />
     </inputs>
     
     <outputs>
-        <data format="txt" name="output_report" label="BQSR Report" from_work_dir="recalibration_report.grp"/>
+        <data format="txt" name="output_report" label="BQSR Report" from_work_dir="recal_data.table"/>
         <data format="bam" name="output_bam" label="BQSR BAM" from_work_dir="output.bam"/>
     </outputs>
     
     <configfiles>
         <configfile name="runscript">#!/bin/bash
 ln -s ${input_bam} input.bam
+ln -s ${input_bam.metadata.bam_index} input.bam.bai
 ln -s ${reference} reference.fasta
+ln -s ${known_sites} known_sites.vcf
+
 samtools faidx reference.fasta
 java -jar /opt/picard/CreateSequenceDictionary.jar R=reference.fasta O=reference.dict
 
 java -jar /opt/GenomeAnalysisTK.jar \
--T PrintReads \
+-T BaseRecalibrator \
 -R reference.fasta \
 -I input.bam \
--BQSR recalibration_report.grp \
+-knownSites known_sites.vcf \
+-o recal_data.table 
+
+java -jar /opt/GenomeAnalysisTK.jar \
+-T BaseRecalibrator \
+-R reference.fasta \
+-I input.bam \
+-knownSites known_sites.vcf \
+-BQSR recal_data.table \
+-o post_recal_data.table 
+
+java -jar /opt/GenomeAnalysisTK.jar \
+-T PrintReads \
+-R reference.fasta \
+--emit_original_quals \
+-I input.bam \
+-BQSR recal_data.table \
 -o output.bam
+
         </configfile>
     </configfiles>
     
     <stdio>
         <exit_code range="1:" level="fatal" />
+        <regex match="ERROR"
+            source="both"
+            level="fatal"
+            description="Error running BQSR" />
     </stdio>
     <help>
         
