@@ -9,12 +9,12 @@
         <param format="vcf"   type="data" name="known_sites"    label="Known SNP sites VCF" />
         <param format="fasta" type="data" name="reference"      label="Reference Genome" />
     </inputs>
-    
+
     <outputs>
         <data format="txt" name="output_report" label="BQSR Report" from_work_dir="recal_data.table"/>
         <data format="bam" name="output_bam" label="BQSR BAM" from_work_dir="output.bam"/>
     </outputs>
-    
+
     <configfiles>
         <configfile name="runscript">#!/bin/bash
 ln -s ${input_bam} input.bam
@@ -30,15 +30,8 @@ java -jar /opt/GenomeAnalysisTK.jar \
 -R reference.fasta \
 -I input.bam \
 -knownSites known_sites.vcf \
--o recal_data.table 
-
-java -jar /opt/GenomeAnalysisTK.jar \
--T BaseRecalibrator \
--R reference.fasta \
--I input.bam \
--knownSites known_sites.vcf \
--BQSR recal_data.table \
--o post_recal_data.table 
+-nct \${GALAXY_SLOTS:-4}
+-o recal_data.table
 
 java -jar /opt/GenomeAnalysisTK.jar \
 -T PrintReads \
@@ -50,7 +43,7 @@ java -jar /opt/GenomeAnalysisTK.jar \
 
         </configfile>
     </configfiles>
-    
+
     <stdio>
         <exit_code range="1:" level="fatal" />
         <regex match="ERROR"
@@ -59,12 +52,12 @@ java -jar /opt/GenomeAnalysisTK.jar \
             description="Error running BQSR" />
     </stdio>
     <help>
-        
+
     </help>
-    
+
     <tests>
         <test>
         </test>
     </tests>
-    
+
 </tool>
