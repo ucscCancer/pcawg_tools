@@ -26,6 +26,9 @@ ln -s ${tumor_bam.metadata.bam_index} tumor.bam.bai
 ln -s ${normal_bam} normal.bam
 ln -s ${normal_bam.metadata.bam_index} normal.bam.bai
 ln -s ${reference} reference.fa
+ln -s ${array_interval} platform.interval_list
+ln -s ${popfile} population.vcf
+ln -s ${interval} gene_intervals.bed
 
 java -Djava.io.tmpdir=./ -Xmx2g \
 -jar /opt/Queue-1.4-437-g6b8a9e1-svn-35362.jar \
@@ -33,9 +36,9 @@ java -Djava.io.tmpdir=./ -Xmx2g \
 --reference reference.fa --output contest \
 --bamfile tumor.bam \
 -nbam normal.bam \
---popfile ${popfile} \
---arrayinterval ${array_interval} \
---interval ${interval} \
+--popfile population.vcf \
+--arrayinterval platform.interval_list \
+--interval gene_intervals.bed \
 -run -memory 2
             
         </configfile>
