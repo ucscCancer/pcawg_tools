@@ -19,6 +19,7 @@
 
     <configfiles>
         <configfile name="runscript">#!/bin/bash
+set -e
 ln -s ${input_bam} input.bam
 ln -s ${input_bam.metadata.bam_index} input.bam.bai
 ln -s ${reference} reference.fasta
