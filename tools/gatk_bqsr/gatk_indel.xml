@@ -1,0 +1,73 @@
+<tool id="gatk_indel" name="GATK INDEL" version="1.0.0">
+    <description>INDEL realignment</description>
+    <requirements>
+        <container type="docker">gatk</container>
+    </requirements>
+    <command interpreter="bash">$runscript</command>
+    <inputs>
+        <param format="bam"   type="data" name="input_bam"      label="Input BAM" help="" />
+        <param format="fasta" type="data" name="reference"      label="Reference Genome" />
+        <repeat name="known"  title="Known Variants">
+            <param name="input" type="data" format="vcf" label="Known Variant VCFs"/>
+        </repeat>
+    </inputs>
+
+    <outputs>
+        <data format="txt" name="output_report" label="BQSR Report" from_work_dir="recal_data.table"/>
+        <data format="bam" name="output_bam" label="BQSR BAM" from_work_dir="output.bam"/>
+    </outputs>
+
+    <configfiles>
+        <configfile name="runscript">#!/bin/bash
+ln -s ${input_bam} input.bam
+ln -s ${input_bam.metadata.bam_index} input.bam.bai
+ln -s ${reference} reference.fasta
+
+samtools faidx reference.fasta
+java -jar /opt/picard/CreateSequenceDictionary.jar R=reference.fasta O=reference.dict
+
+
+java -Xmx8g -jar /opt/GenomeAnalysisTK.jar \
+-T RealignerTargetCreator \
+-R reference.fasta \
+-I input.bam \
+-nt \${GALAXY_SLOTS:-8} \
+--downsampling_type NONE \
+#for $k in $known:
+-known ${k.input} \
+#end for
+-o forIndelRealigner.intervals
+
+
+java -Xmx8g -jar /opt/GenomeAnalysisTK.jar \
+-T IndelRealigner \
+-R reference.fasta \
+-I input.bam \
+-targetIntervals forIndelRealigner.intervals \
+--downsampling_type NONE \
+#for $k in $known:
+-known $k \
+#end for
+-maxReads 720000 -maxInMemory 5400000 \
+-o output.bam
+
+        </configfile>
+    </configfiles>
+
+    <stdio>
+        <exit_code range="1:" level="fatal" />
+        <regex match="ERROR"
+            source="both"
+            level="fatal"
+            description="Error running INDEL Realignment" />
+        </stdio>
+        <help>
+
+        </help>
+
+        <tests>
+            <test>
+            </test>
+        </tests>
+
+    </tool>
