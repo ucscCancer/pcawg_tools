@@ -45,7 +45,7 @@ java -Xmx8g -jar /opt/GenomeAnalysisTK.jar \
 -targetIntervals forIndelRealigner.intervals \
 --downsampling_type NONE \
 #for $k in $known:
--known $k \
+-known ${k.input} \
 #end for
 -maxReads 720000 -maxInMemory 5400000 \
 -o output.bam
