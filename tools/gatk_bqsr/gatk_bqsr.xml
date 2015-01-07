@@ -31,7 +31,7 @@ java -jar /opt/GenomeAnalysisTK.jar \
 -R reference.fasta \
 -I input.bam \
 -knownSites known_sites.vcf \
--nct \${GALAXY_SLOTS:-4}
+-nct \${GALAXY_SLOTS:-4} \
 -o recal_data.table
 
 java -jar /opt/GenomeAnalysisTK.jar \
