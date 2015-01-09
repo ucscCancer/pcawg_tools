@@ -86,7 +86,7 @@ ${CONTAMINATION_LINE}
                 DBSNP_LINE=dbsnp_line,
                 CONTAMINATION_LINE=contamination_line
         )
-        yield cmd, "%s.%s.vcf" % (output_base, i)
+        yield cmd, "%s.%s" % (output_base, i)
 
 
 
@@ -148,12 +148,35 @@ def run_mutect(args):
 
     vcf_writer = None
     for cmd, file in cmds:
-        vcf_reader = vcf.Reader(filename=file)
+        vcf_reader = vcf.Reader(filename=file + ".vcf")
         if vcf_writer is None:
             vcf_writer = vcf.Writer(open(os.path.join(args['vcf']), "w"), vcf_reader)
         for record in vcf_reader:
             vcf_writer.write_record(record)
     vcf_writer.close()
+
+    if args['out'] is not None:
+        with open(args['out'], "w") as handle:
+            for cmd, file in cmds:
+                with open(file + ".out") as ihandle:
+                    for line in ihandle:
+                        handle.write(line)
+
+    first_file = True
+    if args['coverage_file'] is not None:
+        with open(args['coverage_file'], "w") as handle:
+            for cmd, file in cmds:
+                with open(file + ".coverage") as ihandle:
+                    first_line = True
+                    for line in ihandle:
+                        if first_line:
+                            if first_file:
+                                handle.write(line)
+                                first_line = False
+                                first_file = False
+                        else:
+                            handle.write(line)
+
 
     if not args['no_clean']:
         shutil.rmtree(workdir)
@@ -173,8 +196,8 @@ if __name__ == "__main__":
     parser.add_argument("--workdir", default="/tmp")
     parser.add_argument("--cosmic")
     parser.add_argument("--dbsnp")
-    parser.add_argument("--out")
-    parser.add_argument("--coverage_file")
+    parser.add_argument("--out", default=None)
+    parser.add_argument("--coverage_file", default=None)
     parser.add_argument("--fraction_contamination", default=None)
     parser.add_argument("--fraction_contamination-file", default=None)
     parser.add_argument("--vcf", required=True)
