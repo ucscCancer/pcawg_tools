@@ -26,7 +26,7 @@ def execute( cmd, output="" ):
 		else:
 			out = subprocess.PIPE
 		sys_env = dict(os.environ)
-		sys_env['OMP_NUM_THREADS'] = "3"
+		sys_env['OMP_NUM_THREADS'] = "5"
 		print "Running", cmd
 		process = subprocess.Popen( args=shlex.split(cmd), stdout=out, stderr=err, env=sys_env )
 		process.wait()
