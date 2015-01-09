@@ -60,6 +60,9 @@ def call_cmd_iter(muse, ref_seq, block_size, tumor_bam, normal_bam, contaminatio
             yield cmd, "%s.%s.MuSE.txt" % (output_base, i)
 
 def run_muse(args):
+    
+    if not os.path.exists(args.muse):
+        args.muse = which(args.muse)
 
     workdir = tempfile.mkdtemp(dir=args.workdir, prefix="muse_work_")
     
@@ -138,7 +141,7 @@ def run_muse(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("-m", "--muse", help="Which Copy of MuSE", default=which("MuSE"))
+    parser.add_argument("-m", "--muse", help="Which Copy of MuSE", default="MuSEv0.9.9.5")
     parser.add_argument("-f", help="faidx indexed reference sequence file", required=True)
     #parser.add_argument("-r", help="single region (chr:pos-pos) where somatic mutations are called")
     #parser.add_argument("-l", help="list of regions (chr:pos-pos or BED), one region per line")
