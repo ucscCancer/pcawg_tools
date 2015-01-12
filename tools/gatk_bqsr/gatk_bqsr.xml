@@ -39,6 +39,7 @@ java -jar /opt/GenomeAnalysisTK.jar \
 -R reference.fasta \
 --emit_original_quals \
 -I input.bam \
+-nct \${GALAXY_SLOTS:-4} \
 -BQSR recal_data.table \
 -o output.bam
 
