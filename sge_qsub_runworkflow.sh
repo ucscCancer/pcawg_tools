@@ -17,7 +17,7 @@ INPUT=$1
 #workflow to run
 WORKFLOW=$2
 
-SUDO="" # set to "--sudo" if docker must be called with sudo
+SUDO="--sudo" # set to "--sudo" if docker must be called with sudo
 
 hostname > ${INPUT}.host
 echo "LOADING" > ${INPUT}.state

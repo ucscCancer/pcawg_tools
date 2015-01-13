@@ -18,3 +18,7 @@ gunzip dbsnp_132_b37.leftAligned.vcf.gz
 
 wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/hg19/Mills_and_1000G_gold_standard.indels.hg19.sites.vcf.gz
 wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/2.8/hg19/1000G_phase1.indels.hg19.sites.vcf.gz
+
+gzcat Mills_and_1000G_gold_standard.indels.hg19.sites.vcf.gz | perl -pe 's/^chr//' > Mills_and_1000G_gold_standard.indels.hg19.sites.fixed.vcf
+gzcat 1000G_phase1.indels.hg19.sites.vcf.gz | perl -pe 's/^chr//' > 1000G_phase1.indels.hg19.sites.vcf.fixed.vcf
+
