@@ -25,6 +25,21 @@ Build Images:
 python nebula/nebula/warpdrive.py build -o images/ tools/
 ```
 
+Fetch Prebuilt Galaxy Image:
+```
+docker pull bgruening/galaxy-stable:dev
+```
+
+Cache Docker Galaxy image:
+```
+docker export bgruening/galaxy-stable:dev > images/galaxy.tar
+```
+
+Manually instance galaxy (with PCAWG Tools loaded)
+```
+python nebula/nebula/warpdrive.py up -x tools/ -l data/ -a -f -w . -c
+```
+
 Generate jobs:
 ```
 ./scripts/build_jobs.py data/PCAWG_Data_Freeze_Train_2.0_Pilot_64.tsv jobs/
