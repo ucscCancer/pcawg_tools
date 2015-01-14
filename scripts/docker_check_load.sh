@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DOCKER_CMD="docker"
+DOCKER_CMD="docker" #change to 'sudo docker' if needed
 DOCKER_IMAGE=$1
 
 python << EOF
