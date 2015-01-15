@@ -1,0 +1,24 @@
+<tool id="irods_download" name="IRODS Download" version="1.0.0">
+    <description>download data from IRODS</description>
+    <requirements>
+        <container type="docker">irods_python</container>
+    </requirements>
+    <command interpreter="python">
+        irods_download.py $path $cred_file $outfile --dataset_id $outfile.dataset.dataset.id
+    </command>
+    <inputs>
+        <param name="path" type="text" size="70" label="IRODS Path"/>
+        <param name="cred_file" type="select" label="IRODS Zone">
+            <options from_file="irods_credentials.loc">
+                <column name="name" index="0"/>
+                <column name="value" index="1"/>
+            </options>
+        </param>
+    </inputs>
+    <outputs>
+        <data name="outfile" format="auto"/>
+    </outputs>
+    <help>
+        Download file from IRODS
+    </help>
+</tool>

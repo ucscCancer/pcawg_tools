@@ -19,6 +19,15 @@ Add to PYTHONPATH:
 export PYTHONPATH=`pwd`/nebula
 ```
 
+Download Data:
+```
+cd data && ./download.sh
+```
+
+Obtain GATK then:
+```
+cp GenomeAnalysisTK.jar tools/gatk_bqsr/
+```
 
 Build Images:
 ```
@@ -30,9 +39,16 @@ Fetch Prebuilt Galaxy Image:
 docker pull bgruening/galaxy-stable:dev
 ```
 
+Build custom Galaxy image
+```
+git clone https://github.com/bgruening/docker-galaxy-stable.git
+```
+Then inside `galaxy/Dockerfile` on the `apt-get` line change `lxc-docker` to `lxc-docker-1.3`
+
+
 Cache Docker Galaxy image:
 ```
-docker export bgruening/galaxy-stable:dev > images/galaxy.tar
+docker save bgruening/galaxy-stable:dev > images/galaxy.tar
 ```
 
 Manually instance galaxy (with PCAWG Tools loaded)
