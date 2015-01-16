@@ -33,7 +33,7 @@ def call_iinit(config):
     FNULL.close()
     #proc = subprocess.Popen(iinit, env=get_env(config), stdin=subprocess.PIPE)
     #proc.communicate(config['irods_pass'] + "\n")
-    
+
 
 def call_iget(config, src, dst):
     iget = which("iget")
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--path")
     parser.add_argument("--query")
-    
+
     parser.add_argument("config")
     parser.add_argument("outfile")
     parser.add_argument("--dataset_id", default=None)
@@ -52,13 +52,13 @@ if __name__ == "__main__":
     with open(args.config) as handle:
         txt = handle.read()
         config = yaml.load(txt)
-    
+
     call_iinit(config)
     if args.path is not None:
         call_iget(config, args.path, args.outfile)
     else:
         sess = iRODSSession(host=config['irods_host'], port=config['irods_port'], user=config['irods_user'], password=config['irods_pass'], zone=config['irods_zone'])
-        
+
         q = sess.query(Collection, DataObject)
 
         with open(args.query) as handle:
@@ -88,3 +88,5 @@ if __name__ == "__main__":
         if val is not None:
             path = os.path.join(val[Collection.name], val[DataObject.name])
             call_iget(config, path, args.outfile)
+        else:
+            raise Exception("File not found")
