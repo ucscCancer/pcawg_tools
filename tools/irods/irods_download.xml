@@ -7,7 +7,36 @@
         irods_download.py $path $cred_file $outfile --dataset_id $outfile.dataset.dataset.id
     </command>
     <inputs>
-        <param name="path" type="text" size="70" label="IRODS Path"/>
+        <conditional name="query">
+            <param name="method" type="select" label="Query Method">
+                <option value="path">Path</option>
+                <option value="filter">Filter</option>
+            </param>
+            <when value="path">
+                <param name="path" type="text" size="70" label="IRODS Path"/>
+            </when>
+            <when value="filter">
+                <repeat name="filter" title="Filter">
+                    <conditional name="method">
+                        <param name="method_type" type="select" label="Filter Type">
+                            <option value="meta">MetaData</option>
+                            <option value="collection">Collection</option>
+                            <option value="name">Name</option>
+                        </param>
+                        <when value="meta">
+                            <param name="name" type="text" label="Name"/>
+                            <param name="value" type="text" label="Value"/>
+                        </when>
+                        <when value="collection">
+                            <param name="value" type="text" label="Value"/>
+                        </when>
+                        <when value="name">
+                            <param name="value" type="text" label="Value"/>
+                        </when>
+                    </conditional>
+                </repeat>
+            </when>
+        </conditional>
         <param name="cred_file" type="select" label="IRODS Zone">
             <options from_file="irods_credentials.loc">
                 <column name="name" index="0"/>
