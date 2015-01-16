@@ -3,9 +3,10 @@
 import os
 import argparse
 import yaml
+import json
 import subprocess
 from irods.session import iRODSSession
-from irods.models import Collection, DataObject
+from irods.models import Collection, DataObject, DataObjectMeta
 from irods.exception import CollectionDoesNotExist
 
 
@@ -64,6 +65,8 @@ if __name__ == "__main__":
         with open(args.query) as handle:
             query = yaml.load(handle.read())
 
+        print query
+
         elm_map = {
             'meta' : {
                 'name' : DataObjectMeta.name,
@@ -77,16 +80,30 @@ if __name__ == "__main__":
             }
         }
 
-        for k, v in query.items():
-            args = []
-            for field_name, field in elm_map[k].items():
-                p = field == v[field_name]
-                args.append(p)
-            q = q.filter(*args)
+        for filt in query:
+            filter_args = []
+            for field_name, field in elm_map[filt['method']].items():
+                p = field == filt[field_name]
+                filter_args.append(p)
+            q = q.filter(*filter_args)
 
-        val = q.first()
+        #val = q.first() #this is broken right now
+        val = None
+        for row in q.all():
+            val = row
+            break
         if val is not None:
             path = os.path.join(val[Collection.name], val[DataObject.name])
             call_iget(config, path, args.outfile)
+            if args.dataset_id is not None:
+                json_file = open( 'galaxy.json', 'w' )
+                info = dict(
+                    type = 'dataset',
+                    name = os.path.basename(path),
+                    dataset_id = args.dataset_id
+                )
+                json_file.write( json.dumps( info ) )
+                json_file.close()
+
         else:
             raise Exception("File not found")

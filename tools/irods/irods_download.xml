@@ -4,7 +4,14 @@
         <container type="docker">irods-python</container>
     </requirements>
     <command interpreter="python">
-        irods_download.py $path $cred_file $outfile --dataset_id $outfile.dataset.dataset.id
+        irods_download.py
+#if $query.method == "path":
+--path $path
+#end if
+#if $query.method == "filter":
+--query $queryfile
+#end if
+$cred_file $outfile --dataset_id $outfile.dataset.dataset.id
     </command>
     <inputs>
         <conditional name="query">
@@ -16,7 +23,7 @@
                 <param name="path" type="text" size="70" label="IRODS Path"/>
             </when>
             <when value="filter">
-                <repeat name="filter" title="Filter">
+                <repeat name="filters" title="Filter">
                     <conditional name="method">
                         <param name="method_type" type="select" label="Filter Type">
                             <option value="meta">MetaData</option>
@@ -44,6 +51,20 @@
             </options>
         </param>
     </inputs>
+    <configfiles>
+        <configfile name="queryfile">
+#if $query.method == 'filter':
+#for $filter in $query.filters:
+-
+    method: ${filter.method.method_type}
+#if $filter.method.method_type == "meta":
+    name: $filter.method.name
+#end if
+    value: $filter.method.value
+#end for
+#end if
+        </configfile>
+    </configfiles>
     <outputs>
         <data name="outfile" format="auto"/>
     </outputs>
