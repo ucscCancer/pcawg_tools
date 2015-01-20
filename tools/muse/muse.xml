@@ -4,19 +4,19 @@
         <container type="docker">muse</container>
     </requirements>
     <command interpreter="python">
-muse.py 
---tumor-bam ${tumor} 
---tumor-bam-index ${tumor.metadata.bam_index} 
---normal-bam ${normal} 
---normal-bam-index ${normal.metadata.bam_index} 
--f $reference -w ./ 
+muse.py
+--tumor-bam ${tumor}
+--tumor-bam-index ${tumor.metadata.bam_index}
+--normal-bam ${normal}
+--normal-bam-index ${normal.metadata.bam_index}
+-f $reference -w ./
 -p ${contamination}
 #if str($dbsnp) != "None"
 -D ${dbsnp}
 #end if
 --cpus \${GALAXY_SLOTS:-4}
 -O muse.vcf
---muse ${version}
+--muse MuSEv0.9.9.5
     </command>
     <inputs>
         <param name="reference" type="data" format="bed, fasta" label="Select a reference genome"/>
@@ -24,11 +24,11 @@ muse.py
         <param name="tumor" type="data" format="bam" label="Tumor BAM file"/>
         <param name="dbsnp" type="data" format="vcf" label="dbsnp.vcf file" optional="true"/>
         <param name="contamination" type="float" value="0.05" help="normal data contamination rate" label="Contamination"/>
-        <param name="version" type="select" label="MuSE Version">
+        <!--param name="version" type="select" label="MuSE Version">
             <option value="MuSEv0.9.9.5" selected="True">MuSEv0.9.9.5</option>
             <option value="MuSEv0.9.9.4" >MuSEv0.9.9.4</option>
             <option value="MuSEv0.9.9.3" >MuSEv0.9.9.3</option>
-        </param>
+        </param-->
         <!-- param name="intervals" type="text" label="Intervals to process" help="In format 'chr1:1500-2500; chr2:2500-3500', separated by semicolons" optional="true"/ -->
         <!-- param name="intervalfile" type="data" format="txt" label="Intervals to process (.txt file)" help="'chr1:1500-2500', one entry per line" optional="true"/ -->
     </inputs>
