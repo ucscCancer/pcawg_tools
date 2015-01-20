@@ -34,7 +34,7 @@ def call_iinit(config):
     FNULL.close()
     #proc = subprocess.Popen(iinit, env=get_env(config), stdin=subprocess.PIPE)
     #proc.communicate(config['irods_pass'] + "\n")
-
+    
 
 def call_iget(config, src, dst):
     iget = which("iget")
@@ -47,6 +47,8 @@ if __name__ == "__main__":
 
     parser.add_argument("config")
     parser.add_argument("outfile")
+    parser.add_argument("--unique", action="store_true", default=False)
+    parser.add_argument("--test", action="store_true", default=False)
     parser.add_argument("--dataset_id", default=None)
 
     args = parser.parse_args()
@@ -54,8 +56,8 @@ if __name__ == "__main__":
         txt = handle.read()
         config = yaml.load(txt)
 
-    call_iinit(config)
     if args.path is not None:
+        call_iinit(config)
         call_iget(config, args.path, args.outfile)
     else:
         sess = iRODSSession(host=config['irods_host'], port=config['irods_port'], user=config['irods_user'], password=config['irods_pass'], zone=config['irods_zone'])
@@ -64,8 +66,6 @@ if __name__ == "__main__":
 
         with open(args.query) as handle:
             query = yaml.load(handle.read())
-
-        print query
 
         elm_map = {
             'meta' : {
@@ -87,23 +87,34 @@ if __name__ == "__main__":
                 filter_args.append(p)
             q = q.filter(*filter_args)
 
-        #val = q.first() #this is broken right now
+        #print q.criteria
+        #print q.first() #this is broken right now
         val = None
         for row in q.all():
-            val = row
-            break
+            if val is None:
+                val = row
+            else:
+                if args.unique:
+                    path1 = os.path.join(val[Collection.name], val[DataObject.name])
+                    path2 = os.path.join(row[Collection.name], row[DataObject.name])
+                    raise Exception("Non-unique file: %s and %s" % (path1, path2))
+
         if val is not None:
             path = os.path.join(val[Collection.name], val[DataObject.name])
-            call_iget(config, path, args.outfile)
-            if args.dataset_id is not None:
-                json_file = open( 'galaxy.json', 'w' )
-                info = dict(
-                    type = 'dataset',
-                    name = os.path.basename(path),
-                    dataset_id = args.dataset_id
-                )
-                json_file.write( json.dumps( info ) )
-                json_file.close()
+            if not args.test:
+                call_iinit(config)
+                call_iget(config, path, args.outfile)
+                if args.dataset_id is not None:
+                    json_file = open( 'galaxy.json', 'w' )
+                    info = dict(
+                        type = 'dataset',
+                        name = os.path.basename(path),
+                        dataset_id = args.dataset_id
+                    )
+                    json_file.write( json.dumps( info ) )
+                    json_file.close()
+            else:
+                print "Found", path
 
         else:
             raise Exception("File not found")
