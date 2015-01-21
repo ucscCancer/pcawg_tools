@@ -47,7 +47,7 @@ $unique
         </conditional>
 
 
-        <param name="unique" label="Require Unique Hit" checked="true" truevalue="--unique" falsevalue=""/>
+        <param name="unique" type="boolean" label="Require Unique Hit" checked="true" truevalue="--unique" falsevalue=""/>
 
         <param name="cred_file" type="select" label="IRODS Zone">
             <options from_file="irods_credentials.loc">
