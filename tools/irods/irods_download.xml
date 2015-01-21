@@ -12,6 +12,7 @@
 --query $queryfile
 #end if
 $cred_file $outfile --dataset_id $outfile.dataset.dataset.id
+$unique
     </command>
     <inputs>
         <conditional name="query">
@@ -44,6 +45,10 @@ $cred_file $outfile --dataset_id $outfile.dataset.dataset.id
                 </repeat>
             </when>
         </conditional>
+
+
+        <param name="unique" label="Require Unique Hit" checked="true" truevalue="--unique" falsevalue=""/>
+
         <param name="cred_file" type="select" label="IRODS Zone">
             <options from_file="irods_credentials.loc">
                 <column name="name" index="0"/>
