@@ -2,7 +2,7 @@ FROM ubuntu
 
 RUN    apt-get update
 RUN    apt-get install -y git libbz2-dev python-pip wget
-RUN    pip install git+git://github.com/iPlantCollaborativeOpenSource/pycommands.git
+RUN    pip install git+git://github.com/kellrott/python-irodsclient.git
 RUN    pip install pyyaml
 RUN    wget -P /opt/ ftp://ftp.renci.org/pub/irods/releases/4.0.3/irods-icommands-4.0.3-64bit.deb
 
