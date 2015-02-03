@@ -1,0 +1,13 @@
+<tool id="bwamem" name="BWA Mem" version="1.0.0">
+  <description>BWA Mem Aligner</description>
+  <requirements>
+    <container type="docker">pcap_tools</container>
+  </requirements>
+  <inputs>
+    <param format="fasta" name="refseq" type="data" label="Reference Sequence" help="" />
+    <param name="input_bam" type="data" format="bam" label="BAM File to Align"/>
+  </inputs>
+  <outputs>
+    <data format="bam" name="output_bam"/>
+  </outputs>
+</tool>
