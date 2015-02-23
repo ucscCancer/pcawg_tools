@@ -19,29 +19,29 @@ biobambam_split.py --bam_path input_bam --sample-type ${sample_type}
     <param name="input_bam" type="data" format="bam" label="Select a reference genome"/>
     <param name="tumor_id" type="text" help="Leave Empty if Normal" label="Tumor ID"/>
     <param name="normal_id" type="text" help="ID of match normal if tumor" label="Normal ID"/>
-    <param name="sample_type">
-      <param value="01">Primary tumour - solid tissue</param>
-      <param value="02">Recurrent tumour - solid tissue</param>
-      <param value="03">Primary tumour - blood derived (peripheral blood)</param>
-      <param value="04">Recurrent tumour - blood derived (bone marrow)</param>
-      <param value="05">Primary tumour - additional new primary</param>
-      <param value="06">Metastatic tumour - NOS</param>
-      <param value="07">Metastatic tumour - additional metastatic tumour</param>
-      <param value="09">Primary tumour - blood derived (bone marrow)</param>
-      <param value="10">Normal - blood derived</param>
-      <param value="11">Normal - solid tissue</param>
-      <param value="12">Normal - buccal cell</param>
-      <param value="13">Normal - EBV immortalized</param>
-      <param value="14">Normal - bone marrow</param>
-      <param value="40">Recurrent tumour - blood derived (peripheral blood)</param>
-      <param value="50">Cell line - derived from tumour</param>
-      <param value="60">Xenograft - derived from primary tumour</param>
-      <param value="61">Xenograft - derived from tumour cell line tumour</param>
+    <param name="sample_type" type="select">
+      <option value="01">01 - Primary tumour - solid tissue</option>
+      <option value="02">02 - Recurrent tumour - solid tissue</option>
+      <option value="03">03 - Primary tumour - blood derived (peripheral blood)</option>
+      <option value="04">04 - Recurrent tumour - blood derived (bone marrow)</option>
+      <option value="05">05 - Primary tumour - additional new primary</option>
+      <option value="06">06 - Metastatic tumour - NOS</option>
+      <option value="07">07 - Metastatic tumour - additional metastatic tumour</option>
+      <option value="09">09 - Primary tumour - blood derived (bone marrow)</option>
+      <option value="10">10 - Normal - blood derived</option>
+      <option value="11">11 - Normal - solid tissue</option>
+      <option value="12">12 - Normal - buccal cell</option>
+      <option value="13">13 - Normal - EBV immortalized</option>
+      <option value="14">14 - Normal - bone marrow</option>
+      <option value="40">40 - Recurrent tumour - blood derived (peripheral blood)</option>
+      <option value="50">50 - Cell line - derived from tumour</option>
+      <option value="60">60 - Xenograft - derived from primary tumour</option>
+      <option value="61">61 - Xenograft - derived from tumour cell line tumour</option>
     </param>
 
     <param name="center_name" type="text" label="Center Name"/>
 
-    <param name="platform" type="selection" label="Platform">
+    <param name="platform" type="select" label="Platform">
       <option value="CAPILLARY">CAPILLARY</option>
       <option value="LS454">LS454</option>
       <option value="ILLUMINA">ILLUMINA</option>
@@ -51,7 +51,7 @@ biobambam_split.py --bam_path input_bam --sample-type ${sample_type}
       <option value="PACBIO">PACBIO</option>
     </param>
 
-    <param name="platform_model" type="selection" label="Platform Model">
+    <param name="platform_model" type="select" label="Platform Model">
       <option value="Illumina Genome Analyzer II">Illumina Genome Analyzer II</option>
       <option value="PACBIO">PACBIO</option>
       <option value="Illumina HiSeq">Illumina HiSeq</option>

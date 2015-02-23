@@ -2,13 +2,10 @@
 
 import sys, os, re, argparse, shutil
 import dateutil.parser
-import header_utils
 import traceback
 import os
 import hashlib
 import os
-import header_utils
-import utils
 import logging
 import multiprocessing
 import subprocess
@@ -22,8 +19,6 @@ from xml.etree import ElementTree
 default_logger = logging.getLogger()
 default_logger.setLevel(logging.DEBUG)
 default_logger.addHandler(logging.StreamHandler())
-
-FORCE_RUN=True
 
 FORCE_RUN=True
 
@@ -285,20 +280,14 @@ def lane_level_bam_from_fastq(RG, workdir, logger=default_logger):
 
     return True, bam_filename
 
-def process_rg(analysis_id, rg_dict, header, work_dir, output_dir, logger=default_logger):
-
+def process_rg(rg_dict, work_dir, output_dir, logger=default_logger):
     valid_bam, lane_level_bam = lane_level_bam_from_fastq(rg_dict, work_dir)
     if not valid_bam:
         return False, None
-
-    final_file = header_utils.rehead(output_dir, lane_level_bam, header, rg_dict["ID"], analysis_id)
-    md5_file = open(final_file + '.md5', "w")
-    md5_file.write(utils.calc_md5sum(final_file))
-    md5_file.close()
-    return True, final_file
+    return True, lane_level_bam
 
 
-def gen_unaligned_bam(bam_filename, analysis_id, metadata, specimen_dict, work_dir, output_dir, num_processes=4, logger=default_logger ):
+def gen_unaligned_bam(bam_filename, metadata, work_dir, output_dir, num_processes=4, logger=default_logger ):
     """
     The bulk of the work, calls splitting, generates new headers, generates initial
     unaligned BAM, reheaders with new headers
@@ -325,22 +314,21 @@ def gen_unaligned_bam(bam_filename, analysis_id, metadata, specimen_dict, work_d
         return 1
 
 
-    if header_utils.is_valid_analysis(metadata) or FORCE_RUN:
+    if FORCE_RUN or is_valid_analysis(metadata):
         pool = multiprocessing.Pool(processes=num_processes)
         results = []
         for line in rg_file:
-            rg_dict = header_utils.get_read_group_info(line)
-            header = header_utils.create_header(output_dir, metadata, rg_dict, specimen_dict)
-            r = pool.apply_async(process_rg, (analysis_id, rg_dict, header, work_dir, output_dir))
+            rg_dict = get_read_group_info(line)
+            #header = create_header(output_dir, metadata, rg_dict, specimen_dict)
+            r = pool.apply_async(process_rg, (rg_dict, work_dir, output_dir))
             results.append(r)
-
         rg_file.close()
 
         out = []
         for r in results:
             out.append(r.get())
 
-        utils.clean_up_dir(output_dir)
+        clean_up_dir(output_dir)
         if not all( a[0] for a in out ):
             #one of the read group bamtofastq failed
             return 1
@@ -352,7 +340,6 @@ def gen_unaligned_bam(bam_filename, analysis_id, metadata, specimen_dict, work_d
         print "Invalid header/metadata for BAM" % bam_filename
         return 1
     return 0
-
 
 
 def clean_up_dir(dirname):
@@ -388,34 +375,13 @@ def calc_md5sum(bam_filename):
 
     return md5worker.hexdigest()
 
-
-basedir = os.path.abspath(os.path.dirname( __file__ ))
-
-def parse_specimen_dict(spec_filename, header_exists=True):
-    """Parse the mapping between TCGA sample codes and ICGC specimen vocab"""
-
-    spec_file = open(spec_filename, "r")
-    specimen_dict = dict()
-
-    if header_exists:
-        header = spec_file.readline()
-
-    for line in spec_file:
-        line = line.rstrip()
-        line = line.split("\t")
-
-        if(not(line[0] == "")):
-            specimen_dict[line[0]] = (line[1], line[2])
-
-    spec_file.close()
-    return specimen_dict
-
 if __name__ == '__main__':
+    basedir = os.path.abspath(os.path.dirname( __file__ ))
 
     parser = argparse.ArgumentParser(prog='biobambam_split.py', description='Create unaligned BAM files')
     parser.add_argument('--bam_path', type=str, help='path/to/tcga/data/labeled_by_analysis_id', required=True)
-    parser.add_argument('--normal_id', type=str, help='UUID for normal analysis (analysis_id)', default=None)
-    parser.add_argument('--tumor_id', type=str, help='Comma separated list of tumor analysis UUIDs (analysid_id(s))', default=None)
+    #parser.add_argument('--normal_id', type=str, help='UUID for normal analysis (analysis_id)', default=None)
+    #parser.add_argument('--tumor_id', type=str, help='Comma separated list of tumor analysis UUIDs (analysid_id(s))', default=None)
     parser.add_argument('--work_dir', type=str, help='path/to/output/directory', default=None)
     parser.add_argument('--output_dir', type=str, help='path/to/output/directory', required=True)
 
@@ -424,11 +390,14 @@ if __name__ == '__main__':
     if args.work_dir is None:
         args.work_dir = args.output_dir
     exit_code = 0
-    output_dir = utils.make_new_dir(args.output_dir)
-    work_dir = utils.make_new_dir(args.work_dir)
+    output_dir = make_new_dir(args.output_dir)
+    work_dir = make_new_dir(args.work_dir)
     try:
+        exit_code = gen_unaligned_bam(args.bam_path, metadata={}, work_dir=work_dir, output_dir=output_dir)
+
+    	"""
         if args.tumor_id is None and args.normal_id is not None:
-            metadata = header_utils.parse_cghub_metadata(args.normal_id)
+            metadata = parse_cghub_metadata(args.normal_id)
             metadata['use_cntl'] = 'N/A'
             exit_code = bam_utils.gen_unaligned_bam(args.bam_path, args.normal_id, metadata, specimen_dict, work_dir, output_dir)
         elif args.tumor_id is not None and args.normal_id is not None:
@@ -438,6 +407,7 @@ if __name__ == '__main__':
         else:
             print "Please define --normal_id or (--normal_id and --tumor_id)"
             sys.exit(1)
+        """
     except:
         print "PCAP SPLIT Failure!!!"
         traceback.print_exc(file=sys.stderr)

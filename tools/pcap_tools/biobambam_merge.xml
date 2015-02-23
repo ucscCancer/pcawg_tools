@@ -1,0 +1,18 @@
+<tool id="BioBamBamMerge" name="BioBamBam Merge" version="0.0.1">
+    <description>merge BAM files</description>
+    <requirements>
+        <container type="docker">pcap_tools</container>
+    </requirements>
+    <command interpreter="python">
+
+    </command>
+    <inputs>
+        <param name="normal" type="data" format="bam" label="Normal BAM file"/>
+    </inputs>
+    <outputs>
+        <data format="bam" name="outbam" label="MergedBamFile" from_work_dir="out.bam"/>
+    </outputs>
+    <help>
+
+  </help>
+</tool>

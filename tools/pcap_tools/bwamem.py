@@ -42,13 +42,6 @@ def main(args):
 	
 	work_dir = tempfile.mkdtemp(dir=args.workdir, prefix="bwa_mem_")
 
-	#need this for later, for the metrics/stats inclusion in the metadata, it may also behoove us to put this as the rgline
-	#header_cmd = "samtools view -H %s | perl -nae 'next unless /^\@RG/; s/\tPI:\s*\t/\t/; s/\tPI:\s*\z/\n/; s/\t/\\\t/g; print' > %s.header.txt" % (args.inbam,args.inbam)
-	#don't do the \t to \\\t translation, not needed at this point messes up the verification step
-	header_cmd = "samtools view -H %s | perl -nae 'next unless /^\@RG/; s/\tPI:\s*\t/\t/; s/\tPI:\s*\z/\n/; print' > %s.header.txt" % (args.inbam,args.inbam)
-
-	run_command(header_cmd)
-
 	template = "bamtofastq T=${tmpdir}/bamtofastq_tmp S=${tmpdir}/single.fq O=${tmpdir}/unmatched_1.fq O2=${tmpdir}/unmatched_2.fq exclude=QCFAIL,SECONDARY,SUPPLEMENTARY collate=1 filename=${inbam} | \
 ${filter_cmd} 2> ${inbam}.count.txt | \
 bwa mem -t 8 -p -T 0 -R '${rgline}' ${refseq} - | \
@@ -66,11 +59,6 @@ bamsort inputformat=sam level=1 inputthreads=2 outputthreads=2 calmdnm=1 calmdnm
 	})
 
 	run_command(cmd)
-
-        #not sure I need to more these, since we'll just read them from the input dir	
-        #shutil.move( "%s/%s.header.txt" % (work_dir,args.inbam), "%s.header.txt" % args.outbam)
-        #shutil.move( "%s/%s.count.txt" % (work_dir,args.inbam), "%s.count.txt" % args.outbam)
-        #shutil.move( "%s/%s.bamsort_info.txt" % (work_dir,args.inbam), "%s.bamsort_info.txt" % args.outbam)
 
 	shutil.move( "%s/out.bam" % (work_dir), args.outbam)
 	shutil.rmtree(work_dir)
