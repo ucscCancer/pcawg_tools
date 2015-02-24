@@ -1,0 +1,71 @@
+<tool id="biobambam_split" name="BioBamBam Split" version="1.0.0">
+  <description>Bam File Splitter</description>
+  <requirements>
+    <container type="docker">pcap_tools</container>
+  </requirements>
+  <command interpreter="python">
+biobambam_split.py --bam_path input_bam --sample-type ${sample_type}
+#if len(str($tumor_id)):
+--tumor-id ${tumor_id}
+#end if
+#if len(str($normal_id)):
+--normal-id ${normal_id}
+#end if
+#if len(str($center_name)):
+--center-name "$center_name"
+#end if
+  </command>
+  <inputs>
+    <param name="input_bam" type="data" format="bam" label="Select a reference genome"/>
+    <param name="tumor_id" type="text" help="Leave Empty if Normal" label="Tumor ID"/>
+    <param name="normal_id" type="text" help="ID of match normal if tumor" label="Normal ID"/>
+    <param name="sample_type">
+      <param value="01">Primary tumour - solid tissue</param>
+      <param value="02">Recurrent tumour - solid tissue</param>
+      <param value="03">Primary tumour - blood derived (peripheral blood)</param>
+      <param value="04">Recurrent tumour - blood derived (bone marrow)</param>
+      <param value="05">Primary tumour - additional new primary</param>
+      <param value="06">Metastatic tumour - NOS</param>
+      <param value="07">Metastatic tumour - additional metastatic tumour</param>
+      <param value="09">Primary tumour - blood derived (bone marrow)</param>
+      <param value="10">Normal - blood derived</param>
+      <param value="11">Normal - solid tissue</param>
+      <param value="12">Normal - buccal cell</param>
+      <param value="13">Normal - EBV immortalized</param>
+      <param value="14">Normal - bone marrow</param>
+      <param value="40">Recurrent tumour - blood derived (peripheral blood)</param>
+      <param value="50">Cell line - derived from tumour</param>
+      <param value="60">Xenograft - derived from primary tumour</param>
+      <param value="61">Xenograft - derived from tumour cell line tumour</param>
+    </param>
+
+    <param name="center_name" type="text" label="Center Name"/>
+
+    <param name="platform" type="selection" label="Platform">
+      <option value="CAPILLARY">CAPILLARY</option>
+      <option value="LS454">LS454</option>
+      <option value="ILLUMINA">ILLUMINA</option>
+      <option value="SOLID">SOLID</option>
+      <option value="HELICOS">HELICOS</option>
+      <option value="IONTORRENT">IONTORRENT</option>
+      <option value="PACBIO">PACBIO</option>
+    </param>
+
+    <param name="platform_model" type="selection" label="Platform Model">
+      <option value="Illumina Genome Analyzer II">Illumina Genome Analyzer II</option>
+      <option value="PACBIO">PACBIO</option>
+      <option value="Illumina HiSeq">Illumina HiSeq</option>
+      <option value="Illumina HiSeq 2000">Illumina HiSeq 2000</option>
+      <option value="Illumina HiSeq 2500">Illumina HiSeq 2500</option>
+    </param>
+
+  </inputs>
+  <outputs>
+    <collection name="split_output" type="list" label="ReadGroup BAM set">
+      <discover_datasets pattern="__name_and_ext__" directory="outputs"/>
+    </collection>
+  </outputs>
+<help>
+
+</help>
+</tool>
