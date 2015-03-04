@@ -1,0 +1,59 @@
+<tool id="tcga_reheader" name="TCGA ReHeader" version="0.1.0">
+    <stdio>
+        <exit_code range="1:" />
+    </stdio>
+    <requirements>
+    </requirements>
+    <command><![CDATA[
+        TODO: Fill in command template.
+    ]]></command>
+    <inputs>
+ <param name="tumor_id" type="text" help="Leave Empty if Normal" label="Tumor ID"/>
+    <param name="normal_id" type="text" help="ID of match normal if tumor" label="Normal ID"/>
+    <param name="sample_type" type="select">
+      <option value="01">01 - Primary tumour - solid tissue</option>
+      <option value="02">02 - Recurrent tumour - solid tissue</option>
+      <option value="03">03 - Primary tumour - blood derived (peripheral blood)</option>
+      <option value="04">04 - Recurrent tumour - blood derived (bone marrow)</option>
+      <option value="05">05 - Primary tumour - additional new primary</option>
+      <option value="06">06 - Metastatic tumour - NOS</option>
+      <option value="07">07 - Metastatic tumour - additional metastatic tumour</option>
+      <option value="09">09 - Primary tumour - blood derived (bone marrow)</option>
+      <option value="10">10 - Normal - blood derived</option>
+      <option value="11">11 - Normal - solid tissue</option>
+      <option value="12">12 - Normal - buccal cell</option>
+      <option value="13">13 - Normal - EBV immortalized</option>
+      <option value="14">14 - Normal - bone marrow</option>
+      <option value="40">40 - Recurrent tumour - blood derived (peripheral blood)</option>
+      <option value="50">50 - Cell line - derived from tumour</option>
+      <option value="60">60 - Xenograft - derived from primary tumour</option>
+      <option value="61">61 - Xenograft - derived from tumour cell line tumour</option>
+    </param>
+
+    <param name="center_name" type="text" label="Center Name"/>
+
+    <param name="platform" type="select" label="Platform">
+      <option value="CAPILLARY">CAPILLARY</option>
+      <option value="LS454">LS454</option>
+      <option value="ILLUMINA">ILLUMINA</option>
+      <option value="SOLID">SOLID</option>
+      <option value="HELICOS">HELICOS</option>
+      <option value="IONTORRENT">IONTORRENT</option>
+      <option value="PACBIO">PACBIO</option>
+    </param>
+
+    <param name="platform_model" type="select" label="Platform Model">
+      <option value="Illumina Genome Analyzer II">Illumina Genome Analyzer II</option>
+      <option value="PACBIO">PACBIO</option>
+      <option value="Illumina HiSeq">Illumina HiSeq</option>
+      <option value="Illumina HiSeq 2000">Illumina HiSeq 2000</option>
+      <option value="Illumina HiSeq 2500">Illumina HiSeq 2500</option>
+    </param>
+
+    </inputs>
+    <outputs>
+    </outputs>
+    <help><![CDATA[
+        TODO: Fill in help.
+    ]]></help>
+</tool>
