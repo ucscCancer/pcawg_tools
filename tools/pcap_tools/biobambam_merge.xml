@@ -33,7 +33,7 @@ I=${input}
         <data format="txt" name="metrics_file" label="MetricsFile" from_work_dir="out.metrics"/>
     </outputs>
     <stdio>
-      <exit_code range="1:" />
+      <exit_code range="1:"/>
     </stdio>
     <help>
 
