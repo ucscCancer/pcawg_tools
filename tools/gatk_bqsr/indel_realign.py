@@ -134,12 +134,18 @@ def run_indel_realign(args):
         "O=%s" % (ref_dict)
     ])
 
+    known_vcfs = []
+    for i, v in enumerate(args['known']):
+        lpath = os.path.join(workdir, "known.%s.vcf" % (i))
+        os.symlink(os.path.abspath(v), lpath)
+        known_vcfs.append(lpath)
+
     cmd, intervals = call_scan(java=args['java'],
         gatk=args['gatk_jar'],
         ncpus=args['ncpus'],
         ref_seq=ref_seq,
         input_bam=input_bam, output_base=os.path.join(workdir, "output.file"),
-        known_vcfs=args['known'])
+        known_vcfs=known_vcfs)
     if cmd_caller(cmd) != 0:
         raise Exception("Program fail")
 
@@ -149,7 +155,7 @@ def run_indel_realign(args):
         block_size=args['b'],
         input_bam=input_bam,
         output_base=os.path.join(workdir, "output.file"),
-        known_vcfs=args['known'],
+        known_vcfs=known_vcfs,
         target_intervals=intervals
         )
     )
