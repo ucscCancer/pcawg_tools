@@ -18,7 +18,7 @@ python3 $PIPETTE_SERVER_DIR/pipetteSynchronousRunner.py $COMMDIR $OUTDIR $PIPELI
 
 find $OUTDIR -name pipette.module.usage.txt  | xargs  sh -c 'for f; do cat "$f" ; done' true |sort | uniq > total.summary.usage.txt
 
-gunzip -c ${OUTDIR}/links_for_gnos/tabix_snowman_germline_indel/PCAWG-test-01.broad-snowman.DATECODE.germline.indel.vcf.gz > snowman.germline.indel.vcf
-gunzip -c ${OUTDIR}/links_for_gnos/tabix_snowman_germline_sv/PCAWG-test-01.broad-snowman.DATECODE.germline.sv.vcf.gz > snowman.germline.sv.vcf
-gunzip -c ${OUTDIR}/links_for_gnos/tabix_snowman_somatic_indel/PCAWG-test-01.broad-snowman.DATECODE.somatic.indel.vcf.gz > snowman.somatic.indel.vcf
-gunzip -c ${OUTDIR}/links_for_gnos/tabix_snowman_somatic_sv/PCAWG-test-01.broad-snowman.DATECODE.somatic.sv.vcf.gz > snowman.somatic.sv.vcf
+gunzip -c ${OUTDIR}/links_for_gnos/tabix_snowman_germline_indel/${INDIVIDUAL_ID}.broad-snowman.DATECODE.germline.indel.vcf.gz > snowman.germline.indel.vcf
+gunzip -c ${OUTDIR}/links_for_gnos/tabix_snowman_germline_sv/${INDIVIDUAL_ID}.broad-snowman.DATECODE.germline.sv.vcf.gz > snowman.germline.sv.vcf
+gunzip -c ${OUTDIR}/links_for_gnos/tabix_snowman_somatic_indel/${INDIVIDUAL_ID}.broad-snowman.DATECODE.somatic.indel.vcf.gz > snowman.somatic.indel.vcf
+gunzip -c ${OUTDIR}/links_for_gnos/tabix_snowman_somatic_sv/${INDIVIDUAL_ID}.broad-snowman.DATECODE.somatic.sv.vcf.gz > snowman.somatic.sv.vcf
