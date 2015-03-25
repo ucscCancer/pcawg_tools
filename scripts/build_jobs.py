@@ -52,7 +52,7 @@ with open(sys.argv[1]) as handle:
             out = {
                 "parameters": {
                     "tumor_bam_download": {
-                        "cred_file": "/tool_data/files/bazaar.yaml", 
+                        "cred_file": "/tool_data/files/sdsc.yaml", 
                         "query|method" : "filter",
                         "query|filters_0|method|method_type" : "meta",
                         "query|filters_0|method|name" : "ANALYSIS_ID",
@@ -62,8 +62,7 @@ with open(sys.argv[1]) as handle:
                         "query|filters_1|method|value" : "bam"
                     },
                     "normal_bam_download": {
-                        "cred_file": "/tool_data/files/bazaar.yaml", 
-                        "cred_file": "/tool_data/files/bazaar.yaml", 
+                        "cred_file": "/tool_data/files/sdsc.yaml", 
                         "query|method" : "filter",
                         "query|filters_0|method|method_type" : "meta",
                         "query|filters_0|method|name" : "ANALYSIS_ID",
