@@ -9,7 +9,7 @@
 NEBULA=`pwd`/nebula/
 
 #The docker tag for the Galaxy docker image
-GALAXY_TAG=galaxy
+GALAXY_TAG="bgruening/galaxy-stable:dev"
 
 #input JSON block
 INPUT=$1
@@ -18,6 +18,7 @@ INPUT=$1
 WORKFLOW=$2
 
 SUDO="--sudo" # set to "--sudo" if docker must be called with sudo
+DOC_STORE=$3
 
 hostname > ${INPUT}.host
 echo "LOADING" > ${INPUT}.state
@@ -31,8 +32,9 @@ echo "RUNNING" > ${INPUT}.state
 $NEBULA/scripts/run_galaxy_workflow.py \
 -g $GALAXY_TAG \
 -w ${WORKFLOW} \
--d tool_data/ -t tools/ $SUDO \
+-t tools/ $SUDO \
 $INPUT \
+-b $DOC_STORE \
 -td tool_data/ -d data/ --config run_config.yaml 2> ${INPUT}.err > ${INPUT}.out
 
 echo "DONE" > ${INPUT}.state
