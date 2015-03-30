@@ -25,6 +25,8 @@
 --out output_1.bam
 --out output_2.bam
 #end if
+--parallel-realign
+--mem 12
     </command>
     <inputs>
         <conditional name="input">
