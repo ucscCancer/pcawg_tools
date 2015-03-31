@@ -5,6 +5,8 @@ import pysam
 import os
 import logging
 import subprocess
+from datetime import date
+from urlparse import urlparse, urlunparse
 
 """This script runs SomaticSniper
 Required Option:
@@ -54,15 +56,22 @@ def sniper_argparser():
  
     group = parser.add_argument_group('wrapper specific options')
     group.add_argument('--workdir', default='/tmp/', help='Working directory of the wrapper')
-    group.add_argument('--tumor-uuid', dest='tumor_uuid', help='Tumor CGHub analysis id')
-    group.add_argument('--normal-uuid', dest='normal_uuid', help='Normal CGHub analysis id')
+    group.add_argument('--reference-id', dest='reference_id', help='TCGA name of the reference', choices=['hg18', 'hg19', 'GRCh37', 'GRCh37-lite', '36', '36.1', '37'])
+    group.add_argument('--tumor-uuid', dest='tumor_uuid', help='Tumor Sample uuid')
+    group.add_argument('--tumor-barcode', dest='tumor_barcode', help='TCGA Tumor Sample barcode')
+    group.add_argument('--tumor-accession', dest='tumor_accession', help='Tumor CGHub analysis id')
+    group.add_argument('--normal-uuid', dest='normal_uuid', help='Normal Sample uuid')
+    group.add_argument('--normal-barcode', dest='normal_barcode', help='TCGA Normal Sample barcode')
+    group.add_argument('--normal-accession', dest='normal_accession', help='Normal CGHub analysis id')
     group.add_argument('--sniper-exe', dest='sniper_exe', default='bam-somaticsniper', help='Normal CGHub analysis id')
     return parser
 
 def create_sniper_opts(namespace_dict):
     args = []
     flag_opts = set(('L','G','p','J'))
-    wrapper_arguments = set(('f', 'tumor_bam', 'normal_bam', 'output', 'workdir', 'tumor_uuid', 'normal_uuid', 'sniper_exe'))
+    wrapper_arguments = set(('f', 'tumor_bam', 'normal_bam', 'output', 'workdir', 'sniper_exe', 'reference_id',
+        'tumor_uuid', 'tumor_barcode', 'tumor_accession',
+        'normal_uuid', 'normal_barcode', 'normal_accession'))
     for option, value in namespace_dict.items():
         if option in wrapper_arguments:
             continue
@@ -105,9 +114,27 @@ def sample_from_bam(bam_file):
     assert(len(samples) == 1)
     return samples.pop()
 
-def reheader_vcf(original_vcf_file, new_vcf_file):
+def reheader_vcf(options, original_vcf_file, new_vcf_file):
     #need to add fields for the samples to the VCF header? as well as other info we add in Genome::Model::Tools::Vcf::Convert::Base.pm
+    outfile = open(new_vcf_file, 'w')
+    outfile.write("##fileformat=VCFv4.1\n")
+    outfile.write("##fileDate=" + str(date.today().strftime("%Y%m%d")) + "\n")
+    outfile.write("##tcgaversion=1.1\n")
+    outfile.write(reference_header_line(options['reference_id'], options['f']))
     pass
+
+def reference_header_line(reference_name, reference_path):
+    reference_url = None
+    reference_parse_result = urlparse(reference_path)
+    if(reference_parse_result.scheme == ''):
+        #assuming we've been given a file path
+        reference_url = urlunparse(tuple(["file"]) + reference_parse_result[1:])
+    else:
+        reference_url = reference_path #could just unparse this, but that might reconstruct the string oddly
+
+    header_line = "##reference=<ID=" + reference_name + ',Source=' + reference_url + ">\n"
+    return header_line
+
 
 def execute(options, ref, tumor, normal, temp_output_file):
     cmd = create_sniper_cmdline(options, ref, tumor, normal, temp_output_file)
@@ -133,6 +160,6 @@ if __name__ == "__main__":
     temp_output_file = os.path.join(args.workdir, "raw_output.vcf")
     
     execute(vars(args), workspace_ref, workspace_tumor, workspace_normal, temp_output_file)
-    reheader_vcf(temp_output_file, args.output)
+    reheader_vcf(vars(args), temp_output_file, args.output)
 
 
