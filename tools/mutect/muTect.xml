@@ -17,6 +17,9 @@
 #if str($contamination.input) == "value_file":
 --fraction_contamination-file $contamination.input_file
 #end if
+--tumor_lod ${tumor_lod}
+--initial_tumor_lod ${initial_tumor_lod}
+
 --input_file:normal $normal
 --input_file:index:normal $normal.metadata.bam_index
 --input_file:tumor $tumor
@@ -49,6 +52,8 @@
                 <param name="input_file" type="data" format="txt" label="Contamination Value File"/>
             </when>
         </conditional>
+        <param name="tumor_lod" type="float" label="Tumor LOD" help="LOD threshold for calling tumor variant" value="6.3"/>
+        <param name="initial_tumor_lod" type="float" label="Tumor LOD" help="Initial LOD threshold for calling tumor variant" value="4.0"/>
     </inputs>
 
     <outputs>
