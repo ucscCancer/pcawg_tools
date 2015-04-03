@@ -134,11 +134,23 @@ def get_bam_seq(inputBamFile):
 	return seqs
 
 
-# def getMeanInsertSize(bamFile, tempDir):
-# 	samFile = tempDir+"/sam"
-# 	histogramFile = tempDir+"/histogram"
-# 	outputFile = tempDir+"/output"
-# 	cmd = "samtools view -h %s -o %s" % (bamFile, samFile)
+def getMeanInsertSize(bamFile):
+ 	cmd = "samtools view -f66 %s | head -n 1000000" % (bamFile)
+	process = subprocess.Popen(args=cmd, shell=True, stdout=subprocess.PIPE)
+	b_sum = 0L
+	b_count = 0L
+	while True:
+		line = process.stdout.readline()
+		if not line:
+			break
+		tmp = line.split("\t")
+		b_sum += abs(long(tmp[8]))
+		b_count +=1
+	process.wait()
+	mean = b_sum / b_count
+	print "Using insert size: %d" % (mean) 
+	return mean
+
 # 	execute(cmd, )
 # 	cmd = "picard-tools CollectInsertSizeMetrics H=%s O=%s I=%s" % (histogramFile, outputFile, samFile)
 # 	execute(cmd)
@@ -208,10 +220,10 @@ def __main__():
 
 	try:
 		inputFastaFile, inputBamFile = indexBam(args.workdir, args.inputFastaFile, args.inputBamFile)
-		# if args.insert_size==None:
-		# 	meanInsertSize = int(getMeanInsertSize(args.inputBamFile, tempDir))
-		# else:
-		meanInsertSize=args.insert_size
+		if args.insert_size==None:
+		 	meanInsertSize = getMeanInsertSize(args.inputBamFile)
+		else:
+			meanInsertSize=args.insert_size
 		configFile = config(inputBamFile, meanInsertSize, args.sampleTag, tempDir)
 		if args.procs == 1:
 			cmd, pindelTempDir = pindel(inputFastaFile, configFile, args, tempDir)

@@ -11,7 +11,9 @@
 		-r $inputReferenceFile
 		-b $inputBamFile
 		-bi $inputBamFile.metadata.bam_index
-		-s $insertSize
+#if $defineInsertSize.manual_define == "yes":
+		-s $defineInsertSize.insertSize
+#end if
 		<!-- -o1 $outputRaw -->
 		-o2 $outputVcfFile
 		-t $sampleTag
@@ -108,7 +110,15 @@
 		<!-- required -->
 		<param format="fasta" name="inputReferenceFile" type="data" label="reference file" help="" />
 		<param format="bam" name="inputBamFile" type="data" label="bam file" help="" />
-		<param name="insertSize" type="integer" label="Insert size" help="insert size of the reads" value="" />
+		<conditional name="defineInsertSize">
+			<param name="manual_define" type="select" label="Manually Define Insert Size">
+				<option value="yes">yes</option>
+				<option value="no" selected="True">no</option>
+			</param>
+			<when value="yes">
+				<param name="insertSize" type="integer" label="Insert size" help="insert size of the reads" value="" />
+			</when>
+		</conditional>
 		<param name="sampleTag" type="text" label="Tag" help="tag for this sample" value="sample" />
 
 		<!-- optional -->
