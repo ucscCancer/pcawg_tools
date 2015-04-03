@@ -124,9 +124,28 @@ def reheader_vcf(options, original_vcf_file, new_vcf_file):
     outfile = open(new_vcf_file, 'w')
     outfile.write("##fileformat=VCFv4.1\n")
     outfile.write("##fileDate=" + str(date.today().strftime("%Y%m%d")) + "\n")
-    outfile.write("##tcgaversion=1.1\n")
+    outfile.write("##tcgaversion=1.1.1\n")
     outfile.write(reference_header_line(options['reference_id'], options['f']))
-    pass
+    outfile.write("##phasing=none\n")
+    outfile.write('##center="' + options['center'] + "\"\n")
+    outfile.write(vcfprocesslog_header_line(options))
+
+    original = open(original_vcf_file, 'r')
+    for line in original:
+        if line.startswith("##"):
+            if line.startswith("##FORMAT"):
+                outfile.write(line)
+        else:
+            outfile.write(line)
+    outfile.close()
+
+def vcfprocesslog_header_line(options):
+    input_vcf = "InputVCF=<.>"  #no VCF is put into this program so empty
+    source = "InputVCFSource=<bam-somaticsniper>"
+    version = "InputVCFVer=<1.0.4>" #Sniper version, could be different if exe specified differently
+    param = 'InputVCFParam=<"' + create_sniper_opts(options) + '">'
+    anno = "InputVCFgeneAnno=<.>"
+    return "##vcfProcessLog=<" + ",".join([input_vcf, source, version, param, anno]) + ">\n"
 
 def reference_header_line(reference_name, reference_path):
     reference_url = None
@@ -139,7 +158,6 @@ def reference_header_line(reference_name, reference_path):
 
     header_line = "##reference=<ID=" + reference_name + ',Source=' + reference_url + ">\n"
     return header_line
-
 
 def execute(options, ref, tumor, normal, temp_output_file):
     cmd = create_sniper_cmdline(options, ref, tumor, normal, temp_output_file)
@@ -166,5 +184,4 @@ if __name__ == "__main__":
     
     execute(vars(args), workspace_ref, workspace_tumor, workspace_normal, temp_output_file)
     reheader_vcf(vars(args), temp_output_file, args.output)
-
 
