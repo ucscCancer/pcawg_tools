@@ -3,5 +3,5 @@ smp:
     - [pindel, 8]
     - [muTect, 8]
     - [delly, 4]
-    - [gatk_bqsr, 8]
-    - [gatk_indel, 8] 
+    - [gatk_bqsr, 12]
+    - [gatk_indel, 12] 
