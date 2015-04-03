@@ -63,15 +63,20 @@ def sniper_argparser():
     group.add_argument('--normal-uuid', dest='normal_uuid', help='Normal Sample uuid')
     group.add_argument('--normal-barcode', dest='normal_barcode', help='TCGA Normal Sample barcode')
     group.add_argument('--normal-accession', dest='normal_accession', help='Normal CGHub analysis id')
+    group.add_argument('--center', dest='center', help='Center name')
     group.add_argument('--sniper-exe', dest='sniper_exe', default='bam-somaticsniper', help='Normal CGHub analysis id')
     return parser
+
+def wrapper_specific_arguments():
+    return set(('f', 'tumor_bam', 'normal_bam', 'output', 'workdir', 'sniper_exe', 'reference_id', 'center',
+        'tumor_uuid', 'tumor_barcode', 'tumor_accession',
+        'normal_uuid', 'normal_barcode', 'normal_accession'))
 
 def create_sniper_opts(namespace_dict):
     args = []
     flag_opts = set(('L','G','p','J'))
-    wrapper_arguments = set(('f', 'tumor_bam', 'normal_bam', 'output', 'workdir', 'sniper_exe', 'reference_id',
-        'tumor_uuid', 'tumor_barcode', 'tumor_accession',
-        'normal_uuid', 'normal_barcode', 'normal_accession'))
+    wrapper_arguments = wrapper_specific_arguments()
+    
     for option, value in namespace_dict.items():
         if option in wrapper_arguments:
             continue
