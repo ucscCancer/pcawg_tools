@@ -62,8 +62,8 @@ ${JAVA}
 ${COSMIC_LINE}
 ${DBSNP_LINE}
 ${CONTAMINATION_LINE}
---tumor_lod ${tumor_lod}
---initial_tumor_lod ${initial_tumor_lod}
+--tumor_lod ${TUMOR_LOD}
+--initial_tumor_lod ${INITIAL_TUMOR__LOD}
 --coverage_file ${OUTPUT_BASE}.${BLOCK_NUM}.coverage
 --vcf ${OUTPUT_BASE}.${BLOCK_NUM}.vcf
 """.replace("\n", " "))
@@ -88,7 +88,9 @@ ${CONTAMINATION_LINE}
                 OUTPUT_BASE=output_base,
                 COSMIC_LINE=cosmic_line,
                 DBSNP_LINE=dbsnp_line,
-                CONTAMINATION_LINE=contamination_line
+                CONTAMINATION_LINE=contamination_line,
+                TUMOR_LOD=tumor_lod,
+                INITIAL_TUMOR__LOD=initial_tumor_lod
         )
         yield cmd, "%s.%s" % (output_base, i)
 
