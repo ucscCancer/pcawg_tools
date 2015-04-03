@@ -5,6 +5,7 @@ import pysam
 import os
 import logging
 import subprocess
+import os.path
 from datetime import date
 from urlparse import urlparse, urlunparse
 
@@ -60,17 +61,21 @@ def sniper_argparser():
     group.add_argument('--tumor-uuid', dest='tumor_uuid', help='Tumor Sample uuid')
     group.add_argument('--tumor-barcode', dest='tumor_barcode', help='TCGA Tumor Sample barcode')
     group.add_argument('--tumor-accession', dest='tumor_accession', help='Tumor CGHub analysis id')
+    group.add_argument('--tumor-platform', dest='tumor_platform', help='Tumor sequencing platform')
     group.add_argument('--normal-uuid', dest='normal_uuid', help='Normal Sample uuid')
     group.add_argument('--normal-barcode', dest='normal_barcode', help='TCGA Normal Sample barcode')
     group.add_argument('--normal-accession', dest='normal_accession', help='Normal CGHub analysis id')
+    group.add_argument('--normal-platform', dest='normal_platform', help='Normal sequencing platform')
+    group.add_argument('--individual', dest='individual', help='Individual barcode being analyzed')
     group.add_argument('--center', dest='center', help='Center name')
     group.add_argument('--sniper-exe', dest='sniper_exe', default='bam-somaticsniper', help='Normal CGHub analysis id')
     return parser
 
 def wrapper_specific_arguments():
     return set(('f', 'tumor_bam', 'normal_bam', 'output', 'workdir', 'sniper_exe', 'reference_id', 'center',
-        'tumor_uuid', 'tumor_barcode', 'tumor_accession',
-        'normal_uuid', 'normal_barcode', 'normal_accession'))
+        'tumor_uuid', 'tumor_barcode', 'tumor_accession', 'tumor_platform',
+        'normal_uuid', 'normal_barcode', 'normal_accession', 'normal_platform',
+        'individual'))
 
 def create_sniper_opts(namespace_dict):
     args = []
@@ -128,6 +133,22 @@ def reheader_vcf(options, original_vcf_file, new_vcf_file):
     outfile.write(reference_header_line(options['reference_id'], options['f']))
     outfile.write("##phasing=none\n")
     outfile.write('##center="' + options['center'] + "\"\n")
+    outfile.write(sample_header_line(
+        options['t'],
+        options['tumor_uuid'],
+        options['tumor_barcode'],
+        options['individual'],
+        options['tumor_bam'],
+        options['tumor_platform'],
+        options['tumor_accession'],))
+    outfile.write(sample_header_line(
+        options['n'],
+        options['normal_uuid'],
+        options['normal_barcode'],
+        options['individual'],
+        options['normal_bam'],
+        options['normal_platform'],
+        options['normal_accession'],))
     outfile.write(vcfprocesslog_header_line(options))
 
     original = open(original_vcf_file, 'r')
@@ -138,6 +159,9 @@ def reheader_vcf(options, original_vcf_file, new_vcf_file):
         else:
             outfile.write(line)
     outfile.close()
+
+def sample_header_line(sample_id, uuid, barcode, individual, file_name, platform, accession):
+    return "##SAMPLE=<ID={0},SampleUUID={1},SampleTCGABarcode={2},Individual={3},File={4},Platform={5},Source=CGHub,Accession={6}>\n".format(sample_id, uuid, barcode, individual, os.path.basename(file_name), platform, accession)
 
 def vcfprocesslog_header_line(options):
     input_vcf = "InputVCF=<.>"  #no VCF is put into this program so empty
