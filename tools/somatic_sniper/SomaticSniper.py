@@ -1,39 +1,13 @@
 #!/usr/bin/env python
 
 import argparse
-import pysam
 import os
 import logging
 import subprocess
-import os.path
 from datetime import date
 from urlparse import urlparse, urlunparse
 
-"""This script runs SomaticSniper
-Required Option:
-        -f FILE   REQUIRED reference sequence in the FASTA format
-
-Options:
-        -v        Display version information
-
-        -q INT    filtering reads with mapping quality less than INT [0]
-        -Q INT    filtering somatic snv output with somatic quality less than  INT [15]
-        -L FLAG   do not report LOH variants as determined by genotypes
-        -G FLAG   do not report Gain of Reference variants as determined by genotypes
-        -p FLAG   disable priors in the somatic calculation. Increases sensitivity for solid tumors
-        -J FLAG   Use prior probabilities accounting for the somatic mutation rate
-        -s FLOAT  prior probability of a somatic mutation (implies -J) [0.010000]
-        -T FLOAT  theta in maq consensus calling model (for -c/-g) [0.850000]
-        -N INT    number of haplotypes in the sample (for -c/-g) [2]
-        -r FLOAT  prior of a difference between two haplotypes (for -c/-g) [0.001000]
-        -n STRING normal sample id (for VCF header) [NORMAL]
-        -t STRING tumor sample id (for VCF header) [TUMOR]
-        -F STRING select output format [classic]
-           Available formats:
-             classic
-             vcf
-             bed
-"""
+"""This script runs SomaticSniper"""
 
 def sniper_argparser():
     parser = argparse.ArgumentParser(description='Run SomaticSniper')
@@ -45,12 +19,10 @@ def sniper_argparser():
     parser.add_argument('-p', required=False, action='store_true', help='disable priors in the somatic calculation. Increases sensitivity for solid tumors')
     parser.add_argument('-J', required=False, action='store_true', help='Use prior probabilities accounting for the somatic mutation rate')
     parser.add_argument('-s', required=False, metavar='SOMATIC_PRIOR',type=float, help='prior probability of a somatic mutation (implies -J) [%(default)s]', default=0.01)
-    #parser.add_argument('-T', required=False, metavar='THETA', type=float, help='theta in maq consensus calling model [%(default)s]', default=0.85)
-    #parser.add_argument('-N', required=False, metavar='NUM_HAPLOTYPES', type=int, help='number of haplotypes in the sample [%(default)s]', default=2)
     parser.add_argument('-r', required=False, metavar='GERMLINE_PRIOR', type=float, help='prior of a difference between two haplotypes [%(default)s]', default=0.001)
-    parser.add_argument('-n', required=True, metavar='NORMAL_NAME', help='normal sample id (for VCF header) [%(default)s]', default='NORMAL')
-    parser.add_argument('-t', required=True, metavar='TUMOR_NAME', help='tumor sample id (for VCF header) [%(default)s]', default='TUMOR')
-    parser.add_argument('-F', required=True, metavar='FORMAT', choices=('classic', 'vcf', 'bed'), help='select output format [%(default)s]', default='vcf')
+    parser.add_argument('-n', required=False, metavar='NORMAL_NAME', help='normal sample id (for VCF header) [%(default)s]', default='NORMAL')
+    parser.add_argument('-t', required=False, metavar='TUMOR_NAME', help='tumor sample id (for VCF header) [%(default)s]', default='TUMOR')
+    parser.add_argument('-F', required=False, metavar='FORMAT', choices=('classic', 'vcf', 'bed'), help='select output format [%(default)s]', default='vcf')
     parser.add_argument('tumor_bam', help='tumor BAM file')
     parser.add_argument('normal_bam', help='normal BAM file')
     parser.add_argument('output', help='Output file')
@@ -102,7 +74,6 @@ def create_sniper_cmdline(namespace_dict, reference, tumor_bam, normal_bam, temp
         temp_output_file])
 
 def create_workspace(workdir, reference, tumor_bam, normal_bam):
-    #need to symlink in stuff
     symlink_workspace_file(workdir, reference + ".fai" , "ref_genome.fasta.fai"),
     return ( 
             symlink_workspace_file(workdir, tumor_bam, "tumor.bam"),
@@ -115,17 +86,7 @@ def symlink_workspace_file(workdir, original_file, new_file):
     os.symlink(os.path.abspath(original_file), symlink_name)
     return symlink_name
 
-def sample_from_bam(bam_file):
-    file = pysam.Samfile(bam_file) #this may need to be AlignmentFile depending on pysam version
-    readgroups = file.header['RG']
-    samples = set()
-    for readgroup in readgroups:
-        samples.add(readgroup['SM'])
-    assert(len(samples) == 1)
-    return samples.pop()
-
 def reheader_vcf(options, original_vcf_file, new_vcf_file):
-    #need to add fields for the samples to the VCF header? as well as other info we add in Genome::Model::Tools::Vcf::Convert::Base.pm
     outfile = open(new_vcf_file, 'w')
     outfile.write("##fileformat=VCFv4.1\n")
     outfile.write("##fileDate=" + str(date.today().strftime("%Y%m%d")) + "\n")
@@ -166,7 +127,7 @@ def sample_header_line(sample_id, uuid, barcode, individual, file_name, platform
 def vcfprocesslog_header_line(options):
     input_vcf = "InputVCF=<.>"  #no VCF is put into this program so empty
     source = "InputVCFSource=<bam-somaticsniper>"
-    version = "InputVCFVer=<1.0.4>" #Sniper version, could be different if exe specified differently
+    version = "InputVCFVer=<1.0.4>" #Sniper version, could be different if exe specified differently. This should be done better.
     param = 'InputVCFParam=<"' + create_sniper_opts(options) + '">'
     anno = "InputVCFgeneAnno=<.>"
     return "##vcfProcessLog=<" + ",".join([input_vcf, source, version, param, anno]) + ">\n"
@@ -178,7 +139,7 @@ def reference_header_line(reference_name, reference_path):
         #assuming we've been given a file path
         reference_url = urlunparse(tuple(["file"]) + reference_parse_result[1:])
     else:
-        reference_url = reference_path #could just unparse this, but that might reconstruct the string oddly
+        reference_url = reference_path #could just unparse this, but that might reconstruct the string oddly, let's not change what was passed to us
 
     header_line = "##reference=<ID=" + reference_name + ',Source=' + reference_url + ">\n"
     return header_line
@@ -198,14 +159,9 @@ def execute(options, ref, tumor, normal, temp_output_file):
 if __name__ == "__main__":
     parser = sniper_argparser()
     args = parser.parse_args()
-    #opt_string = create_sniper_opts(vars(args))
-
-    #tumor_sample_name = sample_from_bam(args.tumor_bam)
-    #normal_sample_name = sample_from_bam(args.normal_bam)
 
     (workspace_tumor, workspace_normal, workspace_ref) = create_workspace(args.workdir, args.f, args.tumor_bam, args.normal_bam)
     temp_output_file = os.path.join(args.workdir, "raw_output.vcf")
     
     execute(vars(args), workspace_ref, workspace_tumor, workspace_normal, temp_output_file)
     reheader_vcf(vars(args), temp_output_file, args.output)
-
