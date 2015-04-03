@@ -43,11 +43,21 @@ def sniper_argparser():
     group.add_argument('--sniper-exe', dest='sniper_exe', default='bam-somaticsniper', help='Normal CGHub analysis id')
     return parser
 
-def wrapper_specific_arguments():
-    return set(('f', 'tumor_bam', 'normal_bam', 'output', 'workdir', 'sniper_exe', 'reference_id', 'center',
+def tcga_header_arguments():
+    return set(('reference_id', 'center',
         'tumor_uuid', 'tumor_barcode', 'tumor_accession', 'tumor_platform',
         'normal_uuid', 'normal_barcode', 'normal_accession', 'normal_platform',
         'individual'))
+
+def check_if_tcga_header_specified(args):
+    arg_keys = set([ key for key in args.keys() if args[key] != None])
+    tcga_header_specified = arg_keys.intersection(tcga_header_arguments())
+    if len(tcga_header_specified) > 0 and len(tcga_header_specified) < len(tcga_header_arguments()):
+        raise RuntimeError("must specify all TCGA header arguments or none at all")
+    return True
+
+def wrapper_specific_arguments():
+    return set(('f', 'tumor_bam', 'normal_bam', 'output', 'workdir', 'sniper_exe')) | tcga_header_arguments()
 
 def create_sniper_opts(namespace_dict):
     args = []
@@ -159,9 +169,11 @@ def execute(options, ref, tumor, normal, temp_output_file):
 if __name__ == "__main__":
     parser = sniper_argparser()
     args = parser.parse_args()
+    arg_dict = vars(args)
+    check_if_tcga_header_specified(arg_dict) #this will throw if we're not ok with TCGA header args
 
     (workspace_tumor, workspace_normal, workspace_ref) = create_workspace(args.workdir, args.f, args.tumor_bam, args.normal_bam)
     temp_output_file = os.path.join(args.workdir, "raw_output.vcf")
     
-    execute(vars(args), workspace_ref, workspace_tumor, workspace_normal, temp_output_file)
-    reheader_vcf(vars(args), temp_output_file, args.output)
+    execute(arg_dict, workspace_ref, workspace_tumor, workspace_normal, temp_output_file)
+    reheader_vcf(arg_dict, temp_output_file, args.output)
