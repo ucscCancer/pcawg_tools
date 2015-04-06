@@ -11,7 +11,27 @@
         -n $tumor_name
         -t $normal_name
         -F $output_format
-        -q 
+        #if $mapq
+           -q $mapq
+        #end if
+        #if $somaticq
+           -Q $somaticq
+        #end if
+        #if $loh
+            -L
+        #end if
+        #if $gor
+            -G
+        #end if
+        #if $dis_priors
+            -p
+        #end if
+        #if $use_priorp
+            -J
+        #end if
+        #if $prior_p
+            -s $prior_p
+        #end if
         --workdir ./
 
     </command>
@@ -27,6 +47,14 @@
             <option value="classic">classic</option>
             <option value="bed">bed</option>
         </param>
+        <param name="mapq" type="integer" value="0" optional="true" label="Filter reads with mapping quality less than"/>
+        <param name="somaticq" type="integer" value="15" optional="true" label="Filter snv output with quality less than"/>
+        <param name="loh" type="boolean" optional="true" label="Do not report LOH variants as determined by genotypes" />
+        <param name="gor" type="boolean" optional="true" label="Do not report Gain of Reference variants as determined by genotypes" />
+        <param name="dis_priors" type="boolean" optional="true" label="Disable priors in the somatic calculation" />
+        <param name="use_priorp" type="boolean" optional="true" label="Prior probabilities accounting for somatic mutation rate" />
+        <param name="prior_p" type="float" optional="true" value="0.01" label="Prior probability of a somatic mutation" />
+
     </inputs>
 
     <outputs>
@@ -37,7 +65,6 @@
     </stdio>
     <help>
 |
-
 
 **Reference**
 
