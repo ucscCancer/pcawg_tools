@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import logging
 import argparse, os, shutil, subprocess, sys, tempfile, time, shlex
 from multiprocessing import Pool
 import vcf
@@ -22,25 +23,27 @@ def execute(cmd, output=None):
 		sys.stdout.write("warning or error while doing : %s\n-----\n%s-----\n\n" %(cmd, stderr))
 
 
-def indexBam(workdir, inputFastaFile, inputBamFile, inputBamFileIndex=None):
+def indexBam(workdir, inputFastaFile, inputBamFile, bam_number, inputBamFileIndex=None):
 	inputFastaLink = os.path.join(os.path.abspath(workdir), "reference.fa" )
-	os.symlink(inputFastaFile, inputFastaLink)
-	inputBamLink = os.path.join(os.path.abspath(workdir), "sample.bam" )
+	if not os.path.exists(inputFastaLink):
+		os.symlink(inputFastaFile, inputFastaLink)
+		cmd = "samtools faidx %s" %(inputFastaLink)
+		execute(cmd)
+	inputBamLink = os.path.join(os.path.abspath(workdir), "sample_%d.bam" % (bam_number) )
 	os.symlink(inputBamFile, inputBamLink)
 	if inputBamFileIndex is None:
 		cmd = "samtools index %s" %(inputBamLink)
 		execute(cmd)
 	else:
 		os.symlink(inputBamFileIndex, inputBamLink + ".bai")
-	cmd = "samtools faidx %s" %(inputFastaLink)
-	execute(cmd)
 	return inputFastaLink, inputBamLink
 
 
-def config(inputBamFile, meanInsertSize, tag, tempDir):
+def config(inputBamFiles, meanInsertSizes, tags, tempDir):
 	configFile = tempDir+"/pindel_configFile"
 	fil = open(configFile, 'w')
-	fil.write("%s\t%s\t%s\n" %(inputBamFile, meanInsertSize, tag))
+	for inputBamFile, meanInsertSize, tag in zip(inputBamFiles, meanInsertSizes, tags):
+		fil.write("%s\t%s\t%s\n" %(inputBamFile, meanInsertSize, tag))
 	fil.close()
 	return configFile
 
@@ -101,14 +104,14 @@ def move(avant, apres):
 		execute("mv %s %s" %(avant, apres))
 
 
-def pindel2vcf(inputFastaFile, name, pindelTempDir, chrome=None):
+def pindel2vcf(inputFastaFile, refName, pindelTempDir, chrome=None):
 	date = str(time.strftime('%d/%m/%y',time.localtime()))
 	if chrome is None:
-		cmd = "pindel2vcf -P %s -r %s -R %s -d %s" %(pindelTempDir, inputFastaFile, name, date)
+		cmd = "pindel2vcf -P %s -r %s -R %s -d %s" %(pindelTempDir, inputFastaFile, refName, date)
 		return (cmd, pindelTempDir+".vcf")
 	else:
 		output = "%s.%s.vcf" % (pindelTempDir, chrome)
-		cmd = "pindel2vcf -P %s -r %s -R %s -d %s -v %s" %(pindelTempDir, inputFastaFile, name, date, output)
+		cmd = "pindel2vcf -P %s -r %s -R %s -d %s -v %s" %(pindelTempDir, inputFastaFile, refName, date, output)
 		return (cmd, output)
 
 
@@ -148,31 +151,21 @@ def getMeanInsertSize(bamFile):
 		b_count +=1
 	process.wait()
 	mean = b_sum / b_count
-	print "Using insert size: %d" % (mean) 
+	print "Using insert size: %d" % (mean)
 	return mean
 
-# 	execute(cmd, )
-# 	cmd = "picard-tools CollectInsertSizeMetrics H=%s O=%s I=%s" % (histogramFile, outputFile, samFile)
-# 	execute(cmd)
-# 	try:
-# 		f = open(outputFile, 'r')
-# 		lignes = f.readlines()
-# 		f.close()
-# 		meanInsertSize = lignes[7].split('\t')[0]
-# 	except:
-# 		sys.stderr.write("problem while opening file %s " %(outputFile))
-# 		return 0
-# 	return meanInsertSize
 
 
 def __main__():
 	time.sleep(1) #small hack, sometimes it seems like docker file systems aren't avalible instantly
 	parser = argparse.ArgumentParser(description='')
 	parser.add_argument('-r', dest='inputFastaFile', required=True, help='the reference file')
-	parser.add_argument('-b', dest='inputBamFile', required=True, help='the bam file')
-	parser.add_argument('-bi', dest='inputBamFileIndex', default=None, help='the bam file')
-	parser.add_argument('-s', dest='insert_size', type=int, default=None, required=False, help='the insert size')
-	parser.add_argument('-t', dest='sampleTag', default='default', required=False, help='the sample tag')
+	parser.add_argument('-R', dest='inputFastaName', default="genome", help='the reference name')
+
+	parser.add_argument('-b', dest='inputBamFiles', default=[], action="append", help='the bam file')
+	parser.add_argument('-bi', dest='inputBamFileIndexes', default=[], action="append", help='the bam file')
+	parser.add_argument('-s', dest='insert_sizes', type=int, default=[], action="append", required=False, help='the insert size')
+	parser.add_argument('-t', dest='sampleTags', default=[], action="append", help='the sample tag')
 	# parser.add_argument('-o1', dest='outputRaw', help='the output raw', required=True)
 	parser.add_argument('-o2', dest='outputVcfFile', help='the output vcf', required=True)
 	parser.add_argument('--number_of_threads', dest='number_of_threads', type=int, default='1')
@@ -216,23 +209,57 @@ def __main__():
 	parser.add_argument('--no_clean', action="store_true", default=False)
 
 	args = parser.parse_args()
+
+	inputBamFiles = list( os.path.abspath(a) for a in args.inputBamFiles )
+	if len(inputBamFiles) == 0:
+		logging.error("Need input files")
+		sys.exit(1)
+	inputBamFileIndexes = list( os.path.abspath(a) for a in args.inputBamFiles )
+	if len(inputBamFileIndexes) == 0:
+		inputBamFileIndexes = [None] * len(inputBamFiles)
+	if len(inputBamFileIndexes) != len(inputBamFiles):
+		logging.error("Index file count needs to undefined or match input file count")
+		sys.exit(1)
+	insertSizes = args.insert_sizes
+	if len(insertSizes) == 0:
+		insertSizes = [None] * len(inputBamFiles)
+	if len(insertSizes) != len(inputBamFiles):
+		logging.error("Insert Sizes needs to undefined or match input file count")
+		sys.exit(1)
+
+	sampleTags = args.sampleTags
+	if len(sampleTags) != len(inputBamFiles):
+		logging.error("Sample Tags need to match input file count")
+		sys.exit(1)
+
 	tempDir = tempfile.mkdtemp(dir="./", prefix="pindel_work_")
 
 	try:
-		inputFastaFile, inputBamFile = indexBam(args.workdir, args.inputFastaFile, args.inputBamFile)
-		if args.insert_size==None:
-		 	meanInsertSize = getMeanInsertSize(args.inputBamFile)
-		else:
-			meanInsertSize=args.insert_size
-		configFile = config(inputBamFile, meanInsertSize, args.sampleTag, tempDir)
+		meanInsertSizes = []
+		seq_hash = {}
+		newInputFiles = []
+		i = 0
+		for inputBamFile, inputBamIndex, insertSize, sampleTag in zip(inputBamFiles, inputBamFileIndexes, insertSizes, sampleTags ):
+			inputFastaFile, inputBamFile = indexBam(args.workdir, args.inputFastaFile, inputBamFile, i)
+			i += 1
+			newInputFiles.append(inputBamFile)
+			if insertSize==None:
+			 	meanInsertSize = getMeanInsertSize(inputBamFile)
+			else:
+				meanInsertSize=insertSize
+			meanInsertSizes.append( meanInsertSize )
+			for seq in get_bam_seq(inputBamFile):
+				seq_hash[seq] = True
+		seqs = seq_hash.keys()
+		configFile = config(newInputFiles, meanInsertSizes, sampleTags, tempDir)
+
 		if args.procs == 1:
 			cmd, pindelTempDir = pindel(inputFastaFile, configFile, args, tempDir)
 			execute(cmd)
-			cmd, pindelTmpVCF = pindel2vcf(inputFastaFile, args.sampleTag, pindelTempDir)
+			cmd, pindelTmpVCF = pindel2vcf(inputFastaFile, args.inputFastaName, pindelTempDir)
 			execute(cmd)
 			shutil.copy(pindelTmpVCF, args.outputVcfFile)
 		else:
-			seqs = get_bam_seq(inputBamFile)
 			cmds = []
 			runs = []
 			for a in seqs:
@@ -244,7 +271,7 @@ def __main__():
 			cmds = []
 			outs = []
 			for a, b in zip(runs, seqs):
-				cmd, out = pindel2vcf(inputFastaFile, args.sampleTag, a, chrome=b)
+				cmd, out = pindel2vcf(inputFastaFile, args.inputFastaName, a, chrome=b)
 				cmds.append(cmd)
 				outs.append(out)
 			values = p.map(execute, cmds, 1)
