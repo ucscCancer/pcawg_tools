@@ -60,12 +60,12 @@ def call_cmd_iter(muse, ref_seq, block_size, tumor_bam, normal_bam, contaminatio
             yield cmd, "%s.%s.MuSE.txt" % (output_base, i)
 
 def run_muse(args):
-    
+
     if not os.path.exists(args.muse):
         args.muse = which(args.muse)
 
     workdir = tempfile.mkdtemp(dir=args.workdir, prefix="muse_work_")
-    
+
     if not os.path.exists(args.f + ".fai"):
         new_ref = os.path.join(workdir, "ref_genome.fasta")
         os.symlink(args.f,new_ref)
@@ -84,7 +84,7 @@ def run_muse(args):
         os.symlink(args.normal_bam_index,new_bam + ".bai")
         args.normal_bam = new_bam
 
-    if args.normal_bam_index is None:
+    if args.tumor_bam_index is None:
         if not os.path.exists(args.tumor_bam + ".bai"):
             new_bam = os.path.join(workdir, "tumor.bam")
             os.symlink(args.tumor_bam,new_bam)
@@ -116,7 +116,7 @@ def run_muse(args):
                     ohandle.write(line)
             if not args.no_clean:
                 os.unlink(out)
-                
+
     dbsnp_file = None
     if args.D:
         new_dbsnp = os.path.join(workdir, "db_snp.vcf")
@@ -127,7 +127,7 @@ def run_muse(args):
         sump_template = string.Template("${MUSE} sump -I ${MERGE} -O ${OUTPUT} -D ${DBSNP}")
     else:
         sump_template = string.Template("${MUSE} sump -I ${MERGE} -O ${OUTPUT}")
-    
+
     sump_cmd = sump_template.substitute( dict (
         MUSE=args.muse,
         MERGE=merge,
@@ -155,7 +155,7 @@ genome used in 'MuSE call'""")
     parser.add_argument("-n", "--cpus", type=int, default=8)
     parser.add_argument("-w", "--workdir", default="/tmp")
     parser.add_argument("--no-clean", action="store_true", default=False)
-    
+
     parser.add_argument("--tumor-bam", dest="tumor_bam", required=True)
     parser.add_argument("--tumor-bam-index", dest="tumor_bam_index", default=None)
     parser.add_argument("--normal-bam", dest="normal_bam", required=True)
