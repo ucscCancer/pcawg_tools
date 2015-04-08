@@ -100,7 +100,7 @@ def run_muse(args):
         os.symlink(args.normal_bam_index,new_bam + ".bai")
         args.normal_bam = new_bam
 
-    if args.normal_bam_index is None:
+    if args.tumor_bam_index is None:
         if not os.path.exists(args.tumor_bam + ".bai"):
             new_bam = os.path.join(workdir, "tumor.bam")
             os.symlink(args.tumor_bam,new_bam)

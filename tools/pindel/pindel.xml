@@ -9,12 +9,15 @@
 		pindel.py
 		<!-- required -->
 		-r $inputReferenceFile
+		-R $referenceName
 		-b $inputBamFile
+		-t $sampleTag
 		-bi $inputBamFile.metadata.bam_index
-		-s $insertSize
+#if $defineInsertSize.manual_define == "yes":
+		-s $defineInsertSize.insertSize
+#end if
 		<!-- -o1 $outputRaw -->
 		-o2 $outputVcfFile
-		-t $sampleTag
 
 		<!-- optional -->
 
@@ -107,9 +110,18 @@
 	<inputs>
 		<!-- required -->
 		<param format="fasta" name="inputReferenceFile" type="data" label="reference file" help="" />
+		<param name="referenceName" type="text" label="Reference Name" help="Name of the Reference Genome" value="HG19" />
 		<param format="bam" name="inputBamFile" type="data" label="bam file" help="" />
-		<param name="insertSize" type="integer" label="Insert size" help="insert size of the reads" value="" />
 		<param name="sampleTag" type="text" label="Tag" help="tag for this sample" value="sample" />
+		<conditional name="defineInsertSize">
+			<param name="manual_define" type="select" label="Manually Define Insert Size">
+				<option value="yes">yes</option>
+				<option value="no" selected="True">no</option>
+			</param>
+			<when value="yes">
+				<param name="insertSize" type="integer" label="Insert size" help="insert size of the reads" value="" />
+			</when>
+		</conditional>
 
 		<!-- optional -->
 

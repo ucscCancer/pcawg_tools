@@ -1,0 +1,26 @@
+#!/usr/bin/env python
+
+
+import json
+import sys
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-l", "--lines", action="store_true", default=False)
+parser.add_argument("input", nargs="?", default=None)
+
+args = parser.parse_args()
+
+if args.input is None:
+    input = sys.stdin
+else:
+    input = open(args.input)
+
+if args.lines:
+    for line in input:
+        data = json.loads(line)
+        print json.dumps(data, indent=4)
+
+else:
+    data = json.loads(input.read())
+    print json.dumps(data, indent=4)
