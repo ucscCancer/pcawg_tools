@@ -50,13 +50,13 @@ def pindel(reference, configFile, args, tempDir, chrome=None):
 		pindelTempDir=tempDir + "/pindel"
 	else:
 		pindelTempDir=tempDir + "/pindel_" + chrome
-	
+
 	cmd = "pindel -f %s -i %s -o %s " %(reference, configFile, pindelTempDir)
-	cmd += " --number_of_threads %d --window_size %d --sequencing_error_rate %f --sensitivity %f" %(args.number_of_threads, args.window_size, args.sequencing_error_rate, args.sensitivity)
+	cmd += " --number_of_threads %d --max_range_index %d --window_size %d --sequencing_error_rate %f --sensitivity %f" %(args.number_of_threads, args.max_range_index, args.window_size, args.sequencing_error_rate, args.sensitivity)
 	cmd += " -u %f -n %d -a %d -m %d -v %d -d %d -B %d -A %d -M %d " %(args.maximum_allowed_mismatch_rate, args.NM, args.additional_mismatch, args.min_perfect_match_around_BP, args.min_inversion_size, args.min_num_matched_bases, args.balance_cutoff, args.anchor_quality, args.minimum_support_for_event)
-	
+
 	if chrome is not None:
-		cmd += "-c %s " % (chrome) 
+		cmd += "-c %s " % (chrome)
 
 	if args.report_long_insertions:
 		cmd += ' --report_long_insertions '
@@ -80,6 +80,9 @@ def pindel(reference, configFile, args, tempDir, chrome=None):
 	if args.input_SV_Calls_for_assembly:
 		cmd += ' --input_SV_Calls_for_assembly %s ' %(args.input_SV_Calls_for_assembly)
 
+	if args.exclude is not None:
+		cmd += '--exclude %s' % (args.exclude)
+
 	if args.detect_DD:
 		cmd += ' -q '
 		cmd += ' --MAX_DD_BREAKPOINT_DISTANCE '+str(args.MAX_DD_BREAKPOINT_DISTANCE)
@@ -98,10 +101,16 @@ def move(avant, apres):
 		execute("mv %s %s" %(avant, apres))
 
 
-def pindel2vcf(inputFastaFile, name, pindelTempDir):
+def pindel2vcf(inputFastaFile, name, pindelTempDir, chrome=None):
 	date = str(time.strftime('%d/%m/%y',time.localtime()))
-	cmd = "pindel2vcf -P %s -r %s -R %s -d %s" %(pindelTempDir, inputFastaFile, name, date)
-	return (cmd, pindelTempDir+".vcf")
+	if chrome is None:
+		cmd = "pindel2vcf -P %s -r %s -R %s -d %s" %(pindelTempDir, inputFastaFile, name, date)
+		return (cmd, pindelTempDir+".vcf")
+	else:
+		output = "%s.%s.vcf" % (pindelTempDir, chrome)
+		cmd = "pindel2vcf -P %s -r %s -R %s -d %s -v %s" %(pindelTempDir, inputFastaFile, name, date, output)
+		return (cmd, output)
+
 
 
 def which(cmd):
@@ -112,7 +121,7 @@ def which(cmd):
 	return res
 
 
-def get_bam_seq(inputBamFile):
+def get_bam_seq(inputBamFile, min_size=1):
 	samtools = which("samtools")
 	cmd = [samtools, "idxstats", inputBamFile]
 	process = subprocess.Popen(args=cmd, stdout=subprocess.PIPE)
@@ -120,7 +129,7 @@ def get_bam_seq(inputBamFile):
 	seqs = []
 	for line in stdout.split("\n"):
 		tmp = line.split("\t")
-		if len(tmp) == 4 and tmp[2] != "0":
+		if len(tmp) == 4 and int(tmp[2]) >= min_size:
 			seqs.append(tmp[0])
 	return seqs
 
@@ -145,7 +154,7 @@ def get_bam_seq(inputBamFile):
 
 
 def __main__():
-	time.sleep(1) #small hack, sometimes it seems like docker file systems are avalible instantly
+	time.sleep(1) #small hack, sometimes it seems like docker file systems aren't avalible instantly
 	parser = argparse.ArgumentParser(description='')
 	parser.add_argument('-r', dest='inputFastaFile', required=True, help='the reference file')
 	parser.add_argument('-b', dest='inputBamFile', required=True, help='the bam file')
@@ -156,7 +165,9 @@ def __main__():
 	parser.add_argument('-o2', dest='outputVcfFile', help='the output vcf', required=True)
 	parser.add_argument('--number_of_threads', dest='number_of_threads', type=int, default='1')
 	parser.add_argument('--number_of_procs', dest='procs', type=int, default=1)
-	
+	parser.add_argument('--min_chrome_size', dest='min_chrome_size', type=int, default=1)
+
+	parser.add_argument('-x', '--max_range_index', dest='max_range_index', type=int, default='4')
 	parser.add_argument('--window_size', dest='window_size', type=int, default='5')
 	parser.add_argument('--sequencing_error_rate', dest='sequencing_error_rate', type=float, default='0.01')
 	parser.add_argument('--sensitivity', dest='sensitivity', default='0.95', type=float)
@@ -185,6 +196,8 @@ def __main__():
 	parser.add_argument('--MIN_DD_BREAKPOINT_SUPPORT', dest='MIN_DD_BREAKPOINT_SUPPORT', type=int, default='3')
 	parser.add_argument('--MIN_DD_MAP_DISTANCE', dest='MIN_DD_MAP_DISTANCE', type=int, default='8000')
 	parser.add_argument('--DD_REPORT_DUPLICATION_READS', dest='DD_REPORT_DUPLICATION_READS', action='store_true', default=False)
+
+	parser.add_argument("-J", "--exclude", dest="exclude", default=None)
 
 	parser.add_argument('-z', '--input_SV_Calls_for_assembly', dest='input_SV_Calls_for_assembly', action='store_true', default=False)
 
@@ -219,12 +232,12 @@ def __main__():
 			values = p.map(execute, cmds, 1)
 			cmds = []
 			outs = []
-			for a in runs:
-				cmd, out = pindel2vcf(inputFastaFile, args.sampleTag, a)
+			for a, b in zip(runs, seqs):
+				cmd, out = pindel2vcf(inputFastaFile, args.sampleTag, a, chrome=b)
 				cmds.append(cmd)
 				outs.append(out)
 			values = p.map(execute, cmds, 1)
-			
+
 			vcf_writer = None
 			for file in outs:
 				vcf_reader = vcf.Reader(filename=file)

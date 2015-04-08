@@ -66,6 +66,7 @@
 			<!-- Parameters affecting sensitivity and selectivity -->
 		#if str($options_sensel.options_sensel_selector) == "yes":
 			-d $options_sensel.min_num_matched_bases
+			-x $options_sensel.max_range_index
 			-a $options_sensel.additional_mismatch
 			-m $options_sensel.min_perfect_match_around_BP
 			--sequencing_error_rate $options_sensel.sequencing_error_rate
@@ -93,6 +94,11 @@
 			#if $input_SV_Calls_for_assembly.checking == "yes":
 				-z $input_SV_Calls_for_assembly.input_SV_Calls
 			#end if
+
+			#if str($options_miscellaneous.exclude_list) != "None":
+				--exclude ${options_miscellaneous.exclude_list}
+			#end if
+
 		#end if
 
 	</command>
@@ -178,7 +184,7 @@
 
 				<param name="anchor_quality" type="integer" value="0" label="anchor quality" help="the minimal mapping quality of the reads Pindel uses as anchor If you only need high confident calls, set to 30 or higher" />
 				<param name="maximum_allowed_mismatch_rate" type="float" value="0.02" label="Maximum allowed mismatch rate" help="Only reads with more than this fraction of mismatches than the reference genome will be considered as harboring potential SVs." />
-
+				<param name="max_range_index" type="integer" value="4" label="the maximum size of structural variations to be detected" help="the higher this number, the greater the number of SVs reported, but the  computational cost and memory requirements increase, as does the rate of false positives. 1=128, 2=512, 3=2,048, 4=8,092, 5=32,368, 6=129,472, 7=517,888, 8=2,071,552, 9=8,286,208." />
 				<param name="NM" type="integer" value="2" label="NM" help="the minimum number of edit distance between reads and reference genome. reads at least NM edit distance (>= NM) will be realigned" />
 				<param name="additional_mismatch" type="integer" value="1" label="additional mismatch" help="Pindel will only map part of a read to the reference genome if there are no other candidate positions with no more than the specified number of mismatches position. The bigger the value, the more accurate but less sensitive (minimum value 1)" />
 				<param name="min_perfect_match_around_BP" type="integer" value="3" label="min perfect match around BP" help="at the point where the read is split into two, there should at least be this number of perfectly matching bases between read and reference" />
@@ -226,6 +232,7 @@
 				</when>
 				<when value="no" />
 			</conditional>
+			<param name="exclude_list" type="data" format="bed" label="Exclude File" help="Locations to exclude, like centromeres" optional="True"/>
 
 			<!-- <param name="genotyping" type="boolean" truevalue="true" falsevalue="false" checked="no" label="genotyping" help="genotype variants if -i is also used." /> -->
 			</when>
