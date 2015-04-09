@@ -30,19 +30,6 @@ def fai_chunk(path, blocksize):
         for i in xrange(1, l, blocksize):
             yield (seq, i, min(i+blocksize-1, l))
 
-def get_bam_seq(inputBamFile, min_size=1):
-    samtools = which("samtools")
-    cmd = [samtools, "idxstats", inputBamFile]
-    process = subprocess.Popen(args=cmd, stdout=subprocess.PIPE)
-    stdout, stderr = process.communicate()
-    seqs = []
-    for line in stdout.split("\n"):
-        tmp = line.split("\t")
-        if len(tmp) == 4 and int(tmp[2]) >= min_size:
-            seqs.append(tmp[0])
-    return seqs
-
-
 def cmd_caller(cmd):
     logging.info("RUNNING: %s" % (cmd))
     print "running", cmd
@@ -58,22 +45,19 @@ def cmds_runner(cmds, cpus):
 
 def call_cmd_iter(muse, ref_seq, block_size, tumor_bam, normal_bam, contamination, output_base):
     template = string.Template("${MUSE} call -f ${REF_SEQ} -p ${CONTAMINATION} -r ${INTERVAL} ${TUMOR_BAM} ${NORMAL_BAM} -O ${OUTPUT_BASE}.${BLOCK_NUM}")
-    for i, block in enumerate(get_bam_seq(tumor_bam)):
-        #for i, block in enumerate(fai_chunk( ref_seq + ".fai", block_size ) ):
-        cmd = template.substitute(
-            dict(
-                REF_SEQ=ref_seq,
-                CONTAMINATION=contamination,
-                BLOCK_NUM=i,
-                #INTERVAL="%s:%s-%s" % (block[0], block[1], block[2]),
-                INTERVAL="%s" % (block),
-                MUSE=muse,
-                TUMOR_BAM=tumor_bam,
-                NORMAL_BAM=normal_bam,
-                OUTPUT_BASE=output_base
+    for i, block in enumerate(fai_chunk( ref_seq + ".fai", block_size ) ):
+            cmd = template.substitute(
+                dict(
+                    REF_SEQ=ref_seq,
+                    CONTAMINATION=contamination,
+                    BLOCK_NUM=i,
+                    INTERVAL="%s:%s-%s" % (block[0], block[1], block[2]) ),
+                    MUSE=muse,
+                    TUMOR_BAM=tumor_bam,
+                    NORMAL_BAM=normal_bam,
+                    OUTPUT_BASE=output_base
             )
-        )
-        yield cmd, "%s.%s.MuSE.txt" % (output_base, i)
+            yield cmd, "%s.%s.MuSE.txt" % (output_base, i)
 
 def run_muse(args):
 
