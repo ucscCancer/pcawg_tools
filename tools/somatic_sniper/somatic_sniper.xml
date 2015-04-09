@@ -1,8 +1,8 @@
 <tool id="somatic_sniper" name="Somatic Sniper" version="1.0.4">
     <description> identify single nucleotide positions that are different between tumor and normal</description>
-<!--     <requirements>
-        <container type="docker">mutect:1.1.5</container>
-    </requirements> -->
+      <requirements>
+        <container type="docker">somatic-sniper:1.1.0</container>
+      </requirements>
     <command interpreter="python">SomaticSniper.py
         $tumor
         $normal
