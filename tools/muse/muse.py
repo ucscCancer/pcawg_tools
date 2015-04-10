@@ -30,6 +30,19 @@ def fai_chunk(path, blocksize):
         for i in xrange(1, l, blocksize):
             yield (seq, i, min(i+blocksize-1, l))
 
+def get_bam_seq(inputBamFile, min_size=1):
+    samtools = which("samtools")
+    cmd = [samtools, "idxstats", inputBamFile]
+    process = subprocess.Popen(args=cmd, stdout=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    seqs = []
+    for line in stdout.split("\n"):
+        tmp = line.split("\t")
+        if len(tmp) == 4 and int(tmp[2]) >= min_size:
+            seqs.append(tmp[0])
+    return seqs
+
+
 def cmd_caller(cmd):
     logging.info("RUNNING: %s" % (cmd))
     print "running", cmd
@@ -45,27 +58,30 @@ def cmds_runner(cmds, cpus):
 
 def call_cmd_iter(muse, ref_seq, block_size, tumor_bam, normal_bam, contamination, output_base):
     template = string.Template("${MUSE} call -f ${REF_SEQ} -p ${CONTAMINATION} -r ${INTERVAL} ${TUMOR_BAM} ${NORMAL_BAM} -O ${OUTPUT_BASE}.${BLOCK_NUM}")
-    for i, block in enumerate(fai_chunk( ref_seq + ".fai", block_size ) ):
-            cmd = template.substitute(
-                dict(
-                    REF_SEQ=ref_seq,
-                    CONTAMINATION=contamination,
-                    BLOCK_NUM=i,
-                    INTERVAL="%s:%s-%s" % (block[0], block[1], block[2]) ),
-                    MUSE=muse,
-                    TUMOR_BAM=tumor_bam,
-                    NORMAL_BAM=normal_bam,
-                    OUTPUT_BASE=output_base
+    for i, block in enumerate(get_bam_seq(tumor_bam)):
+        #for i, block in enumerate(fai_chunk( ref_seq + ".fai", block_size ) ):
+        cmd = template.substitute(
+            dict(
+                REF_SEQ=ref_seq,
+                CONTAMINATION=contamination,
+                BLOCK_NUM=i,
+                #INTERVAL="%s:%s-%s" % (block[0], block[1], block[2]),
+                INTERVAL="%s" % (block),
+                MUSE=muse,
+                TUMOR_BAM=tumor_bam,
+                NORMAL_BAM=normal_bam,
+                OUTPUT_BASE=output_base
             )
-            yield cmd, "%s.%s.MuSE.txt" % (output_base, i)
+        )
+        yield cmd, "%s.%s.MuSE.txt" % (output_base, i)
 
 def run_muse(args):
-    
+
     if not os.path.exists(args.muse):
         args.muse = which(args.muse)
 
     workdir = tempfile.mkdtemp(dir=args.workdir, prefix="muse_work_")
-    
+
     if not os.path.exists(args.f + ".fai"):
         new_ref = os.path.join(workdir, "ref_genome.fasta")
         os.symlink(args.f,new_ref)
@@ -84,7 +100,7 @@ def run_muse(args):
         os.symlink(args.normal_bam_index,new_bam + ".bai")
         args.normal_bam = new_bam
 
-    if args.normal_bam_index is None:
+    if args.tumor_bam_index is None:
         if not os.path.exists(args.tumor_bam + ".bai"):
             new_bam = os.path.join(workdir, "tumor.bam")
             os.symlink(args.tumor_bam,new_bam)
@@ -116,7 +132,7 @@ def run_muse(args):
                     ohandle.write(line)
             if not args.no_clean:
                 os.unlink(out)
-                
+
     dbsnp_file = None
     if args.D:
         new_dbsnp = os.path.join(workdir, "db_snp.vcf")
@@ -127,7 +143,7 @@ def run_muse(args):
         sump_template = string.Template("${MUSE} sump -I ${MERGE} -O ${OUTPUT} -D ${DBSNP}")
     else:
         sump_template = string.Template("${MUSE} sump -I ${MERGE} -O ${OUTPUT}")
-    
+
     sump_cmd = sump_template.substitute( dict (
         MUSE=args.muse,
         MERGE=merge,
@@ -155,7 +171,7 @@ genome used in 'MuSE call'""")
     parser.add_argument("-n", "--cpus", type=int, default=8)
     parser.add_argument("-w", "--workdir", default="/tmp")
     parser.add_argument("--no-clean", action="store_true", default=False)
-    
+
     parser.add_argument("--tumor-bam", dest="tumor_bam", required=True)
     parser.add_argument("--tumor-bam-index", dest="tumor_bam_index", default=None)
     parser.add_argument("--normal-bam", dest="normal_bam", required=True)

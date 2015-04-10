@@ -1,0 +1,124 @@
+<tool id="mageTab" name="mageTab" version="0.0.1">
+    <description></description>
+    <requirements>
+    </requirements>
+    <command interpreter="python">mageTab.py
+#if $expDesign != "individual_genetic_characteristics_design":
+'$expDesign'
+#end if
+#if $expDesignOntology != "MGED Ontology":
+'$expDesignOntology'
+#end if
+#if $expDesignFactorName != "somatic_variant":
+'$expDesignFactorName'
+#end if
+#if $expDesignFactorType != "disease_state":
+'$expDesignFactorType'
+#end if
+#if $personLastName != "Radenbaugh":
+'$personLastName'
+#end if
+#if $personFirstName != "Amie":
+'$personFirstName'
+#end if
+#if $personMidInitial != "J":
+'$personMidInitial'
+#end if
+#if $personEmail != "aradenba@soe.ucsc.edu":
+'$personEmail'
+#end if
+#if $personAddress != "University of California Santa Cruz, 1156 High St, Mail Stop CBSE, Santa Cruz, CA 95064, USA":
+'$personAddress'
+#end if
+#if $personAffiliation != "University of California Santa Cruz Genome Institute":
+'$personAffiliation'
+#end if
+#if $personRole != "submitter":
+'$personRole'
+#end if
+#if $pubMedId != "25405470":
+'$pubMedId'
+#end if
+#if $pubAuthors != "Radenbaugh AJ, Ma S, Ewing A, Stuart JM, Collisson EA, Zhu J, Haussler D":
+'$pubAuthors'
+#end if
+#if $pubTitle != "RADIA: RNA and DNA Integrated Analysis for Somatic Mutation Detection":
+'$pubTitle'
+#end if
+#if $pubStatus != "published":
+'$pubStatus'
+#end if
+#if $expDescription != "Detection of somatic variants from the TCGA Whole-Exome Sequencing (WES) and RNA-Seq data using RADIA":
+'$expDescription'
+#end if
+#if $protocolNames != "ucsc.edu:variant_calling:Illumina_DNASeq:01,ucsc.edu:vcf2maf:Illumina_DNASeq:01":
+'$protocolNames'
+#end if
+#if $protocolTypes != "Variant Calling,MAF Generation":
+'$protocolTypes'
+#end if
+#if $protocolDescriptions != "Somatic Variant Calling Pipeline: RADIA v1.1.1 (https://github.com/aradenbaugh/radia/),Annotation: SnpEff v3.3_GRCh37.69 (http://snpeff.sourceforge.net/)":
+'$protocolDescriptions'
+#end if
+#if $protocolOntologies != "MGED Ontology,MGED Ontology":
+'$protocolOntologies'
+#end if
+#if $protocolParameters != "":
+'$protocolParameters'
+#end if
+#if $ontologyName != "MGED Ontology":
+'$ontologyName'
+#end if
+#if $ontologyFile != "http://mged.sourceforge.net/ontologies/MGEDontology.php":
+'$ontologyFile'
+#end if
+#if $ontologyVersion != "1.3.1.1":
+'$ontologyVersion'
+#end if
+#if $disease != "":
+-d '$disease'
+#end if
+#if $logLevel != "WARNING":
+-l '$logLevel'
+#end if
+-g '$logFilename'
+
+    </command>
+    <inputs>
+        <param name='expDesign' type='text' value="individual_genetic_characteristics_design" help="the experimental design tag"/>
+        <param name='expDesignOntology' type='text' value="MGED Ontology" help="the experimental design term source reference (e.g. MGED, HUGO, etc."/>
+        <param name='expDesignFactorName' type='text' value="somatic_variant" help="the experimental design factor name"/>
+        <param name='expDesignFactorType' type='text' value="disease_state" help="the experimental design factor type"/>
+        <param name='personLastName' type='text' value="Radenbaugh" help="the submitter's last name"/>
+        <param name='personFirstName' type='text' value="Amie" help="the submitter's first name"/>
+        <param name='personMidInitial' type='text' value="J" help="the submitter's middle initial"/>
+        <param name='personEmail' type='text' value="aradenba@soe.ucsc.edu" help="the submitter's email"/>
+        <param name='personAddress' type='text' value="University of California Santa Cruz, 1156 High St, Mail Stop CBSE, Santa Cruz, CA 95064, USA" help="the submitter's institutional address"/>
+        <param name='personAffiliation' type='text' value="University of California Santa Cruz Genome Institute" help="the submitter's affiliation"/>
+        <param name='personRole' type='text' value="submitter" help="the submitter's role"/>
+        <param name='pubMedId' type='text' value="25405470" help="the PubMed ID"/>
+        <param name='pubAuthors' type='text' value="Radenbaugh AJ, Ma S, Ewing A, Stuart JM, Collisson EA, Zhu J, Haussler D" help="the publication author list"/>
+        <param name='pubTitle' type='text' value="RADIA: RNA and DNA Integrated Analysis for Somatic Mutation Detection" help="the publication title"/>
+        <param name='pubStatus' type='text' value="published" help="the publication status"/>
+        <param name='expDescription' type='text' value="Detection of somatic variants from the TCGA Whole-Exome Sequencing (WES) and RNA-Seq data using RADIA" help="the description of the experiment"/>
+        <param name='protocolNames' type='text' value="ucsc.edu:variant_calling:Illumina_DNASeq:01,ucsc.edu:vcf2maf:Illumina_DNASeq:01" help="the protocol names"/>
+        <param name='protocolTypes' type='text' value="Variant Calling,MAF Generation" help="the protocol types"/>
+        <param name='protocolDescriptions' type='text' value="Somatic Variant Calling Pipeline: RADIA v1.1.1 (https://github.com/aradenbaugh/radia/),Annotation: SnpEff v3.3_GRCh37.69 (http://snpeff.sourceforge.net/)" help="the protocol descriptions"/>
+        <param name='protocolOntologies' type='text' value="MGED Ontology,MGED Ontology" help="the protocol ontologies"/>
+        <param name='protocolParameters' type='text' value="" help="the protocol parameters"/>
+        <param name='ontologyName' type='text' value="MGED Ontology" help="the ontology name"/>
+        <param name='ontologyFile' type='text' value="http://mged.sourceforge.net/ontologies/MGEDontology.php" help="the ontology file"/>
+        <param name='ontologyVersion' type='text' value="1.3.1.1" help="the ontology version"/>
+        <param name='disease' type='text' value="" help="a disease abbreviation (e.g. BRCA), will be taken from VCF header if available"/>
+        <param name='logLevel' type='text' value="WARNING" help="the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL), %default by default"/>
+        <param name='logFilename' type='text' help="the name of the log file, STDOUT by default"/>
+    </inputs>
+    <outputs>
+    </outputs>
+    <help>
+usage: python %prog vcfDir protectedIDFFilename protectedSDRFFilename protectedArchiveName openAccessIDFFilename openAccessSDRFFilename openAccessArchiveName [Options]
+    </help>
+</tool>
+
+
+

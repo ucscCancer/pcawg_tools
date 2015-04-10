@@ -37,7 +37,9 @@ def cmds_runner(cmds, cpus):
     p = Pool(cpus)
     values = p.map(cmd_caller, cmds, 1)
 
-def call_cmd_iter(java, mutect, ref_seq, block_size, tumor_bam, normal_bam, output_base, cosmic, dbsnp, contamination):
+def call_cmd_iter(java, mutect, ref_seq, block_size, tumor_bam, normal_bam,
+    output_base, cosmic, dbsnp,
+    contamination, tumor_lod, initial_tumor_lod):
 
     """
     --cosmic $args.cosmic
@@ -60,6 +62,8 @@ ${JAVA}
 ${COSMIC_LINE}
 ${DBSNP_LINE}
 ${CONTAMINATION_LINE}
+--tumor_lod ${TUMOR_LOD}
+--initial_tumor_lod ${INITIAL_TUMOR__LOD}
 --coverage_file ${OUTPUT_BASE}.${BLOCK_NUM}.coverage
 --vcf ${OUTPUT_BASE}.${BLOCK_NUM}.vcf
 """.replace("\n", " "))
@@ -84,7 +88,9 @@ ${CONTAMINATION_LINE}
                 OUTPUT_BASE=output_base,
                 COSMIC_LINE=cosmic_line,
                 DBSNP_LINE=dbsnp_line,
-                CONTAMINATION_LINE=contamination_line
+                CONTAMINATION_LINE=contamination_line,
+                TUMOR_LOD=tumor_lod,
+                INITIAL_TUMOR__LOD=initial_tumor_lod
         )
         yield cmd, "%s.%s" % (output_base, i)
 
@@ -140,7 +146,9 @@ def run_mutect(args):
         output_base=os.path.join(workdir, "output.file"),
         cosmic=args['cosmic'],
         dbsnp=args['dbsnp'],
-        contamination = contamination
+        contamination = contamination,
+        tumor_lod=args['tumor_lod'],
+        initial_tumor_lod=args['initial_tumor_lod']
         )
     )
 
@@ -198,8 +206,11 @@ if __name__ == "__main__":
     parser.add_argument("--dbsnp")
     parser.add_argument("--out", default=None)
     parser.add_argument("--coverage_file", default=None)
+
     parser.add_argument("--fraction_contamination", default=None)
     parser.add_argument("--fraction_contamination-file", default=None)
+    parser.add_argument("--tumor_lod", type=float, default=6.3)
+    parser.add_argument("--initial_tumor_lod", type=float, default=4.0)
     parser.add_argument("--vcf", required=True)
     parser.add_argument("--no-clean", action="store_true", default=False)
     parser.add_argument("--java", default="/usr/bin/java")
