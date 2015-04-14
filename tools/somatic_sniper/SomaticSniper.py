@@ -26,7 +26,7 @@ def sniper_argparser():
     parser.add_argument('tumor_bam', help='tumor BAM file')
     parser.add_argument('normal_bam', help='normal BAM file')
     parser.add_argument('output', help='Output file')
- 
+
     group = parser.add_argument_group('wrapper specific options')
     group.add_argument('--workdir', default='/tmp/', help='Working directory of the wrapper')
     group.add_argument('--reference-id', dest='reference_id', help='TCGA name of the reference', choices=['hg18', 'hg19', 'GRCh37', 'GRCh37-lite', '36', '36.1', '37'])
@@ -34,13 +34,15 @@ def sniper_argparser():
     group.add_argument('--tumor-barcode', dest='tumor_barcode', help='TCGA Tumor Sample barcode')
     group.add_argument('--tumor-accession', dest='tumor_accession', help='Tumor CGHub analysis id')
     group.add_argument('--tumor-platform', dest='tumor_platform', help='Tumor sequencing platform')
+    group.add_argument('--tumor-source', dest='tumor_source', help='Tumor File Source')
     group.add_argument('--normal-uuid', dest='normal_uuid', help='Normal Sample uuid')
     group.add_argument('--normal-barcode', dest='normal_barcode', help='TCGA Normal Sample barcode')
     group.add_argument('--normal-accession', dest='normal_accession', help='Normal CGHub analysis id')
     group.add_argument('--normal-platform', dest='normal_platform', help='Normal sequencing platform')
+    group.add_argument('--normal-source', dest='normal_source', help='Normal File Source')
     group.add_argument('--individual', dest='individual', help='Individual barcode being analyzed')
     group.add_argument('--center', dest='center', help='Center name')
-    group.add_argument('--sniper-exe', dest='sniper_exe', default='bam-somaticsniper', help='Normal CGHub analysis id')
+    group.add_argument('--sniper-exe', dest='sniper_exe', default='bam-somaticsniper', help='SomaticSniper Exec Name')
     return parser
 
 def tcga_header_arguments():
@@ -57,13 +59,13 @@ def check_if_tcga_header_specified(args):
     return True
 
 def wrapper_specific_arguments():
-    return set(('f', 'tumor_bam', 'normal_bam', 'output', 'workdir', 'sniper_exe')) | tcga_header_arguments()
+    return set(('f', 'tumor_bam', 'normal_bam', 'output', 'workdir', 'sniper_exe', 'normal_source', 'tumor_source')) | tcga_header_arguments()
 
 def create_sniper_opts(namespace_dict):
     args = []
     flag_opts = set(('L','G','p','J'))
     wrapper_arguments = wrapper_specific_arguments()
-    
+
     for option, value in namespace_dict.items():
         if option in wrapper_arguments:
             continue
@@ -71,7 +73,7 @@ def create_sniper_opts(namespace_dict):
             if value:
                 args.append("-" + option)
         else:
-            args.append("-" + option + " " + str(value)) 
+            args.append("-" + option + " " + str(value))
     return " ".join(args)
 
 def create_sniper_cmdline(namespace_dict, reference, tumor_bam, normal_bam, temp_output_file):
@@ -79,18 +81,18 @@ def create_sniper_cmdline(namespace_dict, reference, tumor_bam, normal_bam, temp
         namespace_dict['sniper_exe'],
         create_sniper_opts(namespace_dict),
         "-f " + reference,
-        tumor_bam, 
+        tumor_bam,
         normal_bam,
         temp_output_file])
 
 def create_workspace(workdir, reference, tumor_bam, normal_bam):
     symlink_workspace_file(workdir, reference + ".fai" , "ref_genome.fasta.fai"),
-    return ( 
+    return (
             symlink_workspace_file(workdir, tumor_bam, "tumor.bam"),
             symlink_workspace_file(workdir, normal_bam, "normal.bam"),
             symlink_workspace_file(workdir, reference, "ref_genome.fasta"),
             )
-    
+
 def symlink_workspace_file(workdir, original_file, new_file):
     symlink_name = os.path.join(workdir, new_file)
     os.symlink(os.path.abspath(original_file), symlink_name)
@@ -101,9 +103,12 @@ def reheader_vcf(options, original_vcf_file, new_vcf_file):
     outfile.write("##fileformat=VCFv4.1\n")
     outfile.write("##fileDate=" + str(date.today().strftime("%Y%m%d")) + "\n")
     outfile.write("##tcgaversion=1.1.1\n")
-    outfile.write(reference_header_line(options['reference_id'], options['f']))
+    if options['reference_id'] is not None:
+        outfile.write(reference_header_line(options['reference_id'], options['f']))
     outfile.write("##phasing=none\n")
-    outfile.write('##center="' + options['center'] + "\"\n")
+    if options['center'] is not None:
+        outfile.write('##center="' + options['center'] + "\"\n")
+
     outfile.write(sample_header_line(
         options['t'],
         options['tumor_uuid'],
@@ -111,7 +116,8 @@ def reheader_vcf(options, original_vcf_file, new_vcf_file):
         options['individual'],
         options['tumor_bam'],
         options['tumor_platform'],
-        options['tumor_accession'],))
+        options['tumor_accession'],
+        options['tumor_source']))
     outfile.write(sample_header_line(
         options['n'],
         options['normal_uuid'],
@@ -119,7 +125,8 @@ def reheader_vcf(options, original_vcf_file, new_vcf_file):
         options['individual'],
         options['normal_bam'],
         options['normal_platform'],
-        options['normal_accession'],))
+        options['normal_accession'],
+        options['normal_source']))
     outfile.write(vcfprocesslog_header_line(options))
 
     original = open(original_vcf_file, 'r')
@@ -131,8 +138,26 @@ def reheader_vcf(options, original_vcf_file, new_vcf_file):
             outfile.write(line)
     outfile.close()
 
-def sample_header_line(sample_id, uuid, barcode, individual, file_name, platform, accession):
-    return "##SAMPLE=<ID={0},SampleUUID={1},SampleTCGABarcode={2},Individual={3},File={4},Platform={5},Source=CGHub,Accession={6}>\n".format(sample_id, uuid, barcode, individual, os.path.basename(file_name), platform, accession)
+def sample_header_line(sample_id, uuid, barcode, individual, file_name, platform, accession, source):
+    meta = []
+    if sample_id is not None:
+        meta.append( ("ID", sample_id) )
+    if uuid is not None:
+        meta.append( ("SampleUUID", uuid))
+    if barcode is not None:
+        meta.append( ("SampleTCGABarcode", barcode))
+    if individual is not None:
+        meta.append( ("Individual", individual))
+    if file_name is not None:
+        meta.append( ("File", file_name))
+    if platform is not None:
+        meta.append( ("Platform", platform))
+    if source is not None:
+        meta.append( ("Source", source))
+    if accession is not None:
+        meta.append( ("Accession", accession) )
+
+    return "##SAMPLE=<%s>\n" % ( ",".join( list( "%s=%s" for k,v in meta) ))
 
 def vcfprocesslog_header_line(options):
     input_vcf = "InputVCF=<.>"  #no VCF is put into this program so empty
@@ -160,7 +185,7 @@ def execute(options, ref, tumor, normal, temp_output_file):
     logging.info("RUNNING: %s" % (cmd))
     print "running", cmd
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    
+
     stdout, stderr = p.communicate()
     if len(stderr):
         print stderr
@@ -174,6 +199,6 @@ if __name__ == "__main__":
 
     (workspace_tumor, workspace_normal, workspace_ref) = create_workspace(args.workdir, args.f, args.tumor_bam, args.normal_bam)
     temp_output_file = os.path.join(args.workdir, "raw_output.vcf")
-    
+
     execute(arg_dict, workspace_ref, workspace_tumor, workspace_normal, temp_output_file)
     reheader_vcf(arg_dict, temp_output_file, args.output)
