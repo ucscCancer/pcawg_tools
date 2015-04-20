@@ -114,11 +114,13 @@ my @vcf_lines;
 my %rc_for_snp; # store info on snp positions and VCF line
 my %rc_for_indel; #store info on indel positions and VCF line
 
-my $input = new IO::File->new($vcf_file) or die "Unable to open input file $vcf_file: $!\n";
+my $input = IO::File->new($vcf_file) or die "Unable to open input file $vcf_file: $!\n";
 $vcf_header = parse_vcf_header($input);
 add_filters_to_vcf_header($vcf_header, values %filters);
 
-my @header_fields = split "\t", $vcf_header->[-1];
+my $header_line = $vcf_header->[-1];
+chomp $header_line;
+my @header_fields = split "\t", $header_line;
 
 while(my $entry = $input->getline) {
     push @vcf_lines, $entry;
@@ -141,8 +143,8 @@ while(my $entry = $input->getline) {
     my ($var) = sort @used_alleles; #follow existing convention of fp filter using alphabetical order to choose a single base on triallelic sites
     $var = uc($var);
     my $ref = uc($fields{REF});
-    my $chrom = $entry->{CHROM};
-    my $pos = $entry->{POS};
+    my $chrom = $fields{'#CHROM'};
+    my $pos = $fields{POS};
 
     if(length($ref) > 1 || length($var) > 1) {
         #it's an indel or mnp
@@ -167,26 +169,26 @@ while(my $entry = $input->getline) {
     }
 }
 #done parsing vcf
-
-my $snp_list = IO::File->new("snp_pos.txt","w") or die "Unable to open file for snp coordinates\n";
+my $snp_list_name = "snp_pos.txt";
+my $snp_list = IO::File->new($snp_list_name,"w") or die "Unable to open file for snp coordinates\n";
 generate_region_list(\%rc_for_snp, $snp_list);
 $snp_list->close();
 
 ## run bam-readcount
-my $bam_readcount_cmd = "$bam_readcount_path -f $ref_fasta -l $snp_list -q 1 -b 20 $bam_file |";
-my $rc_results = IO::File->new($bam_readcount_cmd, "r") or die "Unable to open pipe to bam-readcount cmd: $bam_readcount_cmd\n";
+my $bam_readcount_cmd = "$bam_readcount_path -f $ref_fasta -l $snp_list_name -w 0 -q 1 -b 20 $bam_file|";
+my $rc_results = IO::File->new($bam_readcount_cmd) or die "Unable to open pipe to bam-readcount cmd: $bam_readcount_cmd\n";
 while(my $rc_line = $rc_results->getline) {
     chomp $rc_line;
     my ($chrom, $position) = split(/\t/, $rc_line);
     if($rc_for_snp{$chrom}{$position}) {
         for my $ref (keys %{$rc_for_snp{$chrom}{$position}}) {
-            for my $var (keys %{$rc_for_snp{$chrom}{$position}}) {
+            for my $var (keys %{$rc_for_snp{$chrom}{$position}{$ref}}) {
                 my $ref_result = read_counts_by_allele($rc_line, $ref);
                 my $var_result = read_counts_by_allele($rc_line, $var);
                 my @filters = filter_site($ref_result, $var_result);
 
                 my $vcf_line_ref = $rc_for_snp{$chrom}{$position}{$ref}{$var};
-                my @fields = split "\t", @$vcf_line_ref;
+                my @fields = split "\t", $$vcf_line_ref;
                 if($fields[6] eq '.' || $fields[6] eq 'PASS') {
                     $fields[6] = join(";", @filters);
                 }
@@ -345,7 +347,7 @@ sub parse_vcf_header {
 
 sub generate_region_list {
     my ($hash, $region_fh) = @_; #input_fh should be a filehandle to the VCF
-    print STDERR "Printing variants to temporary region_list file $output_file...\n";
+    print STDERR "Printing variants to temporary region_list file...\n";
     for my $chr (keys %$hash) {
         for my $pos (keys %{$hash->{$chr}}) {
             print $region_fh "$chr\t$pos\t$pos\n";
@@ -448,36 +450,36 @@ sub filter_site {
             ## FAILURE : Variant allele frequency does not meet minimum ##
             if($var_freq < $min_var_freq) {
                 #$stats{'num_fail_varfreq'}++;
-                push @filter_names, $filters{'min_var_freq'};
+                push @filter_names, $filters{'min_var_freq'}->[0];
             }
 
             ## FAILURE 3: Paralog filter for sites where variant allele mismatch-quality-sum is significantly higher than reference allele mmqs
             if($mismatch_qualsum_diff> $max_mm_qualsum_diff) {
                 #$stats{'num_fail_mmqs'}++;
-                push @filter_names, $filters{'mmqs_diff'};
+                push @filter_names, $filters{'mmqs_diff'}->[0];
             }
 
             ## FAILURE 4: Mapping quality difference exceeds allowable maximum ##
             if($mapqual_diff > $max_mapqual_diff) {
                 #$stats{'num_fail_mapqual'}++;
-                push @filter_names, $filters{'mq_diff'};
+                push @filter_names, $filters{'mq_diff'}->[0];
             }
 
             ## FAILURE 5: Read length difference exceeds allowable maximum ##
             if($readlen_diff > $max_readlen_diff) {
                 #$stats{'num_fail_readlen'}++;
-                push @filter_names, $filters{'read_length'};
+                push @filter_names, $filters{'read_length'}->[0];
             }
 
             ## FAILURE 5: Read length difference exceeds allowable maximum ##
             if($var_dist_3 < $min_var_dist_3) {
                 #$stats{'num_fail_dist3'}++;
-                push @filter_names, $filters{'dist3'};
+                push @filter_names, $filters{'dist3'}->[0];
             }
 
             if($max_var_mm_qualsum && $var_mmqs > $max_var_mm_qualsum) {
                 #$stats{'num_fail_var_mmqs'}++;
-                push @filter_names, $filters{'var_mmqs'};
+                push @filter_names, $filters{'var_mmqs'}->[0];
             }
 
             ## SUCCESS: Pass Filter ##
@@ -489,13 +491,13 @@ sub filter_site {
 
         }
         else {
-            push @filter_names, $filters{'no_var_readcount'};
+            push @filter_names, $filters{'no_var_readcount'}->[0];
         }
     }
     else {
         #$stats{'num_no_readcounts'}++;
         #print $fail_fh "$line\tno_readcounts\n";
-        push @filter_names, $filters{'incomplete_readcount'};
+        push @filter_names, $filters{'incomplete_readcount'}->[0];
     }
     return @filter_names;
 }
