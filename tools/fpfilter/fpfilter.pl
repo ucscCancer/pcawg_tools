@@ -38,6 +38,7 @@ my $help;
 
 
 my $opt_result;
+my @params = @ARGV;
 
 $opt_result = GetOptions(
     'vcf-file=s' => \$vcf_file,
@@ -45,7 +46,6 @@ $opt_result = GetOptions(
     'sample=s' => \$sample,
     'bam-readcount=s' => \$bam_readcount_path,
     'reference=s' => \$ref_fasta,
-#    'readcount-file=s' => \$readcount_file,
     'output=s'   => \$output_file,
     'verbose=s'   => \$verbose,
     'min-read-pos=f' => \$min_read_pos,
@@ -117,6 +117,7 @@ my %rc_for_indel; #store info on indel positions and VCF line
 my $input = IO::File->new($vcf_file) or die "Unable to open input file $vcf_file: $!\n";
 $vcf_header = parse_vcf_header($input);
 add_filters_to_vcf_header($vcf_header, values %filters);
+add_process_log_to_header($vcf_header, $vcf_file, @params);
 
 my $header_line = $vcf_header->[-1];
 chomp $header_line;
@@ -173,10 +174,16 @@ while(my $entry = $input->getline) {
 if(%rc_for_snp) {
     filter_sites_in_hash(\%rc_for_snp, $bam_readcount_path, $bam_file, $ref_fasta);
 }
+else {
+    print STDERR "No SNP sites identified\n";
+}
+
 if(%rc_for_indel) {
     filter_sites_in_hash(\%rc_for_indel, $bam_readcount_path, $bam_file, $ref_fasta);
 }
-
+else {
+    print STDERR "No Indel sites identified\n";
+}
 
 ## Open the output files ##
 my $filtered_vcf = IO::File->new("$output_file","w") or die "Can't open output file $output_file: $!\n";
@@ -483,6 +490,13 @@ sub add_filters_to_vcf_header {
         push @$parsed_header, $filter_line;
     }
     push @$parsed_header, $column_header;
+}
+
+sub add_process_log_to_header {
+    my ($parsed_header, $input, @params) = @_;
+    my $column_header = pop @$parsed_header;
+    my $param_string = join(" ", @params);
+    push @$parsed_header, qq{##vcfProcessLog=<InputVCF=<$input>, InputVCFSource=<fpfilter>, InputVCFVer=<6.0>, InputVCFParam=<"$param_string"> InputVCFgeneAnno=<.>>\n}, $column_header;
 }
 
 sub filter_sites_in_hash {
