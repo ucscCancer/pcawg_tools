@@ -103,7 +103,6 @@ $filters{'mmqs_diff'} = [ sprintf("MMQSD%d",$max_mm_qualsum_diff), "Difference i
 $filters{'mq_diff'} = [ sprintf("MQD%d",$max_mapqual_diff), "Difference in average mapping quality sum between variant and reference supporting reads is greater than " . $max_mapqual_diff];
 $filters{'read_length'} = [ sprintf("RLD%d",$max_readlen_diff), "Difference in average clipped read length between variant and reference supporting reads is greater than " . $max_readlen_diff];
 $filters{'dist3'} = [ sprintf("DETP%0.f",$min_var_dist_3*100), "Average distance of the variant base to the effective 3' end is less than " . $min_var_dist_3];
-#$filters{'homopolymer'} = [ sprintf("HPMR%d",$min_homopolymer), "Variant is flanked by a homopolymer of the same base and of length greater than or equal to " . $min_homopolymer];
 $filters{'var_mmqs'} = [ sprintf("MMQS%d",$max_var_mm_qualsum), "The average mismatch quality sum of reads supporting the variant is greater than " . $max_var_mm_qualsum] if($max_var_mm_qualsum);
 $filters{'no_var_readcount'} = [ "NRC", "Unable to grab readcounts for variant allele"];
 $filters{'incomplete_readcount'} = [ "IRC", "Unable to grab any sort of readcount for either the reference or the variant allele"];
@@ -188,7 +187,6 @@ else {
 ## Open the output files ##
 my $filtered_vcf = IO::File->new("$output_file","w") or die "Can't open output file $output_file: $!\n";
 print $filtered_vcf @$vcf_header;
-# TODO write out header lines for filter tags
 print $filtered_vcf @vcf_lines;
 exit(0);
 
