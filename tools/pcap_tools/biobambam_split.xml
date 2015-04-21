@@ -11,15 +11,21 @@ biobambam_split.py --bam_path ${input_bam} --output_dir outputs --header header.
 
   </inputs>
   <outputs>
-    <collection name="split_output" type="list" label="ReadGroup BAM set">
-      <discover_datasets pattern="__name_and_ext__" directory="outputs"/>
+    <collection name="outputs_1" type="list" label="ReadGroup BAM set (forward)">
+      <discover_datasets pattern="(?P&lt;name&gt;.*)\_1\.fq?" format="fastq" directory="outputs"/>
     </collection>
+    <collection name="outputs_2" type="list" label="ReadGroup BAM set (reverse)">
+      <discover_datasets pattern="(?P&lt;name&gt;.*)\_2\.fq?" format="fastq" directory="outputs"/>
+    </collection>
+    <!-- collection name="split_output" type="list" label="ReadGroup BAM set">
+      <discover_datasets pattern="__name_and_ext__" directory="outputs"/>
+    </collection -->
     <data format="text" name="bamheader" label="BamHeader" from_work_dir="header.sam"/>
   </outputs>
   <stdio>
     <exit_code range="1:" />
   </stdio>
-  
+
 <help>
 
 </help>
