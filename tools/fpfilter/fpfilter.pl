@@ -154,6 +154,7 @@ while(my $entry = $input->getline) {
         elsif(length($ref) > length($var)) {
             #it's a deletion
             $pos += 1;
+            ($ref, $var) = ($var, $ref);
             $ref = substr($var, 1, 1);
             $var = "-" . substr($var, 1);
         }
@@ -168,42 +169,13 @@ while(my $entry = $input->getline) {
         $rc_for_snp{$chrom}{$pos}{$ref}{$var} = \$vcf_lines[-1];
     }
 }
-#done parsing vcf
-my $snp_list_name = "snp_pos.txt";
-my $snp_list = IO::File->new($snp_list_name,"w") or die "Unable to open file for snp coordinates\n";
-generate_region_list(\%rc_for_snp, $snp_list);
-$snp_list->close();
 
-## run bam-readcount
-my $bam_readcount_cmd = "$bam_readcount_path -f $ref_fasta -l $snp_list_name -w 0 -q 1 -b 20 $bam_file|";
-my $rc_results = IO::File->new($bam_readcount_cmd) or die "Unable to open pipe to bam-readcount cmd: $bam_readcount_cmd\n";
-while(my $rc_line = $rc_results->getline) {
-    chomp $rc_line;
-    my ($chrom, $position) = split(/\t/, $rc_line);
-    if($rc_for_snp{$chrom}{$position}) {
-        for my $ref (keys %{$rc_for_snp{$chrom}{$position}}) {
-            for my $var (keys %{$rc_for_snp{$chrom}{$position}{$ref}}) {
-                my $ref_result = read_counts_by_allele($rc_line, $ref);
-                my $var_result = read_counts_by_allele($rc_line, $var);
-                my @filters = filter_site($ref_result, $var_result);
-
-                my $vcf_line_ref = $rc_for_snp{$chrom}{$position}{$ref}{$var};
-                my @fields = split "\t", $$vcf_line_ref;
-                if($fields[6] eq '.' || $fields[6] eq 'PASS') {
-                    $fields[6] = join(";", @filters);
-                }
-                else {
-                    $fields[6] = join(";", $fields[6], @filters) if($filters[0] ne 'PASS');
-                }
-                $$vcf_line_ref = join("\t", @fields);
-            }
-        }
-    }
-    else {
-        die "Unknown site for rc\n";
-    }
+if(%rc_for_snp) {
+    filter_sites_in_hash(\%rc_for_snp, $bam_readcount_path, $bam_file, $ref_fasta);
 }
-
+if(%rc_for_indel) {
+    filter_sites_in_hash(\%rc_for_indel, $bam_readcount_path, $bam_file, $ref_fasta);
+}
 
 
 ## Open the output files ##
@@ -349,7 +321,7 @@ sub generate_region_list {
     my ($hash, $region_fh) = @_; #input_fh should be a filehandle to the VCF
     print STDERR "Printing variants to temporary region_list file...\n";
     for my $chr (keys %$hash) {
-        for my $pos (keys %{$hash->{$chr}}) {
+        for my $pos (sort { $a <=> $b } keys %{$hash->{$chr}}) {
             print $region_fh "$chr\t$pos\t$pos\n";
         }
     }
@@ -511,4 +483,43 @@ sub add_filters_to_vcf_header {
         push @$parsed_header, $filter_line;
     }
     push @$parsed_header, $column_header;
+}
+
+sub filter_sites_in_hash {
+    my ($hash, $bam_readcount_path, $bam_file, $ref_fasta) = @_;
+    #done parsing vcf
+    my $list_name = "regions.txt";
+    my $list_fh = IO::File->new($list_name,"w") or die "Unable to open file for coordinates\n";
+    generate_region_list($hash, $list_fh);
+    $list_fh->close();
+
+## run bam-readcount
+    my $bam_readcount_cmd = "$bam_readcount_path -f $ref_fasta -l $list_name -w 0 -q 1 -b 20 $bam_file|";
+    my $rc_results = IO::File->new($bam_readcount_cmd) or die "Unable to open pipe to bam-readcount cmd: $bam_readcount_cmd\n";
+    while(my $rc_line = $rc_results->getline) {
+        chomp $rc_line;
+        my ($chrom, $position) = split(/\t/, $rc_line);
+        if($hash->{$chrom}{$position}) {
+            for my $ref (keys %{$hash->{$chrom}{$position}}) {
+                for my $var (keys %{$hash->{$chrom}{$position}{$ref}}) {
+                    my $ref_result = read_counts_by_allele($rc_line, $ref);
+                    my $var_result = read_counts_by_allele($rc_line, $var);
+                    my @filters = filter_site($ref_result, $var_result);
+
+                    my $vcf_line_ref = $hash->{$chrom}{$position}{$ref}{$var};
+                    my @fields = split "\t", $$vcf_line_ref;
+                    if($fields[6] eq '.' || $fields[6] eq 'PASS') {
+                        $fields[6] = join(";", @filters);
+                    }
+                    else {
+                        $fields[6] = join(";", $fields[6], @filters) if($filters[0] ne 'PASS');
+                    }
+                    $$vcf_line_ref = join("\t", @fields);
+                }
+            }
+        }
+        else {
+            die "Unknown site for rc\n";
+        }
+    }
 }
