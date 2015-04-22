@@ -1,0 +1,168 @@
+<tool id="radia" name="radia" version="0.1.0">
+    <requirements>
+    </requirements>
+    <stdio>
+        <exit_code range="1:" />
+    </stdio>
+    <macros>
+      <macro name="input_params">
+        <param name="inputbam" type="data" format="bam" help="Input BAM"/>
+        <param name="MinTotalBases" type="integer" value="4" help="the minimum number of overall reads covering a position"/>
+        <param name="MinAltBases" type="integer" value="2" help="the minimum number of alternative reads supporting a variant at a position"/>
+        <param name="BaseQual" type="integer" value="10" help="the minimum base quality"/>
+        <param name="MapQual" type="integer" value="10" help="the minimum mapping quality"/>
+        <param name="Description" value="Normal DNA Sample" type="text" help="the description for the sample in the VCF header"/>
+      </macro>
+    </macros>
+    <command interpreter="python"><![CDATA[
+radia.py
+
+--outputFilename out.vcf
+#if $patientId:
+--patientId ${patientId}
+#end if
+--fastaFilename ${fastaFile}
+--refId ${refId}
+--refUrl ${refUrl}
+--refFilename ${refFilename}
+--dataSource ${dataSource}
+--sequencingPlatform ${sequencingPlatform}
+--statsDir stats
+--disease ${disease}
+
+--genotypeMinDepth ${genotypeMinDepth}
+--genotypeMinPct ${genotypeMinPct}
+
+## params for normal DNA
+--dnaNormalFilename", dest="dnaNormalFilename", metavar="DNA_NORMAL_FILE", help="the name of the normal DNA .bam file")
+--dnaNormalBaiFilename", dest="dnaNormalBaiFilename", metavar="DNA_NORMAL_BAI_FILE", help="the name of the normal DNA .bai file")
+--dnaNormalMinTotalBases", type="int", default=int(4), dest="dnaNormalMinTotalNumBases", metavar="DNA_NOR_MIN_TOTAL_BASES", help="the minimum number of overall normal DNA reads covering a position, %default by default")
+--dnaNormalMinAltBases", type="int", default=int(2), dest="dnaNormalMinAltNumBases", metavar="DNA_NOR_MIN_ALT_BASES", help="the minimum number of alternative normal DNA reads supporting a variant at a position, %default by default")
+--dnaNormalBaseQual", type="int", default=int(10), dest="dnaNormalMinBaseQuality", metavar="DNA_NOR_BASE_QUAL", help="the minimum normal DNA base quality, %default by default")
+--dnaNormalMapQual", type="int", default=int(10), dest="dnaNormalMinMappingQuality", metavar="DNA_NOR_MAP_QUAL", help="the minimum normal DNA mapping quality, %default by default")
+--dnaNormalUseChr", action="store_true", default=False, dest="dnaNormalUseChrPrefix", help="include this argument if the 'chr' prefix should be used in the samtools command for the normal DNA .bam file")
+--dnaNormalFasta", dest="dnaNormalFastaFilename", metavar="DNA_NOR_FASTA_FILE", help="the name of the fasta file for the normal DNA .bam file")
+--dnaNormalMitochon", default = "M", dest="dnaNormalMitochon", metavar="DNA_NOR_MITOCHON", help="the short name for the mitochondrial DNA (e.g 'M' or 'MT'), %default by default")
+--dnaNormalDescription", default = "Normal DNA Sample", dest="dnaNormalDesc", metavar="DNA_NOR_DESC", help="the description for the sample in the VCF header, %default by default")
+
+# params for normal RNA
+--rnaNormalFilename", dest="rnaNormalFilename", metavar="RNA_NORMAL_FILE", help="the name of the normal RNA-Seq .bam file")
+--rnaNormalBaiFilename", dest="rnaNormalBaiFilename", metavar="RNA_NORMAL_BAI_FILE", help="the name of the normal RNA .bai file")
+--rnaNormalMinTotalBases", type="int", default=int(4), dest="rnaNormalMinTotalNumBases", metavar="RNA_NOR_MIN_TOTAL_BASES", help="the minimum number of overall normal RNA-Seq reads covering a position, %default by default")
+--rnaNormalMinAltBases", type="int", default=int(2), dest="rnaNormalMinAltNumBases", metavar="RNA_NOR_MIN_ALT_BASES", help="the minimum number of alternative normal RNA-Seq reads supporting a variant at a position, %default by default")
+--rnaNormalBaseQual", type="int", default=int(10), dest="rnaNormalMinBaseQuality", metavar="RNA_NOR_BASE_QUAL", help="the minimum normal RNA-Seq base quality, %default by default")
+--rnaNormalMapQual", type="int", default=int(10), dest="rnaNormalMinMappingQuality", metavar="RNA_NOR_MAP_QUAL", help="the minimum normal RNA-Seq mapping quality, %default by default")
+--rnaNormalUseChr", action="store_true", default=False, dest="rnaNormalUseChrPrefix", help="include this argument if the 'chr' prefix should be used in the samtools command for the normal RNA .bam file")
+--rnaNormalFasta", dest="rnaNormalFastaFilename", metavar="RNA_NOR_FASTA_FILE", help="the name of the fasta file for the normal RNA .bam file")
+--rnaNormalMitochon", default = "M", dest="rnaNormalMitochon", metavar="RNA_NOR_MITOCHON", help="the short name for the mitochondrial RNA (e.g 'M' or 'MT'), %default by default")
+--rnaNormalDescription", default = "Normal RNA Sample", dest="rnaNormalDesc", metavar="RNA_NOR_DESC", help="the description for the sample in the VCF header, %default by default")
+
+# params for tumor DNA
+--dnaTumorFilename", dest="dnaTumorFilename", metavar="DNA_TUMOR_FILE", help="the name of the tumor DNA .bam file")
+--dnaTumorBaiFilename", dest="dnaTumorBaiFilename", metavar="DNA_TUMOR_BAI_FILE", help="the name of the tumor DNA .bai file")
+--dnaTumorMinTotalBases", type="int", default=int(4), dest="dnaTumorMinTotalNumBases", metavar="DNA_TUM_MIN_TOTAL_BASES", help="the minimum number of overall tumor DNA reads covering a position, %default by default")
+--dnaTumorMinAltBases", type="int", default=int(2), dest="dnaTumorMinAltNumBases", metavar="DNA_TUM_MIN_ALT_BASES", help="the minimum number of alternative tumor DNA reads supporting a variant at a position, %default by default")
+--dnaTumorBaseQual", type="int", default=int(10), dest="dnaTumorMinBaseQuality", metavar="DNA_TUM_BASE_QUAL", help="the minimum tumor DNA base quality, %default by default")
+--dnaTumorMapQual", type="int", default=int(10), dest="dnaTumorMinMappingQuality", metavar="DNA_TUM_MAP_QUAL", help="the minimum tumor DNA mapping quality, %default by default")
+--dnaTumorUseChr", action="store_true", default=False, dest="dnaTumorUseChrPrefix", help="include this argument if the 'chr' prefix should be used in the samtools command for the tumor DNA .bam file")
+--dnaTumorFasta", dest="dnaTumorFastaFilename", metavar="DNA_TUM_FASTA_FILE", help="the name of the fasta file for the tumor DNA .bam file")
+--dnaTumorMitochon", default = "M", dest="dnaTumorMitochon", metavar="DNA_TUM_MITOCHON", help="the short name for the mitochondrial DNA (e.g 'M' or 'MT'), %default by default")
+--dnaTumorDescription", default = "Tumor DNA Sample", dest="dnaTumorDesc", metavar="DNA_TUM_DESC", help="the description for the sample in the VCF header, %default by default")
+
+# params for tumor RNA
+--rnaTumorFilename", dest="rnaTumorFilename", metavar="RNA_TUMOR_FILE", help="the name of the tumor RNA-Seq .bam file")
+--rnaTumorBaiFilename", dest="rnaTumorBaiFilename", metavar="RNA_TUMOR_BAI_FILE", help="the name of the tumor RNA .bai file")
+--rnaTumorMinTotalBases", type="int", default=int(4), dest="rnaTumorMinTotalNumBases", metavar="RNA_TUM_MIN_TOTAL_BASES", help="the minimum number of overall tumor RNA-Seq reads covering a position, %default by default")
+--rnaTumorMinAltBases", type="int", default=int(2), dest="rnaTumorMinAltNumBases", metavar="RNA_TUM_MIN_ALT_BASES", help="the minimum number of alternative tumor RNA-Seq reads supporting a variant at a position, %default by default")
+--rnaTumorBaseQual", type="int", default=int(10), dest="rnaTumorMinBaseQuality", metavar="RNA_TUM_BASE_QUAL", help="the minimum tumor RNA-Seq base quality, %default by default")
+--rnaTumorMapQual", type="int", default=int(10), dest="rnaTumorMinMappingQuality", metavar="RNA_TUM_MAP_QUAL", help="the minimum tumor RNA-Seq mapping quality, %default by default")
+--rnaTumorUseChr", action="store_true", default=False, dest="rnaTumorUseChrPrefix", help="include this argument if the 'chr' prefix should be used in the samtools command for the tumor RNA .bam file")
+--rnaTumorFasta", dest="rnaTumorFastaFilename", metavar="RNA_TUM_FASTA_FILE", help="the name of the fasta file for the tumor RNA .bam file")
+--rnaTumorMitochon", default = "M", dest="rnaTumorMitochon", metavar="RNA_TUM_MITOCHON", help="the short name for the mitochondrial RNA (e.g 'M' or 'MT'), %default by default")
+--rnaTumorDescription", default = "Tumor RNA Sample", dest="rnaTumorDesc", metavar="RNA_TUM_DESC", help="the description for the sample in the VCF header, %default by default")
+
+
+#############################
+#    RADIA filter params    #
+#############################
+--outputDir", dest="outputDir", required=True, metavar="FILTER_OUT_DIR", help="the directory where temporary and final filtered output should be stored")
+--scriptsDir", dest="scriptsDir", required=True, metavar="SCRIPTS_DIR", help="the directory that contains the RADIA filter scripts")
+
+--dbSnpDir
+--cosmicDir
+
+--noBlacklist
+--noTargets
+--noDbSnp
+--noRetroGenes
+--noPseudoGenes
+--noCosmic
+--noBlat
+--noPositionalBias
+--noRnaBlacklist
+--noSnpEff
+--dnaOnly", action="store_true", default=False, dest="dnaOnly", help="include this argument if you only have DNA or filtering should only be done on the DNA")
+--rnaOnly", action="store_true", default=False, dest="rnaOnly", help="include this argument if the filtering should only be done on the RNA")
+
+    ]]></command>
+    <inputs>
+      <param name="patientId" label="Patient ID" type="text" value="Parient" help=""/>
+      <param name="fastaFile" label="Reference Genome" type="data" format="fasta" help=""/>
+      <param name="refId" label="Reference Genome ID" type="text" value="" help=""/>
+      <param name="refUrl" label="Reference Genome URL" type="text" value="" help=""/>
+      <param name="refFilename" label="Reference Genome File Name" type="text" value="" help=""/>
+      <param name="dataSource" label="Data Source" type="text" value="" help=""/>
+      <param name="sequencingPlatform" label="SequencingPlatform" type="text" value="" help=""/>
+      <param name="disease" label="Disease Code" type="text" value="" help=""/>
+
+      <param name="genotypeMinDepth" label="genotypeMinDepth" type="text" value="" help=""/>
+      <param name="genotypeMinPct" label="genotypeMinPct" type="text" value="" help=""/>
+
+      <conditional name="dnaNormal">
+        <param name="use" type="select" label="Use DNA Normal">
+          <option value="yes">yes</option>
+          <option value="no" selected="True">no</option>
+        </param>
+        <when value="yes">
+          <expand macro="input_params"/>
+        </when>
+      </conditional>
+
+      <conditional name="dnaTumor">
+        <param name="use" type="select" label="Use DNA Tumor">
+          <option value="yes">yes</option>
+          <option value="no" selected="True">no</option>
+        </param>
+        <when value="yes">
+          <expand macro="input_params"/>
+        </when>
+      </conditional>
+
+      <conditional name="rnaNormal">
+        <param name="use" type="select" label="Use RNA Normal">
+          <option value="yes">yes</option>
+          <option value="no" selected="True">no</option>
+        </param>
+        <when value="yes">
+          <expand macro="input_params"/>
+        </when>
+      </conditional>
+
+      <conditional name="rnaTumor">
+        <param name="use" type="select" label="Use RNA Tumor">
+          <option value="yes">yes</option>
+          <option value="no" selected="True">no</option>
+        </param>
+        <when value="yes">
+          <expand macro="input_params"/>
+        </when>
+      </conditional>
+    </inputs>
+    <outputs>
+      <data format="vcf" from_work_dir="out.vcf"/>
+      --statsDir stats
+    </outputs>
+    <help><![CDATA[
+        TODO: Fill in help.
+    ]]></help>
+</tool>
