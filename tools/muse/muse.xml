@@ -33,7 +33,7 @@ muse.py
         <!-- param name="intervalfile" type="data" format="txt" label="Intervals to process (.txt file)" help="'chr1:1500-2500', one entry per line" optional="true"/ -->
     </inputs>
     <outputs>
-        <data format="vcf" name="mutations" label="MutationVCF" from_work_dir="muse.vcf"/>
+        <data format="vcf" name="mutations" label="MuSE VCF" from_work_dir="muse.vcf"/>
     </outputs>
     <help>
 
