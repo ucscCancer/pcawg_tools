@@ -93,6 +93,10 @@ unless($output_file) {
     warn "You must provide an output file name: $output_file\n";
     die help_text();
 }
+unless($sample) {
+    warn "You must provide a sample name\n";
+    die help_text();
+}
 
 my %filters;
 $filters{'position'} = [sprintf("PB%0.f",$min_read_pos*100), "Average position on read less than " . $min_read_pos . " or greater than " . $max_read_pos . " fraction of the read length"];
