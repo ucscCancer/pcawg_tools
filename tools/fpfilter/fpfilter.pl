@@ -26,7 +26,6 @@ my $max_var_mm_qualsum = 100;
 ## Parse arguments ##
 
 my $output_basename;
-my $verbose = 0;
 
 my $vcf_file;
 my $output_file;
@@ -47,13 +46,10 @@ $opt_result = GetOptions(
     'bam-readcount=s' => \$bam_readcount_path,
     'reference=s' => \$ref_fasta,
     'output=s'   => \$output_file,
-    'verbose=s'   => \$verbose,
     'min-read-pos=f' => \$min_read_pos,
-    'max-read-pos=f' => \$max_read_pos,
     'min-var-freq=f' => \$min_var_freq,
     'min-var-count=f' => \$min_var_count,
     'min-strandedness=f' => \$min_strandedness,
-    'max-strandedness=f' => \$max_strandedness,
     'max-mm-qualsum-diff=f' => \$max_mm_qualsum_diff,
     'max-mapqual-diff=f' => \$max_mapqual_diff,
     'max-readlen-diff=f' => \$max_readlen_diff,
@@ -236,27 +232,37 @@ sub read_counts_by_allele {
 
 sub help_text {
     return <<HELP;
-fpfilter - Advanced filtering for SomaticSniper
+fpfilter - Filtering for Illumina Sequencing
 
 SYNOPSIS
 fpfilter [options] [file ...]
 
 OPTIONS
---snp-file              the input bam-somaticsniper output file (requires v1.0.0 or greater output)
---readcount-file        the output of bam-readcount for the snp-file
+--vcf-file              the input VCF file. Must have a GT field.
+--bam-file              the BAM file of the sample you are filtering on. Typically the tumor.
+--sample                the sample name of the sample you want to filter on in the VCF file.
+--reference-sequence    a fasta containing the reference sequence the BAM file was aligned to.
+--output                the filename of the output VCF file
+--min-read-pos          minimum average relative distance from start/end of read 
+--min-var-freq          minimum variant allele frequency
+--min-var-count         minimum number of variant-supporting reads
+--min-strandedness      minimum representation of variant allele on each strand
+--max-mm-qualsum-diff   maximum difference of mismatch quality sum between variant and reference reads (paralog filter)
+--max_var_mm_qualsum    maximum mismatch quality sum of reference-supporting reads
+--max-mapqual-diff      maximum difference of mapping quality between variant and reference reads
+--max-readlen-diff      maximum difference of average supporting read length between variant and reference reads (paralog filter)
+--min-var-dist-3        minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads
 --help                  this message
 
 DESCRIPTION
-This program will filter bam-somaticsniper output with a variety of filters as detailed in the VarScan2 paper (http://www.ncbi.nlm.nih.gov/pubmed/22300766). It requires the bam-readcount utility (https://github.com/genome/bam-readcount). This is more convenient than the filtering described in the SomaticSniper paper, but more heuristic. Regardless, the principles are similar and we observe ~5% false negative rate with this filter.
+This program will filter a VCF with a variety of filters as detailed in the VarScan2 paper (http://www.ncbi.nlm.nih.gov/pubmed/22300766). It requires the bam-readcount utility (https://github.com/genome/bam-readcount). 
 
 This filter was calibrated on 100bp PE Illumina reads. It is likely to be overly stringent for longer reads and may be less effective on shorter reads.
 
 AUTHORS
 Dan Koboldt     Original code
-Dave Larson     Modification specifically for bam-somaticsniper
+Dave Larson     Modifications for VCF and exportation.
 
-SUPPORT
-For user support please mail genome-dev\@genome.wustl.edu.
 HELP
 }
 
@@ -365,7 +371,7 @@ sub filter_site {
             my $var_freq = $var_count / ($ref_count + $var_count);
 
             ## FAILURE 1: READ POSITION ##
-            if(($var_pos < $min_read_pos)) {
+            if(($var_pos < $min_read_pos) || ($var_pos > $max_read_pos)) {
                 #$stats{'num_fail_pos'}++;
                 push @filter_names, $filters{'position'}->[0];
             }
