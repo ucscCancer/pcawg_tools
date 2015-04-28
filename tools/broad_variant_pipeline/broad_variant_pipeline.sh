@@ -1,24 +1,43 @@
 #!/bin/bash
-
-
-export NAMESPACE=gsaksena
-export PIPELINE=/cga/fh/pcawg_pipeline/pipelines/pcawg_pipeline_v4.py
 export INDIVIDUAL_ID=$1
 export BAM_TUMOR=$2
-export BAM_NORMAL=$3
+export BAM_TUMOR_BAI=$3
+export BAM_NORMAL=$4
+export BAM_NORMAL_BAI=$5
+export REF_DIR=$6
+export FINALRESULTSDIR=$7
 
-export PIPETTE_SERVER_DIR=/cga/fh/pcawg_pipeline/utils/pipette/pipette/server
-export TIMESTAMP=`date +'%Y-%m-%d__%H-%M-%S'`
-export COMMDIR=/cga/fh/pcawg_pipeline/tmp/pipette_commdirs/$NAMESPACE/$INDIVIDUAL_ID/run
-export OUTDIR=/cga/fh/pcawg_pipeline/jobResults_pipette/$NAMESPACE/$INDIVIDUAL_ID/run
+ln -s $BAM_TUMOR tumor.bam
+ln -s $BAM_TUMOR_BAI tumor.bam.bai
+ln -s $BAM_NORMAL normal.bam
+ln -s $BAM_NORMAL_BAI normal.bam.bai
 
+ln -s $REF_DIR /cga/fh/pcawg_pipeline/refdata
+
+PIPELINE=/cga/fh/pcawg_pipeline/pipelines/pcawg_pipeline_v5.py
+
+export PIPETTE_SERVER_DIR=/cga/fh/pcawg_pipeline/utils/pipette_server
+
+export COMMDIR=/cga/fh/pcawg_pipeline/jobResults_pipette/status
+#OUTDIR contains the intermediate files
+export OUTDIR=/cga/fh/pcawg_pipeline/jobResults_pipette/jobs/$INDIVIDUAL_ID
+#FINALRESULTSDIR contains all the files that should be kept after the pipeline completes
+#export FINALRESULTSDIR=/cga/fh/pcawg_pipeline/jobResults_pipette/results
+
+rm -rf $COMMDIR
 mkdir -p $COMMDIR
 
-python3 $PIPETTE_SERVER_DIR/pipetteSynchronousRunner.py $COMMDIR $OUTDIR $PIPELINE $COMMDIR $OUTDIR $INDIVIDUAL_ID $BAM_TUMOR $BAM_NORMAL
+set -e
 
-find $OUTDIR -name pipette.module.usage.txt  | xargs  sh -c 'for f; do cat "$f" ; done' true |sort | uniq > total.summary.usage.txt
+python3 $PIPETTE_SERVER_DIR/pipetteSynchronousRunner.py $COMMDIR $OUTDIR $PIPELINE $COMMDIR $OUTDIR $INDIVIDUAL_ID `pwd`/tumor.bam `pwd`/normal.bam # > run.out 2> run.err
 
-gunzip -c ${OUTDIR}/links_for_gnos/tabix_snowman_germline_indel/${INDIVIDUAL_ID}.broad-snowman.DATECODE.germline.indel.vcf.gz > snowman.germline.indel.vcf
-gunzip -c ${OUTDIR}/links_for_gnos/tabix_snowman_germline_sv/${INDIVIDUAL_ID}.broad-snowman.DATECODE.germline.sv.vcf.gz > snowman.germline.sv.vcf
-gunzip -c ${OUTDIR}/links_for_gnos/tabix_snowman_somatic_indel/${INDIVIDUAL_ID}.broad-snowman.DATECODE.somatic.indel.vcf.gz > snowman.somatic.indel.vcf
-gunzip -c ${OUTDIR}/links_for_gnos/tabix_snowman_somatic_sv/${INDIVIDUAL_ID}.broad-snowman.DATECODE.somatic.sv.vcf.gz > snowman.somatic.sv.vcf
+find $OUTDIR -name pipette.module.usage.txt  | xargs  sh -c 'for f; do cat "$f" ; done' true |sort | uniq > $FINALRESULTSDIR/summary.usage.txt
+
+mkdir $FINALRESULTSDIR/gnos_vcfs
+cp $OUTDIR/links_for_gnos/*/*.vcf.gz $FINALRESULTSDIR/gnos_vcfs/
+
+#collect the file outputs for return back to Broad
+tar -cvhf $FINALRESULTSDIR/broad.tar.gz $OUTDIR/links_for_broad
+
+#display any failing modules
+cat summary.usage.txt
