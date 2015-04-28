@@ -178,7 +178,7 @@ else {
 }
 
 if(%rc_for_indel) {
-    filter_sites_in_hash(\%rc_for_indel, $bam_readcount_path, $bam_file, $ref_fasta);
+    filter_sites_in_hash(\%rc_for_indel, $bam_readcount_path, $bam_file, $ref_fasta, '-i');
 }
 else {
     print STDERR "No Indel sites identified\n";
@@ -462,15 +462,16 @@ sub add_process_log_to_header {
 }
 
 sub filter_sites_in_hash {
-    my ($hash, $bam_readcount_path, $bam_file, $ref_fasta) = @_;
+    my ($hash, $bam_readcount_path, $bam_file, $ref_fasta, $optional_param) = @_;
     #done parsing vcf
+    $optional_param ||= '';
     my $list_name = "regions.txt";
     my $list_fh = IO::File->new($list_name,"w") or die "Unable to open file for coordinates\n";
     generate_region_list($hash, $list_fh);
     $list_fh->close();
 
 ## run bam-readcount
-    my $bam_readcount_cmd = "$bam_readcount_path -f $ref_fasta -l $list_name -w 0 -q 1 -b 20 $bam_file|";
+    my $bam_readcount_cmd = "$bam_readcount_path -f $ref_fasta -l $list_name -w 0 -q 1 -b 20 $optional_param $bam_file|";
     my $rc_results = IO::File->new($bam_readcount_cmd) or die "Unable to open pipe to bam-readcount cmd: $bam_readcount_cmd\n";
     while(my $rc_line = $rc_results->getline) {
         chomp $rc_line;
