@@ -471,7 +471,7 @@ sub filter_sites_in_hash {
     $list_fh->close();
 
 ## run bam-readcount
-    my $bam_readcount_cmd = "$bam_readcount_path -f $ref_fasta -l $list_name -w 0 -q 1 -b 20 $optional_param $bam_file|";
+    my $bam_readcount_cmd = "$bam_readcount_path -f $ref_fasta -l $list_name -w 0 -b 20 $optional_param $bam_file|";
     my $rc_results = IO::File->new($bam_readcount_cmd) or die "Unable to open pipe to bam-readcount cmd: $bam_readcount_cmd\n";
     while(my $rc_line = $rc_results->getline) {
         chomp $rc_line;
