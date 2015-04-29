@@ -110,7 +110,6 @@ ${JAVA}
 -I ${INPUT_LIST}
 -L ${INTERVAL}
 -targetIntervals ${TARGET_INTERVALS}
---downsampling_type NONE
 ${KNOWN_STR}
 -maxReads 720000 -maxInMemory 5400000 \
 -nWayOut ${OUTPUT_MAP}
@@ -155,9 +154,7 @@ ${JAVA}
 -R ${REF_SEQ}
 -I ${INPUT_LIST}
 -targetIntervals ${TARGET_INTERVALS}
---downsampling_type NONE
 ${KNOWN_STR}
--maxReads 720000 -maxInMemory 5400000 \
 -nWayOut ${OUTPUT_MAP}
 """.replace("\n", " "))
 

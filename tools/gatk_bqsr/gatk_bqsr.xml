@@ -8,6 +8,7 @@
         <param format="bam"   type="data" name="input_bam"      label="Input BAM" help="" />
         <param format="vcf"   type="data" name="known_sites"    label="Known SNP sites VCF" />
         <param format="fasta" type="data" name="reference"      label="Reference Genome" />
+        <param type="boolean" name="emit_oq" label="Emit Original Quality Scores" truevalue="--emit_original_quals" falsevalue="" checked="yes"/>
     </inputs>
 
     <outputs>
@@ -37,7 +38,7 @@ java -jar /opt/GenomeAnalysisTK.jar \
 java -jar /opt/GenomeAnalysisTK.jar \
 -T PrintReads \
 -R reference.fasta \
---emit_original_quals \
+${emit_oq} \
 -I input.bam \
 -nct \${GALAXY_SLOTS:-4} \
 -BQSR recal_data.table \
