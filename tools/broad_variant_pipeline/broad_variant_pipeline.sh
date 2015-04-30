@@ -34,7 +34,14 @@ python3 $PIPETTE_SERVER_DIR/pipetteSynchronousRunner.py $COMMDIR $OUTDIR $PIPELI
 find $OUTDIR -name pipette.module.usage.txt  | xargs  sh -c 'for f; do cat "$f" ; done' true |sort | uniq > $FINALRESULTSDIR/summary.usage.txt
 
 mkdir $FINALRESULTSDIR/gnos_vcfs
-cp $OUTDIR/links_for_gnos/*/*.vcf.gz $FINALRESULTSDIR/gnos_vcfs/
+#cp $OUTDIR/links_for_gnos/*/*.vcf.gz $FINALRESULTSDIR/gnos_vcfs/
+cp /cga/fh/pcawg_pipeline/jobResults_pipette/jobs/*/links_for_gnos/tabix_dRanger/*.broad-dRanger.DATECODE.somatic.sv.vcf.gz broad-dRanger.DATECODE.somatic.sv.vcf.gz
+cp /cga/fh/pcawg_pipeline/jobResults_pipette/jobs/*/links_for_gnos/tabix_merge_sv_vcf/*.broad-dRanger_snowman.DATECODE.somatic.sv.vcf.gz broad-dRanger_snowman.DATECODE.somatic.sv.vcf.gz
+cp /cga/fh/pcawg_pipeline/jobResults_pipette/jobs/*/links_for_gnos/tabix_mutect/*.broad-mutect.DATECODE.somatic.snv_mnv.vcf.gz broad-mutect.DATECODE.somatic.snv_mnv.vcf.gz
+cp /cga/fh/pcawg_pipeline/jobResults_pipette/jobs/*/links_for_gnos/tabix_snowman_germline_indel/*.broad-snowman.DATECODE.germline.indel.vcf.gz broad-snowman.DATECODE.germline.indel.vcf.gz
+cp /cga/fh/pcawg_pipeline/jobResults_pipette/jobs/*/links_for_gnos/tabix_snowman_germline_sv/*.broad-snowman.DATECODE.germline.sv.vcf.gz broad-snowman.DATECODE.germline.sv.vcf.gz
+cp /cga/fh/pcawg_pipeline/jobResults_pipette/jobs/*/links_for_gnos/tabix_snowman_somatic_indel/*.broad-snowman.DATECODE.somatic.indel.vcf.gz broad-snowman.DATECODE.somatic.indel.vcf.gz
+cp /cga/fh/pcawg_pipeline/jobResults_pipette/jobs/*/links_for_gnos/tabix_snowman_somatic_sv/*.broad-snowman.DATECODE.somatic.sv.vcf.gz broad-snowman.DATECODE.somatic.sv.vcf.gz
 
 #collect the file outputs for return back to Broad
 tar -cvhf $FINALRESULTSDIR/broad.tar.gz $OUTDIR/links_for_broad
