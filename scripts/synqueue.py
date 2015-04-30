@@ -53,20 +53,34 @@ import requests.packages.urllib3
 requests.packages.urllib3.disable_warnings()
 
 
-def listAssignments(syn, list_all, table_id, primary_col, assignee_col, state_col, debug):
+def listAssignments(syn, table_id, primary_col, assignee_col, state_col, list_all=False, debug=False, display=False):
     table = syn.get(table_id)
     if table.entityType != "org.sagebionetworks.repo.model.table.TableEntity":
         return
     username = syn.getUserProfile()['userName']
-    results = syn.tableQuery('select "%s", "%s", "%s" from %s' % (primary_col, assignee_col, state_col, table.id))
+    results = syn.tableQuery('select * from %s' % (table.id))
     total = 0
-    for row in results:
-        if row[3] == username or list_all:
-            print "\t".join( list( str(a) for a in row[2:]) )
+    rbase = {"id": primary_col, "assignee" : assignee_col, "state" : state_col }
+    out = []
+    df = results.asDataFrame()
+    for row_name in df.index:
+        row = df.loc[row_name]
+        if row[assignee_col] == username or list_all:
+            rec = {}
+            for k,v in rbase.items():
+                rec[k] = row[v]
+            rec['meta'] = {}
+            for c in row.index:
+                rec['meta'][c] = row[c]
+            if display:
+                print "%s\t%s\t%s" % ( row[primary_col], row[state_col], row[assignee_col] )
             total += 1
-    print "Total:", total
+            out.append(rec)
+    if display:
+        print "Total:", total
+    return out
 
-def registerAssignments(syn, count, table_id, primary_col, assignee_col, state_col, debug):
+def registerAssignments(syn, count, table_id, primary_col, assignee_col, state_col, debug=False, display=False):
     table = syn.get(table_id)
     if table.entityType != "org.sagebionetworks.repo.model.table.TableEntity":
         return
@@ -78,7 +92,7 @@ def registerAssignments(syn, count, table_id, primary_col, assignee_col, state_c
         df.loc[row,assignee_col] = username
     syn.store(synapseclient.Table(table, df, etag=results.etag))
 
-def setStates(syn, state, ids, table_id, primary_col, assignee_col, state_col, debug):
+def setStates(syn, state, ids, table_id, primary_col, assignee_col, state_col, debug=False, display=False):
     table = syn.get(table_id)
     if table.entityType != "org.sagebionetworks.repo.model.table.TableEntity":
         return
@@ -128,7 +142,22 @@ def build_parser():
 
     return parser
 
-
+def find_config():
+    config = {}
+    cur_dir = os.path.abspath(os.getcwd())
+    while True:
+        cur_path = os.path.join(cur_dir,".synqueue")
+        #print "Checking", cur_path
+        if os.path.exists(cur_path):
+            with open(cur_path) as handle:
+                meta = json.loads(handle.read())
+            for k,v in meta.items():
+                config[k] = v
+            break
+        cur_dir = os.path.dirname(cur_dir)
+        if cur_dir == "/":
+            break
+    return config
 
 if __name__ == "__main__":
     args = build_parser().parse_args()
@@ -137,21 +166,8 @@ if __name__ == "__main__":
     if 'func' in args:
         kwds = dict(vars(args))
         del kwds['func']
-        cur_dir = os.path.abspath(os.getcwd())
-        while True:
-            cur_path = os.path.join(cur_dir,".synqueue")
-            print "Checking", cur_path
-            if os.path.exists(cur_path):
-                with open(cur_path) as handle:
-                    meta = json.loads(handle.read())
-                for k,v in meta.items():
-                    kwds[k] = v
-                break
-            cur_dir = os.path.dirname(cur_dir)
-            if cur_dir == "/":
-                break
-
+        kwds.update(find_config())
         for i in ['table_id', 'primary_col', 'assignee_col', 'state_col']:
             if kwds[i] is None:
                 raise Exception("Please define --%s" % (i))
-        sys.exit(args.func(syn=syn, **kwds))
+        args.func(syn=syn, display=True, **kwds)
