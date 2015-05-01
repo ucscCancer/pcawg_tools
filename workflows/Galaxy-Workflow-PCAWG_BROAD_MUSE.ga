@@ -186,40 +186,6 @@
             "user_outputs": [],
             "uuid": "20e59ad1-836d-4ca2-a22d-6c24bbac3289"
         },
-        "6": {
-            "annotation": "",
-            "id": 6,
-            "input_connections": {},
-            "inputs": [],
-            "label": null,
-            "name": "Select",
-            "outputs": [
-                {
-                    "name": "out_file1",
-                    "type": "input"
-                }
-            ],
-            "position": {
-                "left": 1943.578125,
-                "top": 1778.21875
-            },
-            "post_job_actions": {
-                "RenameDatasetActionout_file1": {
-                    "action_arguments": {
-                        "newname": "gatk_mutect_vcf"
-                    },
-                    "action_type": "RenameDatasetAction",
-                    "output_name": "out_file1"
-                }
-            },
-            "tool_errors": null,
-            "tool_id": "Grep1",
-            "tool_state": "{\"__page__\": 0, \"input\": \"null\", \"invert\": \"\\\"true\\\"\", \"__rerun_remap_job_id__\": null, \"pattern\": \"\\\"REJECT\\\"\"}",
-            "tool_version": "1.0.1",
-            "type": "tool",
-            "user_outputs": [],
-            "uuid": "1a9d0ae4-e2ef-4aaf-970b-0d9e5b9139ba"
-        },
         "7": {
             "annotation": "tumor_indel",
             "id": 7,
@@ -443,7 +409,7 @@
             "uuid": "d1259f3a-9c4f-4a11-a311-531bec6c878b"
         },
         "11": {
-            "annotation": "broad_variant_pipeline", 
+            "annotation": "broad_variant_pipeline",
             "id": 11,
             "input_connections": {
                 "normal_bam": {
