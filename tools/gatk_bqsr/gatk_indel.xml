@@ -50,7 +50,7 @@
 
     <outputs>
         <data format="bam" name="output_bam" label="INDEL Realigned BAM" from_work_dir="output.bam">
-          <filter>input.input_mode == "1"</filter>
+          <filter>input['input_mode'] == "1"</filter>
         </data>
         <!-- Paired indel alignemt output -->
         <data format="bam" name="output_bam_1" label="INDEL Realigned BAM 1" from_work_dir="output_1.bam">
