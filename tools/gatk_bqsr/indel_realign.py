@@ -75,7 +75,6 @@ ${JAVA}
 -R ${REF_SEQ}
 -I ${INPUT_LIST}
 ${KNOWN_STR}
---downsampling_type NONE
 -o ${OUT}
 """.replace("\n", " "))
 #output_base
@@ -110,9 +109,7 @@ ${JAVA}
 -I ${INPUT_LIST}
 -L ${INTERVAL}
 -targetIntervals ${TARGET_INTERVALS}
---downsampling_type NONE
 ${KNOWN_STR}
--maxReads 720000 -maxInMemory 5400000 \
 -nWayOut ${OUTPUT_MAP}
 """.replace("\n", " "))
 
@@ -155,9 +152,7 @@ ${JAVA}
 -R ${REF_SEQ}
 -I ${INPUT_LIST}
 -targetIntervals ${TARGET_INTERVALS}
---downsampling_type NONE
 ${KNOWN_STR}
--maxReads 720000 -maxInMemory 5400000 \
 -nWayOut ${OUTPUT_MAP}
 """.replace("\n", " "))
 
@@ -261,7 +256,8 @@ def run_indel_realign(args):
             raise Exception("IndelRealigner failed")
 
         for i, o in enumerate(args['out']):
-            cmd = [samtools, "merge", o ] + list( a[1][i] for a in cmds )
+            merge_cpus = min(4, args['ncpus'])
+            cmd = [samtools, "merge", "-@%s" % (merge_cpus), o ] + list( a[1][i] for a in cmds )
             logging.info("Running Merge: %s" % " ".join(cmd))
             subprocess.check_call(cmd)
     else:
