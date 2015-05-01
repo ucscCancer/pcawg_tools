@@ -111,7 +111,20 @@ if __name__ == "__main__":
     if args.create_service:
         service = GalaxyService(
             docstore=docstore,
-            galaxy="bgruening/galaxy-stable:dev"
+            galaxy="bgruening/galaxy-stable:dev",
+            sudo=True,
+            tool_data=os.path.abspath("tool_data"),
+            tool_dir=os.path.abspath("tools"),
+            smp=[
+                ["MuSE", 8],
+                ["pindel", 8],
+                ["muTect", 8],
+                ["delly", 4],
+                ["gatk_bqsr", 12],
+                ["gatk_indel", 12],
+                ["bwa_mem", 12],
+                ["broad_variant_pipline", 28]
+            ]
         )
         with open("pcawg.service", "w") as handle:
             service.get_config().store(handle)
