@@ -98,7 +98,8 @@ if __name__ == "__main__":
                     "broad_ref_dir" : "/tool_data/files/refdata",
                     "sample_id" : ent['meta']['Donor_ID']
                 }
-            }
+            },
+            tags=[ "sample:%s" % (ent['meta']['Donor_ID']) ]
         )
         tasks.append(task)
 
