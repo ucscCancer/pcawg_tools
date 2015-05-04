@@ -2,7 +2,7 @@
 FROM	ubuntu:12.04
 
 RUN		apt-get update
-RUN		apt-get install -y zlib1g-dev g++ dh-autoreconf libncurses-dev pkg-config git libgd2-noxpm-dev unzip python python-dateutil libipc-system-simple-perl python-lxml libjson-perl wget libxml-simple-perl curl
+RUN		apt-get install -y zlib1g-dev g++ dh-autoreconf libncurses-dev pkg-config git libgd2-noxpm-dev unzip python python-dateutil libipc-system-simple-perl python-lxml libjson-perl wget libxml-simple-perl curl python-yaml
 
 #Get PCAP Tools
 RUN		mkdir /opt/ICGC

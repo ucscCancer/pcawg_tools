@@ -21,7 +21,7 @@
 
 		<!-- optional -->
 
-		<!-- Parameters affecting runtime and memory usage -->
+		<!-- Parameters affecting runtime and memory usage
 		#if str($options_runtime.options_runtime_selector) == "yes":
 			--number_of_threads $options_runtime.number_of_threads
 			--window_size $options_runtime.window_size
@@ -29,6 +29,8 @@
 		#else
 			--number_of_procs \${GALAXY_SLOTS:-4}
 		#end if
+	  -->
+		--number_of_procs \${GALAXY_SLOTS:-4}
 		<!-- Parameters affecting which structural variants are reported -->
 		#if str($options_which.options_which_selector) == "yes":
 			#if $options_which.reportInversions:
@@ -132,8 +134,8 @@
 				<option value="no">no</option>
 			</param>
 			<when value="yes">
-				<param name="number_of_procs" type="integer" label="Number of Procs" help="Number of chrome processes" value="4" />
-				<param name="number_of_threads" type="integer" label="Number of threads" help="the number of threads Pindel will use" value="1" />
+				<!-- param name="number_of_procs" type="integer" label="Number of Procs" help="Number of chrome processes" value="4" / -->
+				<!-- param name="number_of_threads" type="integer" label="Number of threads" help="the number of threads Pindel will use" value="1" / -->
 				<param name="window_size" type="integer" value="5" label="Window size" help="for saving RAM, divides the reference in bins of X million bases and only analyzes the reads that belong in the current bin, (default=5 million)" />
 			</when>
 			<when value="no">

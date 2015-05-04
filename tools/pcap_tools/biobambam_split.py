@@ -9,6 +9,7 @@ import logging
 import multiprocessing
 import subprocess
 import urllib2
+from glob import glob
 from xml.etree import ElementTree
 
 default_logger = logging.getLogger()
@@ -78,33 +79,43 @@ def process_rg(rg_dict, work_dir, output_dir, logger=default_logger):
     return True, lane_level_bam
 
 
-def gen_unaligned_bam(bam_filename, metadata, work_dir, output_dir, num_processes=4, logger=default_logger ):
+def gen_unaligned_data(bam_filename, metadata, work_dir, output_dir, header_output, num_processes=4, to_bam=False, logger=default_logger ):
     """
     The bulk of the work, calls splitting, generates new headers, generates initial
     unaligned BAM, reheaders with new headers
     """
 
-    read_group_sam = os.path.join(output_dir, 'rg_header.sam')
-
     #get the read groups from the original sample level BAM
-    exit_code = os.system("samtools view -H %s | grep \"@RG\" > %s" %(bam_filename, read_group_sam))
+    exit_code = os.system("samtools view -H %s | grep \"@RG\" > %s" %(bam_filename, header_output))
     if exit_code != 0:
         print "Failure in bam splitting during read group extraction from %s" % bam_filename
         return 1
 
+    if to_bam:
+        #create the read group fastqs
+        try:
+            cmd = "bamtofastq outputperreadgroup=1 gz=1 level=1 inputbuffersize=2097152000 tryoq=1 outputdir=%s T=`mktemp -p %s bamtofastq_XXXXXXXXX` < %s" %(work_dir, work_dir, bam_filename)
+            logger.info("Running %s" % cmd)
+            subprocess.check_call(cmd, shell=True)
+        except:
+            print "Failure in bam splitting"
+            return 1
+    else:
+        #create the read group fastqs
+        try:
+            cmd = "bamtofastq outputperreadgroup=1 level=1 inputbuffersize=2097152000 tryoq=1 outputdir=%s T=`mktemp -p %s bamtofastq_XXXXXXXXX` < %s" %(output_dir, work_dir, bam_filename)
+            logger.info("Running %s" % cmd)
+            subprocess.check_call(cmd, shell=True)
+            for a in glob(os.path.join(output_dir, "*.fq")):
 
-    rg_file = open(read_group_sam, "r")
-
-    #create the read group fastqs
-    try:
-        cmd = "bamtofastq outputperreadgroup=1 gz=1 level=1 inputbuffersize=2097152000 tryoq=1 outputdir=%s T=`mktemp -p %s bamtofastq_XXXXXXXXX` < %s" %(work_dir, work_dir, bam_filename)
-        logger.info("Running %s" % cmd)
-        subprocess.check_call(cmd, shell=True)
-    except:
-        print "Failure in bam splitting"
-        return 1
+                shutil.move( a, a[:-3] + ".fastq" )
+            return 0
+        except:
+            print "Failure in bam splitting"
+            return 1
 
 
+    rg_file = open(header_output, "r")
     pool = multiprocessing.Pool(processes=num_processes)
     results = []
     for line in rg_file:
@@ -164,12 +175,14 @@ def calc_md5sum(bam_filename):
 if __name__ == '__main__':
     basedir = os.path.abspath(os.path.dirname( __file__ ))
 
-    parser = argparse.ArgumentParser(prog='biobambam_split.py', description='Create unaligned BAM files')
+    parser = argparse.ArgumentParser(prog='biobambam_split.py', description='Create unaligned FASTQ/BAM files from original BAM file')
     parser.add_argument('--bam_path', type=str, help='path/to/tcga/data/labeled_by_analysis_id', required=True)
+    parser.add_argument('--bam', action="store_true", default=False)
     #parser.add_argument('--normal_id', type=str, help='UUID for normal analysis (analysis_id)', default=None)
     #parser.add_argument('--tumor_id', type=str, help='Comma separated list of tumor analysis UUIDs (analysid_id(s))', default=None)
     parser.add_argument('--work_dir', type=str, help='path/to/output/directory', default=None)
     parser.add_argument('--output_dir', type=str, help='path/to/output/directory', required=True)
+    parser.add_argument('--header', type=str, required=True)
 
     args = parser.parse_args()
 
@@ -179,7 +192,7 @@ if __name__ == '__main__':
     output_dir = make_new_dir(args.output_dir)
     work_dir = make_new_dir(args.work_dir)
     try:
-        exit_code = gen_unaligned_bam(args.bam_path, metadata={}, work_dir=work_dir, output_dir=output_dir)
+        exit_code = gen_unaligned_data(bam_filename=args.bam_path, metadata={}, work_dir=work_dir, output_dir=output_dir, header_output=args.header, to_bam=args.bam)
 
     	"""
         if args.tumor_id is None and args.normal_id is not None:
