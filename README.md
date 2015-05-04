@@ -13,15 +13,9 @@ Get Nebula for deployment:
 git clone https://github.com/kellrott/nebula.git
 ```
 
-
 Add to PYTHONPATH:
 ```
 export PYTHONPATH=`pwd`/nebula
-```
-
-Download Data:
-```
-cd data && ./download.sh
 ```
 
 Obtain GATK then:
@@ -39,36 +33,34 @@ Fetch Prebuilt Galaxy Image:
 docker pull bgruening/galaxy-stable:dev
 ```
 
-Build custom Galaxy image
-```
-git clone https://github.com/bgruening/docker-galaxy-stable.git
-```
-Then inside `galaxy/Dockerfile` on the `apt-get` line change `lxc-docker` to `lxc-docker-1.3`
-
 
 Cache Docker Galaxy image:
 ```
 docker save bgruening/galaxy-stable:dev > images/galaxy.tar
 ```
 
-Manually instance galaxy (with PCAWG Tools loaded)
-```
-python nebula/nebula/warpdrive.py up -x tools/ -l data/ -a -f -w . -c
-```
-
 Generate jobs:
 ```
-./scripts/build_jobs.py data/PCAWG_Data_Freeze_Train_2.0_Pilot_64.tsv jobs/
+./scripts/pcawg_wf_gen.py --ref-download /path/to/pcawg/docstore --create-service
 ```
 
 
 Submit job:
 ```
-qsub sge_qsub_runworkflow.sh jobs/00ad0ffe-2105-4829-a495-1c2aceb5bb31.json workflows/Galaxy-Workflow-PCAWG_Pilot.ga
+qsub sge_qsub_runworkflow.sh pcawg.service pcawg.tasks/workflow_id
 ```
 
+
+Debugging and Development
+=========================
+To manually instance galaxy (with PCAWG Tools loaded) for interactive analysis and testing
+```
+python nebula/nebula/warpdrive.py up -t tools/ -l data/ -a -f -w . -c
+```
+
+
 Tools
-====
+=====
 
 
 pcap_tools
