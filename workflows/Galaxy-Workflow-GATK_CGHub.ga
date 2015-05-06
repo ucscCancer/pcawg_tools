@@ -187,42 +187,8 @@
             "uuid": "20e59ad1-836d-4ca2-a22d-6c24bbac3289"
         }, 
         "6": {
-            "annotation": "", 
-            "id": 6, 
-            "input_connections": {}, 
-            "inputs": [], 
-            "label": null, 
-            "name": "Select", 
-            "outputs": [
-                {
-                    "name": "out_file1", 
-                    "type": "input"
-                }
-            ], 
-            "position": {
-                "left": 1996.078125, 
-                "top": 1778.21875
-            }, 
-            "post_job_actions": {
-                "RenameDatasetActionout_file1": {
-                    "action_arguments": {
-                        "newname": "gatk_mutect_vcf"
-                    }, 
-                    "action_type": "RenameDatasetAction", 
-                    "output_name": "out_file1"
-                }
-            }, 
-            "tool_errors": null, 
-            "tool_id": "Grep1", 
-            "tool_state": "{\"__page__\": 0, \"input\": \"null\", \"invert\": \"\\\"true\\\"\", \"__rerun_remap_job_id__\": null, \"pattern\": \"\\\"REJECT\\\"\"}", 
-            "tool_version": "1.0.1", 
-            "type": "tool", 
-            "user_outputs": [], 
-            "uuid": "1a9d0ae4-e2ef-4aaf-970b-0d9e5b9139ba"
-        }, 
-        "7": {
             "annotation": "tumor_indel", 
-            "id": 7, 
+            "id": 6, 
             "input_connections": {
                 "input|input_bam_1": {
                     "id": 0, 
@@ -263,8 +229,8 @@
                 }
             ], 
             "position": {
-                "left": 669.328125, 
-                "top": 203.0625
+                "left": 671.328125, 
+                "top": 200.0625
             }, 
             "post_job_actions": {
                 "HideDatasetActionoutput_bam": {
@@ -291,12 +257,12 @@
             "user_outputs": [], 
             "uuid": "306fef0e-5d26-474c-a339-f68d7d3c754f"
         }, 
-        "8": {
+        "7": {
             "annotation": "tumor_bqsr_bam", 
-            "id": 8, 
+            "id": 7, 
             "input_connections": {
                 "input_bam": {
-                    "id": 7, 
+                    "id": 6, 
                     "output_name": "output_bam_1"
                 }, 
                 "known_sites": {
@@ -330,22 +296,29 @@
                     "action_arguments": {}, 
                     "action_type": "HideDatasetAction", 
                     "output_name": "output_report"
+                }, 
+                "RenameDatasetActionoutput_bam": {
+                    "action_arguments": {
+                        "newname": "tumor_bam_output"
+                    }, 
+                    "action_type": "RenameDatasetAction", 
+                    "output_name": "output_bam"
                 }
             }, 
             "tool_errors": null, 
             "tool_id": "gatk_bqsr", 
-            "tool_state": "{\"__page__\": 0, \"__rerun_remap_job_id__\": null, \"known_sites\": \"null\", \"input_bam\": \"null\", \"reference\": \"null\"}", 
+            "tool_state": "{\"__page__\": 0, \"reference\": \"null\", \"__rerun_remap_job_id__\": null, \"emit_oq\": \"\\\"True\\\"\", \"known_sites\": \"null\", \"input_bam\": \"null\"}", 
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
             "uuid": "43deaa78-e3fb-49ab-a842-0a2084cfe0ec"
         }, 
-        "9": {
+        "8": {
             "annotation": "normal_bqsr_bam", 
-            "id": 9, 
+            "id": 8, 
             "input_connections": {
                 "input_bam": {
-                    "id": 7, 
+                    "id": 6, 
                     "output_name": "output_bam_2"
                 }, 
                 "known_sites": {
@@ -379,16 +352,23 @@
                     "action_arguments": {}, 
                     "action_type": "HideDatasetAction", 
                     "output_name": "output_report"
+                }, 
+                "RenameDatasetActionoutput_bam": {
+                    "action_arguments": {
+                        "newname": "normal_bam_output"
+                    }, 
+                    "action_type": "RenameDatasetAction", 
+                    "output_name": "output_bam"
                 }
             }, 
             "tool_errors": null, 
             "tool_id": "gatk_bqsr", 
-            "tool_state": "{\"__page__\": 0, \"__rerun_remap_job_id__\": null, \"known_sites\": \"null\", \"input_bam\": \"null\", \"reference\": \"null\"}", 
+            "tool_state": "{\"__page__\": 0, \"reference\": \"null\", \"__rerun_remap_job_id__\": null, \"emit_oq\": \"\\\"True\\\"\", \"known_sites\": \"null\", \"input_bam\": \"null\"}", 
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
             "uuid": "988f70f0-cbb9-4c5a-993f-66ba89606ae7"
         }
     }, 
-    "uuid": "33ada1d3-ff46-42a2-9e4c-5c93eaf13390"
+    "uuid": "20eff6c1-efef-46e3-b9e9-ea9cb4d63ca7"
 }

@@ -80,17 +80,26 @@ def listAssignments(syn, table_id, primary_col, assignee_col, state_col, list_al
         print "Total:", total
     return out
 
-def registerAssignments(syn, count, table_id, primary_col, assignee_col, state_col, debug=False, display=False):
+def registerAssignments(syn, count, table_id, primary_col, assignee_col, state_col, force=None, debug=False, display=False):
     table = syn.get(table_id)
     if table.entityType != "org.sagebionetworks.repo.model.table.TableEntity":
         return
     username = syn.getUserProfile()['userName']
 
-    results = syn.tableQuery('select * from %s where "%s" is NULL limit %s' % (table.id, assignee_col, count))
-    df = results.asDataFrame()
-    for row in df.index:
-        df.loc[row,assignee_col] = username
-    syn.store(synapseclient.Table(table, df, etag=results.etag))
+    if force is None:
+        results = syn.tableQuery('select * from %s where "%s" is NULL limit %s' % (table.id, assignee_col, count))
+        df = results.asDataFrame()
+        for row in df.index:
+            df.loc[row,assignee_col] = username
+        syn.store(synapseclient.Table(table, df, etag=results.etag))
+    else:
+        results = syn.tableQuery('select * from %s where "%s"=\'%s\'' % (table.id, primary_col, force))
+        df = results.asDataFrame()
+        for row in df.index:
+            df.loc[row,assignee_col] = username
+        syn.store(synapseclient.Table(table, df, etag=results.etag))
+
+
 
 def setStates(syn, state, ids, table_id, primary_col, assignee_col, state_col, debug=False, display=False):
     table = syn.get(table_id)
@@ -126,6 +135,7 @@ def build_parser():
     parser_register = subparsers.add_parser('register',
                                        help='Returns set of new assignments')
     parser_register.add_argument("-c", "--count", help="Number of assignments to get", type=int, default=1)
+    parser_register.add_argument("-f", "--force", help="Force Register specific ID", default=None)
     add_config_arguments(parser_register)
     parser_register.set_defaults(func=registerAssignments)
 
