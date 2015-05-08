@@ -40,6 +40,7 @@ def indexBam(workdir, inputFastaFile, inputBamFile, bam_number, inputBamFileInde
 
 
 def config(inputBamFiles, meanInsertSizes, tags, tempDir):
+    print("Creating Config File.")
     configFile = tempDir+"/pindel_configFile"
     fil = open(configFile, 'w')
     for inputBamFile, meanInsertSize, tag in zip(inputBamFiles, meanInsertSizes, tags):
@@ -93,8 +94,8 @@ def pindel(reference, configFile, args, tempDir, chrome=None):
         cmd += ' --MIN_DD_CLUSTER_SIZE '+str(args.MIN_DD_CLUSTER_SIZE)
         cmd += ' --MIN_DD_BREAKPOINT_SUPPORT '+str(args.MIN_DD_BREAKPOINT_SUPPORT)
         cmd += ' --MIN_DD_MAP_DISTANCE '+str(args.MIN_DD_MAP_DISTANCE)
-        if args.DD_REPORT_DUPLICATION_READS:
-            cmd += ' --DD_REPORT_DUPLICATION_READS '
+    if args.DD_REPORT_DUPLICATION_READS:
+        cmd += ' --DD_REPORT_DUPLICATION_READS '
 
     return (cmd, pindelTempDir)
 
@@ -138,7 +139,7 @@ def get_bam_seq(inputBamFile, min_size=1):
 
 
 def getMeanInsertSize(bamFile):
-     cmd = "samtools view -f66 %s | head -n 1000000" % (bamFile)
+    cmd = "samtools view -f66 %s | head -n 1000000" % (bamFile)
     process = subprocess.Popen(args=cmd, shell=True, stdout=subprocess.PIPE)
     b_sum = 0L
     b_count = 0L
@@ -147,8 +148,9 @@ def getMeanInsertSize(bamFile):
         if not line:
             break
         tmp = line.split("\t")
-        b_sum += abs(long(tmp[8]))
-        b_count +=1
+        if abs(long(tmp[8])) < 10000:
+            b_sum += abs(long(tmp[8]))
+            b_count +=1
     process.wait()
     mean = b_sum / b_count
     print "Using insert size: %d" % (mean)
@@ -215,6 +217,7 @@ def __main__():
         logging.error("Need input files")
         sys.exit(1)
     inputBamFileIndexes = list( os.path.abspath(a) for a in args.inputBamFiles )
+
     if len(inputBamFileIndexes) == 0:
         inputBamFileIndexes = [None] * len(inputBamFiles)
     if len(inputBamFileIndexes) != len(inputBamFiles):
@@ -233,7 +236,7 @@ def __main__():
         sys.exit(1)
 
     tempDir = tempfile.mkdtemp(dir="./", prefix="pindel_work_")
-
+    print(tempDir)
     try:
         meanInsertSizes = []
         seq_hash = {}
@@ -244,7 +247,7 @@ def __main__():
             i += 1
             newInputFiles.append(inputBamFile)
             if insertSize==None:
-                 meanInsertSize = getMeanInsertSize(inputBamFile)
+                meanInsertSize = getMeanInsertSize(inputBamFile)
             else:
                 meanInsertSize=insertSize
             meanInsertSizes.append( meanInsertSize )
