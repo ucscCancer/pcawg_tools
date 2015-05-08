@@ -85,6 +85,7 @@
 
     </command>
     <inputs>
+        <param name='in_vcf' type="data" format="vcf" help="Input VCF" label="InVCF"/>
         <param name='expDesign' type='text' value="individual_genetic_characteristics_design" help="the experimental design tag"/>
         <param name='expDesignOntology' type='text' value="MGED Ontology" help="the experimental design term source reference (e.g. MGED, HUGO, etc."/>
         <param name='expDesignFactorName' type='text' value="somatic_variant" help="the experimental design factor name"/>
@@ -114,11 +115,9 @@
         <param name='logFilename' type='text' help="the name of the log file, STDOUT by default"/>
     </inputs>
     <outputs>
+        <data format="txt" name="out_magetab" label="mage.tab"/>
     </outputs>
     <help>
 usage: python %prog vcfDir protectedIDFFilename protectedSDRFFilename protectedArchiveName openAccessIDFFilename openAccessSDRFFilename openAccessArchiveName [Options]
     </help>
 </tool>
-
-
-
