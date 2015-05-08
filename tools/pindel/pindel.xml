@@ -10,26 +10,17 @@
 		<!-- required -->
 		-r $inputReferenceFile
 		-R $referenceName
-		-b $inputBamFile
-		-t $sampleTag
-		-bi $inputBamFile.metadata.bam_index
-#if $defineInsertSize.manual_define == "yes":
-		-s $defineInsertSize.insertSize
+#for $i, $s in enumerate($inputs):
+		-b $s.inputBamFile
+		-t $s.sampleTag
+		-bi $s.inputBamFile.metadata.bam_index
+#if $s.defineInsertSize.manual_define == "yes":
+		-s $s.defineInsertSize.insertSize
 #end if
+#end for
 		<!-- -o1 $outputRaw -->
 		-o2 $outputVcfFile
 
-		<!-- optional -->
-
-		<!-- Parameters affecting runtime and memory usage
-		#if str($options_runtime.options_runtime_selector) == "yes":
-			--number_of_threads $options_runtime.number_of_threads
-			--window_size $options_runtime.window_size
-			--number_of_procs $options_runtime.number_of_procs
-		#else
-			--number_of_procs \${GALAXY_SLOTS:-4}
-		#end if
-	  -->
 		--number_of_procs \${GALAXY_SLOTS:-4}
 		<!-- Parameters affecting which structural variants are reported -->
 		#if str($options_which.options_which_selector) == "yes":
@@ -113,18 +104,19 @@
 		<!-- required -->
 		<param format="fasta" name="inputReferenceFile" type="data" label="reference file" help="" />
 		<param name="referenceName" type="text" label="Reference Name" help="Name of the Reference Genome" value="HG19" />
-		<param format="bam" name="inputBamFile" type="data" label="bam file" help="" />
-		<param name="sampleTag" type="text" label="Tag" help="tag for this sample" value="sample" />
-		<conditional name="defineInsertSize">
-			<param name="manual_define" type="select" label="Manually Define Insert Size">
-				<option value="yes">yes</option>
-				<option value="no" selected="True">no</option>
-			</param>
-			<when value="yes">
-				<param name="insertSize" type="integer" label="Insert size" help="insert size of the reads" value="" />
-			</when>
-		</conditional>
-
+		<repeat name="inputs" title="Inputs">
+			<param format="bam" name="inputBamFile" type="data" label="bam file" help="" />
+			<param name="sampleTag" type="text" label="Tag" help="tag for this sample" value="sample" />
+			<conditional name="defineInsertSize">
+				<param name="manual_define" type="select" label="Manually Define Insert Size">
+					<option value="yes">yes</option>
+					<option value="no" selected="True">no</option>
+				</param>
+				<when value="yes">
+					<param name="insertSize" type="integer" label="Insert size" help="insert size of the reads" value="" />
+				</when>
+			</conditional>
+		</repeat>
 		<!-- optional -->
 
 		<!-- Parameters affecting runtime and memory usage -->
