@@ -37,6 +37,9 @@ class Record:
             self.seq, "%d" % (self.pos), self.id, self.ref, self.alt,
             self.qual, self.filter, self.info, self.format] + self.samples )
 
+def atoi(text):
+    return int(text) if text.isdigit() else text.lower()
+
 class VCF:
 
     def __init__(self):
@@ -59,6 +62,8 @@ class VCF:
         bams = []
         for b in bam_files:
             bams.append(pysam.AlignmentFile(b, "rb"))
+
+        self.records.sort(key=lambda x: [atoi(x.seq), x.pos])
 
         #loop through each record
         for rec in self.records:
