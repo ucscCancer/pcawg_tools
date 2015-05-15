@@ -27,7 +27,7 @@ muse.py
         <param name="version" type="select" label="MuSE Version">
             <option value="MuSEv0.9.9.5" selected="True">MuSEv0.9.9.5</option>
             <option value="MuSEv1.0rc" >MuSEv1.0rc</option>
-        </param-->
+        </param>
         <!-- param name="intervals" type="text" label="Intervals to process" help="In format 'chr1:1500-2500; chr2:2500-3500', separated by semicolons" optional="true"/ -->
         <!-- param name="intervalfile" type="data" format="txt" label="Intervals to process (.txt file)" help="'chr1:1500-2500', one entry per line" optional="true"/ -->
     </inputs>

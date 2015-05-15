@@ -42,6 +42,7 @@ def cmd_caller(cmd):
 def cmds_runner(cmds, cpus):
     p = Pool(cpus)
     values = p.map(cmd_caller, cmds, 1)
+    return values
 
 def call_cmd_iter(muse, ref_seq, block_size, tumor_bam, normal_bam, contamination, output_base):
     contamination_str = ""
@@ -75,7 +76,7 @@ def run_muse(args):
     if not os.path.exists(args.muse):
         args.muse = which(args.muse)
 
-    workdir = tempfile.mkdtemp(dir=args.workdir, prefix="muse_work_")
+    workdir = os.path.abspath(tempfile.mkdtemp(dir=args.workdir, prefix="muse_work_"))
 
     if not os.path.exists(args.f + ".fai"):
         new_ref = os.path.join(workdir, "ref_genome.fasta")
@@ -117,7 +118,8 @@ def run_muse(args):
     )
 
     rvals = cmds_runner(list(a[0] for a in cmds), args.cpus)
-
+    if any(rvals):
+        raise Exception("MuSE CALL failed")
     #check if rvals is ok
     first = True
     merge = os.path.join(workdir, "merge.output")
@@ -142,14 +144,22 @@ def run_muse(args):
     else:
         sump_template = string.Template("${MUSE} sump -I ${MERGE} -O ${OUTPUT} ${MODE}")
 
+    tmp_out = os.path.join(workdir, "tmp.vcf")
     sump_cmd = sump_template.substitute( dict (
         MUSE=args.muse,
         MERGE=merge,
-        OUTPUT=args.O,
+        OUTPUT=tmp_out,
         DBSNP=dbsnp_file,
         MODE=mode_flag
     ))
     cmd_caller(sump_cmd)
+
+    if args.muse.endswith("MuSEv0.9.9.5"):
+        subprocess.check_call( ["/opt/bin/vcf_reformat.py", tmp_out, "-o", args.O,
+            "-b", "TUMOR", args.tumor_bam, "-b", "NORMAL", args.normal_bam] )
+    else:
+        shutil.copy(tmp_out, args.O)
+
     if not args.no_clean:
         shutil.rmtree(workdir)
 

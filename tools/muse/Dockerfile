@@ -8,5 +8,6 @@ RUN     wget -O /opt/bin/MuSEv0.9.9.5 http://bioinformatics.mdanderson.org/Softw
 RUN     wget -O /opt/bin/MuSEv1.0rc http://odin.mdacc.tmc.edu/~yfan1/MuSE/MuSEv1.0rc
 RUN     chmod +x /opt/bin/MuSE*
 ADD     ./muse.py /opt/bin/
+ADD     ./vcf_reformat.py /opt/bin/vcf_reformat.py
 
 ENV     PATH /usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/bin

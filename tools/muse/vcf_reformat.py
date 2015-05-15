@@ -133,7 +133,7 @@ class VCF:
 
 
 
-def run_adjust(vcf, samples):
+def run_adjust(vcf, samples, out):
 
     input = VCF()
     with open(vcf) as handle:
@@ -152,13 +152,18 @@ def run_adjust(vcf, samples):
             s.append(b)
     input.samples = s
     input.adjust_format( list(a[1] for a in samples) )
-    input.write(sys.stdout)
+    if out is None:
+        input.write(sys.stdout)
+    else:
+        with open(out, "w") as handle:
+            input.write(handle)
 
 
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("vcf")
     parser.add_argument("-b", dest="samples", nargs=2, action="append")
+    parser.add_argument("-o", "--out", default=None)
 
     args = parser.parse_args()
     v = vars(args)
