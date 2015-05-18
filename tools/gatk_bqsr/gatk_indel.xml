@@ -4,14 +4,45 @@
         <container type="docker">gatk</container>
     </requirements>
     <command interpreter="python">indel_realign.py
-#if $input.input_mode == "1":
---input_file ${input.input_bam}
---input_file:index ${input.input_bam.metadata.bam_index}
-#else
+#if int($input.input_count) >= 1:
 --input_file ${input.input_bam_1}
 --input_file:index ${input.input_bam_1.metadata.bam_index}
+#end if
+#if int($input.input_count) >= 2:
 --input_file ${input.input_bam_2}
 --input_file:index ${input.input_bam_2.metadata.bam_index}
+#end if
+#if int($input.input_count) >= 3:
+--input_file ${input.input_bam_3}
+--input_file:index ${input.input_bam_3.metadata.bam_index}
+#end if
+#if int($input.input_count) >= 4:
+--input_file ${input.input_bam_4}
+--input_file:index ${input.input_bam_4.metadata.bam_index}
+#end if
+#if int($input.input_count) >= 5:
+--input_file ${input.input_bam_5}
+--input_file:index ${input.input_bam_5.metadata.bam_index}
+#end if
+#if int($input.input_count) >= 6:
+--input_file ${input.input_bam_6}
+--input_file:index ${input.input_bam_6.metadata.bam_index}
+#end if
+#if int($input.input_count) >= 7:
+--input_file ${input.input_bam_7}
+--input_file:index ${input.input_bam_7.metadata.bam_index}
+#end if
+#if int($input.input_count) >= 8:
+--input_file ${input.input_bam_8}
+--input_file:index ${input.input_bam_8.metadata.bam_index}
+#end if
+#if int($input.input_count) >= 9:
+--input_file ${input.input_bam_9}
+--input_file:index ${input.input_bam_9.metadata.bam_index}
+#end if
+#if int($input.input_count) >= 10:
+--input_file ${input.input_bam_10}
+--input_file:index ${input.input_bam_10.metadata.bam_index}
 #end if
 --reference-sequence ${reference}
 --ncpus \${GALAXY_SLOTS:-8}
@@ -19,27 +50,128 @@
 #for $k in $known:
 --known ${k.input}
 #end for
-#if $input.input_mode == "1":
---out output.bam
-#else
+#if int($input.input_count) >= 1:
 --out output_1.bam
+#end if
+#if int($input.input_count) >= 2:
 --out output_2.bam
 #end if
+#if int($input.input_count) >= 3:
+--out output_3.bam
+#end if
+#if int($input.input_count) >= 4:
+--out output_4.bam
+#end if
+#if int($input.input_count) >= 5:
+--out output_5.bam
+#end if
+#if int($input.input_count) >= 6:
+--out output_6.bam
+#end if
+#if int($input.input_count) >= 7:
+--out output_7.bam
+#end if
+#if int($input.input_count) >= 8:
+--out output_8.bam
+#end if
+#if int($input.input_count) >= 9:
+--out output_9.bam
+#end if
+#if int($input.input_count) >= 10:
+--out output_10.bam
+#end if
+
 --parallel-realign
 --mem 16
     </command>
     <inputs>
         <conditional name="input">
-          <param name="input_mode" type="select" label="Input Mode">
-            <option value="1">Single BAM</option>
-            <option value="2">Paired BAM</option>
+          <param name="input_count" type="select" label="BAM Count">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
           </param>
           <when value="1">
-            <param format="bam"   type="data" name="input_bam"      label="Input BAM" help="" />
+            <param format="bam"   type="data" name="input_bam_1"      label="Input BAM 1" help="" />
           </when>
           <when value="2">
             <param format="bam"   type="data" name="input_bam_1"      label="Input BAM 1" help="" />
             <param format="bam"   type="data" name="input_bam_2"      label="Input BAM 2" help="" />
+          </when>
+          <when value="3">
+            <param format="bam"   type="data" name="input_bam_1"      label="Input BAM 1" help="" />
+            <param format="bam"   type="data" name="input_bam_2"      label="Input BAM 2" help="" />
+            <param format="bam"   type="data" name="input_bam_3"      label="Input BAM 3" help="" />
+          </when>
+          <when value="4">
+            <param format="bam"   type="data" name="input_bam_1"      label="Input BAM 1" help="" />
+            <param format="bam"   type="data" name="input_bam_2"      label="Input BAM 2" help="" />
+            <param format="bam"   type="data" name="input_bam_3"      label="Input BAM 3" help="" />
+            <param format="bam"   type="data" name="input_bam_4"      label="Input BAM 4" help="" />
+          </when>
+          <when value="5">
+            <param format="bam"   type="data" name="input_bam_1"      label="Input BAM 1" help="" />
+            <param format="bam"   type="data" name="input_bam_2"      label="Input BAM 2" help="" />
+            <param format="bam"   type="data" name="input_bam_3"      label="Input BAM 3" help="" />
+            <param format="bam"   type="data" name="input_bam_4"      label="Input BAM 4" help="" />
+            <param format="bam"   type="data" name="input_bam_5"      label="Input BAM 5" help="" />
+          </when>
+          <when value="6">
+            <param format="bam"   type="data" name="input_bam_1"      label="Input BAM 1" help="" />
+            <param format="bam"   type="data" name="input_bam_2"      label="Input BAM 2" help="" />
+            <param format="bam"   type="data" name="input_bam_3"      label="Input BAM 3" help="" />
+            <param format="bam"   type="data" name="input_bam_4"      label="Input BAM 4" help="" />
+            <param format="bam"   type="data" name="input_bam_5"      label="Input BAM 5" help="" />
+            <param format="bam"   type="data" name="input_bam_6"      label="Input BAM 6" help="" />
+          </when>
+          <when value="7">
+            <param format="bam"   type="data" name="input_bam_1"      label="Input BAM 1" help="" />
+            <param format="bam"   type="data" name="input_bam_2"      label="Input BAM 2" help="" />
+            <param format="bam"   type="data" name="input_bam_3"      label="Input BAM 3" help="" />
+            <param format="bam"   type="data" name="input_bam_4"      label="Input BAM 4" help="" />
+            <param format="bam"   type="data" name="input_bam_5"      label="Input BAM 5" help="" />
+            <param format="bam"   type="data" name="input_bam_6"      label="Input BAM 6" help="" />
+            <param format="bam"   type="data" name="input_bam_7"      label="Input BAM 7" help="" />
+          </when>
+          <when value="8">
+            <param format="bam"   type="data" name="input_bam_1"      label="Input BAM 1" help="" />
+            <param format="bam"   type="data" name="input_bam_2"      label="Input BAM 2" help="" />
+            <param format="bam"   type="data" name="input_bam_3"      label="Input BAM 3" help="" />
+            <param format="bam"   type="data" name="input_bam_4"      label="Input BAM 4" help="" />
+            <param format="bam"   type="data" name="input_bam_5"      label="Input BAM 5" help="" />
+            <param format="bam"   type="data" name="input_bam_6"      label="Input BAM 6" help="" />
+            <param format="bam"   type="data" name="input_bam_7"      label="Input BAM 7" help="" />
+            <param format="bam"   type="data" name="input_bam_8"      label="Input BAM 8" help="" />
+          </when>
+          <when value="9">
+            <param format="bam"   type="data" name="input_bam_1"      label="Input BAM 1" help="" />
+            <param format="bam"   type="data" name="input_bam_2"      label="Input BAM 2" help="" />
+            <param format="bam"   type="data" name="input_bam_3"      label="Input BAM 3" help="" />
+            <param format="bam"   type="data" name="input_bam_4"      label="Input BAM 4" help="" />
+            <param format="bam"   type="data" name="input_bam_5"      label="Input BAM 5" help="" />
+            <param format="bam"   type="data" name="input_bam_6"      label="Input BAM 6" help="" />
+            <param format="bam"   type="data" name="input_bam_7"      label="Input BAM 7" help="" />
+            <param format="bam"   type="data" name="input_bam_8"      label="Input BAM 8" help="" />
+            <param format="bam"   type="data" name="input_bam_9"      label="Input BAM 9" help="" />
+          </when>
+          <when value="10">
+            <param format="bam"   type="data" name="input_bam_1"      label="Input BAM 1" help="" />
+            <param format="bam"   type="data" name="input_bam_2"      label="Input BAM 2" help="" />
+            <param format="bam"   type="data" name="input_bam_3"      label="Input BAM 3" help="" />
+            <param format="bam"   type="data" name="input_bam_4"      label="Input BAM 4" help="" />
+            <param format="bam"   type="data" name="input_bam_5"      label="Input BAM 5" help="" />
+            <param format="bam"   type="data" name="input_bam_6"      label="Input BAM 6" help="" />
+            <param format="bam"   type="data" name="input_bam_7"      label="Input BAM 7" help="" />
+            <param format="bam"   type="data" name="input_bam_8"      label="Input BAM 8" help="" />
+            <param format="bam"   type="data" name="input_bam_9"      label="Input BAM 9" help="" />
+            <param format="bam"   type="data" name="input_bam_10"      label="Input BAM 10" help="" />
           </when>
         </conditional>
         <param format="fasta" type="data" name="reference"      label="Reference Genome" />
@@ -49,16 +181,37 @@
     </inputs>
 
     <outputs>
-        <data format="bam" name="output_bam" label="INDEL Realigned BAM" from_work_dir="output.bam">
-          <filter>input['input_mode'] == "1"</filter>
-        </data>
-        <!-- Paired indel alignemt output -->
         <data format="bam" name="output_bam_1" label="INDEL Realigned BAM 1" from_work_dir="output_1.bam">
-          <filter>input['input_mode'] == "2"</filter>
+            <filter>int(input['input_count']) >= 1</filter>
         </data>
         <data format="bam" name="output_bam_2" label="INDEL Realigned BAM 2" from_work_dir="output_2.bam">
-          <filter>input['input_mode'] == "2"</filter>
+            <filter>int(input['input_count']) >= 2</filter>
         </data>
+        <data format="bam" name="output_bam_3" label="INDEL Realigned BAM 3" from_work_dir="output_3.bam">
+            <filter>int(input['input_count']) >= 3</filter>
+        </data>
+        <data format="bam" name="output_bam_4" label="INDEL Realigned BAM 4" from_work_dir="output_4.bam">
+            <filter>int(input['input_count']) >= 4</filter>
+        </data>
+        <data format="bam" name="output_bam_5" label="INDEL Realigned BAM 5" from_work_dir="output_5.bam">
+            <filter>int(input['input_count']) >= 5</filter>
+        </data>
+        <data format="bam" name="output_bam_6" label="INDEL Realigned BAM 6" from_work_dir="output_6.bam">
+            <filter>int(input['input_count']) >= 6</filter>
+        </data>
+        <data format="bam" name="output_bam_7" label="INDEL Realigned BAM 7" from_work_dir="output_7.bam">
+            <filter>int(input['input_count']) >= 7</filter>
+        </data>
+        <data format="bam" name="output_bam_8" label="INDEL Realigned BAM 8" from_work_dir="output_8.bam">
+            <filter>int(input['input_count']) >= 8</filter>
+        </data>
+        <data format="bam" name="output_bam_9" label="INDEL Realigned BAM 9" from_work_dir="output_9.bam">
+            <filter>int(input['input_count']) >= 9</filter>
+        </data>
+        <data format="bam" name="output_bam_10" label="INDEL Realigned BAM 10" from_work_dir="output_10.bam">
+            <filter>int(input['input_count']) >= 10</filter>
+        </data>
+
     </outputs>
 
     <stdio>
