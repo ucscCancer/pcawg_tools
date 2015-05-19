@@ -21,8 +21,8 @@ broad_variant_pipeline.sh ${sample_id} ${tumor_bam} ${tumor_bam.metadata.bam_ind
     </inputs>
     <outputs>
         <data name="dRanger" format="vcf_bgzip" label="broad-dRanger.DATECODE.somatic.sv.vcf.gz" from_work_dir="broad-dRanger.DATECODE.somatic.sv.vcf.gz"/>
-        <data name="dRanger_snowman" format="vcf_bgzip" label="broad-dRanger_snowman.DATECODE.somatic.sv.vcf.gz" from_work_dir="broad-dRanger_snowman.DATECODE.somatic.sv.vcf.gz"/>
         <data name="mutect" format="vcf_bgzip" label="broad-mutect.DATECODE.somatic.snv_mnv.vcf.gz" from_work_dir="broad-mutect.DATECODE.somatic.snv_mnv.vcf.gz"/>
+        <data name="snowman_dRanger" format="vcf_bgzip" label="broad-dRanger_snowman.DATECODE.somatic.sv.vcf.gz" from_work_dir="broad-dRanger_snowman.DATECODE.somatic.sv.vcf.gz"/>
         <data name="snowman_germline_indel" format="vcf_bgzip" label="broad-snowman.DATECODE.germline.indel.vcf.gz" from_work_dir="broad-snowman.DATECODE.germline.indel.vcf.gz"/>
         <data name="snowman_germline_sv" format="vcf_bgzip" label="broad-snowman.DATECODE.germline.sv.vcf.gz" from_work_dir="broad-snowman.DATECODE.germline.sv.vcf.gz"/>
         <data name="snowman_somatic_indel" format="vcf_bgzip" label="broad-snowman.DATECODE.somatic.indel.vcf.gz" from_work_dir="broad-snowman.DATECODE.somatic.indel.vcf.gz"/>
