@@ -216,7 +216,7 @@ def __main__():
     if len(inputBamFiles) == 0:
         logging.error("Need input files")
         sys.exit(1)
-    inputBamFileIndexes = list( os.path.abspath(a) for a in args.inputBamFiles )
+    inputBamFileIndexes = list( os.path.abspath(a) for a in args.inputBamFileIndexes )
 
     if len(inputBamFileIndexes) == 0:
         inputBamFileIndexes = [None] * len(inputBamFiles)
@@ -243,7 +243,7 @@ def __main__():
         newInputFiles = []
         i = 0
         for inputBamFile, inputBamIndex, insertSize, sampleTag in zip(inputBamFiles, inputBamFileIndexes, insertSizes, sampleTags ):
-            inputFastaFile, inputBamFile = indexBam(args.workdir, args.inputFastaFile, inputBamFile, i)
+            inputFastaFile, inputBamFile = indexBam(args.workdir, args.inputFastaFile, inputBamFile, i, inputBamIndex)
             i += 1
             newInputFiles.append(inputBamFile)
             if insertSize==None:
