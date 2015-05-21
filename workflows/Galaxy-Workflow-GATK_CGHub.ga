@@ -5,7 +5,7 @@
     "name": "GATK_CGHub", 
     "steps": {
         "0": {
-            "annotation": "tumor_bam_download", 
+            "annotation": "INPUT_BAM_1", 
             "id": 0, 
             "input_connections": {}, 
             "inputs": [
@@ -27,8 +27,8 @@
                 }
             ], 
             "position": {
-                "left": 256.5, 
-                "top": 200
+                "left": 142, 
+                "top": 167
             }, 
             "post_job_actions": {
                 "HideDatasetActionoutfile": {
@@ -43,10 +43,10 @@
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
-            "uuid": "fc141622-4599-4f89-84e0-fcf5a8fc7a21"
+            "uuid": "0bf4f272-b288-4dfa-8467-b009a17b2927"
         }, 
         "1": {
-            "annotation": "normal_bam_download", 
+            "annotation": "INPUT_BAM_2", 
             "id": 1, 
             "input_connections": {}, 
             "inputs": [
@@ -68,8 +68,8 @@
                 }
             ], 
             "position": {
-                "left": 252.5, 
-                "top": 314
+                "left": 147, 
+                "top": 275
             }, 
             "post_job_actions": {
                 "HideDatasetActionoutfile": {
@@ -84,7 +84,7 @@
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
-            "uuid": "b0319bfe-b48f-4eb2-ba73-b231a0b4f344"
+            "uuid": "3a66fd6f-302e-4f22-9f89-6ecd4cdb1f9b"
         }, 
         "2": {
             "annotation": "", 
@@ -100,8 +100,8 @@
             "name": "Input dataset", 
             "outputs": [], 
             "position": {
-                "left": 292, 
-                "top": 572
+                "left": 150.5, 
+                "top": 365
             }, 
             "tool_errors": null, 
             "tool_id": null, 
@@ -109,7 +109,7 @@
             "tool_version": null, 
             "type": "data_input", 
             "user_outputs": [], 
-            "uuid": "5cf83ba3-98a9-4fad-8fed-911e0af56d5f"
+            "uuid": "2f013268-ad72-4918-a8b7-474cb6aa9106"
         }, 
         "3": {
             "annotation": "", 
@@ -125,8 +125,8 @@
             "name": "Input dataset", 
             "outputs": [], 
             "position": {
-                "left": 274, 
-                "top": 912.6875
+                "left": 154.5, 
+                "top": 459
             }, 
             "tool_errors": null, 
             "tool_id": null, 
@@ -134,7 +134,7 @@
             "tool_version": null, 
             "type": "data_input", 
             "user_outputs": [], 
-            "uuid": "16b2a167-d166-4ce2-8b41-66dc32ded4f1"
+            "uuid": "8d17b8db-6b72-484d-89b9-b9de83c2a91a"
         }, 
         "4": {
             "annotation": "", 
@@ -150,8 +150,8 @@
             "name": "Input dataset", 
             "outputs": [], 
             "position": {
-                "left": 285, 
-                "top": 800.328125
+                "left": 151, 
+                "top": 560
             }, 
             "tool_errors": null, 
             "tool_id": null, 
@@ -159,7 +159,7 @@
             "tool_version": null, 
             "type": "data_input", 
             "user_outputs": [], 
-            "uuid": "2e7dbf22-9530-48c4-b631-5e7abdc1bbf1"
+            "uuid": "1640cdc8-2c81-4753-aef8-49a496964c13"
         }, 
         "5": {
             "annotation": "", 
@@ -175,8 +175,8 @@
             "name": "Input dataset", 
             "outputs": [], 
             "position": {
-                "left": 287, 
-                "top": 696.3125
+                "left": 149, 
+                "top": 694
             }, 
             "tool_errors": null, 
             "tool_id": null, 
@@ -184,10 +184,10 @@
             "tool_version": null, 
             "type": "data_input", 
             "user_outputs": [], 
-            "uuid": "20e59ad1-836d-4ca2-a22d-6c24bbac3289"
+            "uuid": "3a793cd2-2529-44ce-b6cb-0082a873f5d9"
         }, 
         "6": {
-            "annotation": "tumor_indel", 
+            "annotation": "", 
             "id": 6, 
             "input_connections": {
                 "input|input_bam_1": {
@@ -199,11 +199,11 @@
                     "output_name": "outfile"
                 }, 
                 "known_0|input": {
-                    "id": 4, 
+                    "id": 3, 
                     "output_name": "output"
                 }, 
                 "known_1|input": {
-                    "id": 3, 
+                    "id": 4, 
                     "output_name": "output"
                 }, 
                 "reference": {
@@ -216,49 +216,112 @@
             "name": "GATK INDEL", 
             "outputs": [
                 {
-                    "name": "output_bam", 
-                    "type": "bam"
-                }, 
-                {
                     "name": "output_bam_1", 
                     "type": "bam"
                 }, 
                 {
                     "name": "output_bam_2", 
                     "type": "bam"
+                }, 
+                {
+                    "name": "output_bam_3", 
+                    "type": "bam"
+                }, 
+                {
+                    "name": "output_bam_4", 
+                    "type": "bam"
+                }, 
+                {
+                    "name": "output_bam_5", 
+                    "type": "bam"
+                }, 
+                {
+                    "name": "output_bam_6", 
+                    "type": "bam"
+                }, 
+                {
+                    "name": "output_bam_7", 
+                    "type": "bam"
+                }, 
+                {
+                    "name": "output_bam_8", 
+                    "type": "bam"
+                }, 
+                {
+                    "name": "output_bam_9", 
+                    "type": "bam"
+                }, 
+                {
+                    "name": "output_bam_10", 
+                    "type": "bam"
                 }
             ], 
             "position": {
-                "left": 671.328125, 
-                "top": 200.0625
+                "left": 443.5, 
+                "top": 217
             }, 
             "post_job_actions": {
-                "HideDatasetActionoutput_bam": {
-                    "action_arguments": {}, 
-                    "action_type": "HideDatasetAction", 
-                    "output_name": "output_bam"
-                }, 
                 "HideDatasetActionoutput_bam_1": {
                     "action_arguments": {}, 
                     "action_type": "HideDatasetAction", 
                     "output_name": "output_bam_1"
                 }, 
+                "HideDatasetActionoutput_bam_10": {
+                    "action_arguments": {}, 
+                    "action_type": "HideDatasetAction", 
+                    "output_name": "output_bam_10"
+                }, 
                 "HideDatasetActionoutput_bam_2": {
                     "action_arguments": {}, 
                     "action_type": "HideDatasetAction", 
                     "output_name": "output_bam_2"
+                }, 
+                "HideDatasetActionoutput_bam_3": {
+                    "action_arguments": {}, 
+                    "action_type": "HideDatasetAction", 
+                    "output_name": "output_bam_3"
+                }, 
+                "HideDatasetActionoutput_bam_4": {
+                    "action_arguments": {}, 
+                    "action_type": "HideDatasetAction", 
+                    "output_name": "output_bam_4"
+                }, 
+                "HideDatasetActionoutput_bam_5": {
+                    "action_arguments": {}, 
+                    "action_type": "HideDatasetAction", 
+                    "output_name": "output_bam_5"
+                }, 
+                "HideDatasetActionoutput_bam_6": {
+                    "action_arguments": {}, 
+                    "action_type": "HideDatasetAction", 
+                    "output_name": "output_bam_6"
+                }, 
+                "HideDatasetActionoutput_bam_7": {
+                    "action_arguments": {}, 
+                    "action_type": "HideDatasetAction", 
+                    "output_name": "output_bam_7"
+                }, 
+                "HideDatasetActionoutput_bam_8": {
+                    "action_arguments": {}, 
+                    "action_type": "HideDatasetAction", 
+                    "output_name": "output_bam_8"
+                }, 
+                "HideDatasetActionoutput_bam_9": {
+                    "action_arguments": {}, 
+                    "action_type": "HideDatasetAction", 
+                    "output_name": "output_bam_9"
                 }
             }, 
             "tool_errors": null, 
             "tool_id": "gatk_indel", 
-            "tool_state": "{\"__page__\": 0, \"reference\": \"null\", \"__rerun_remap_job_id__\": null, \"known\": \"[{\\\"__index__\\\": 0, \\\"input\\\": null}, {\\\"__index__\\\": 1, \\\"input\\\": null}]\", \"input\": \"{\\\"input_mode\\\": \\\"2\\\", \\\"input_bam_2\\\": null, \\\"input_bam_1\\\": null, \\\"__current_case__\\\": 1}\", \"input_bam\": \"null\"}", 
+            "tool_state": "{\"known\": \"[{\\\"__index__\\\": 0, \\\"input\\\": null}, {\\\"__index__\\\": 1, \\\"input\\\": null}]\", \"input\": \"{\\\"input_bam_2\\\": null, \\\"input_bam_1\\\": null, \\\"input_count\\\": \\\"2\\\", \\\"__current_case__\\\": 1}\", \"__rerun_remap_job_id__\": null, \"reference\": \"null\", \"__page__\": 0}", 
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
-            "uuid": "306fef0e-5d26-474c-a339-f68d7d3c754f"
+            "uuid": "067901f3-6861-4937-a2af-6196e5388c92"
         }, 
         "7": {
-            "annotation": "tumor_bqsr_bam", 
+            "annotation": "", 
             "id": 7, 
             "input_connections": {
                 "input_bam": {
@@ -288,8 +351,8 @@
                 }
             ], 
             "position": {
-                "left": 1131.6875, 
-                "top": 439
+                "left": 800.5, 
+                "top": 188
             }, 
             "post_job_actions": {
                 "HideDatasetActionoutput_report": {
@@ -299,7 +362,7 @@
                 }, 
                 "RenameDatasetActionoutput_bam": {
                     "action_arguments": {
-                        "newname": "tumor_bam_output"
+                        "newname": "OUTPUT_BAM_1"
                     }, 
                     "action_type": "RenameDatasetAction", 
                     "output_name": "output_bam"
@@ -311,10 +374,10 @@
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
-            "uuid": "43deaa78-e3fb-49ab-a842-0a2084cfe0ec"
+            "uuid": "b75cb979-1d68-4efb-9b6d-39e8d5d92523"
         }, 
         "8": {
-            "annotation": "normal_bqsr_bam", 
+            "annotation": "", 
             "id": 8, 
             "input_connections": {
                 "input_bam": {
@@ -344,8 +407,8 @@
                 }
             ], 
             "position": {
-                "left": 1139.65625, 
-                "top": 668.390625
+                "left": 808.5, 
+                "top": 435
             }, 
             "post_job_actions": {
                 "HideDatasetActionoutput_report": {
@@ -355,7 +418,7 @@
                 }, 
                 "RenameDatasetActionoutput_bam": {
                     "action_arguments": {
-                        "newname": "normal_bam_output"
+                        "newname": "OUTPUT_BAM_2"
                     }, 
                     "action_type": "RenameDatasetAction", 
                     "output_name": "output_bam"
@@ -367,8 +430,8 @@
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
-            "uuid": "988f70f0-cbb9-4c5a-993f-66ba89606ae7"
+            "uuid": "b1be8ac2-1cae-4ab9-a104-6c97efd9e39b"
         }
     }, 
-    "uuid": "20eff6c1-efef-46e3-b9e9-ea9cb4d63ca7"
+    "uuid": "e8fa3693-c6e3-4816-b3b0-b1a5aca5e137"
 }
