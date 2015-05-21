@@ -35,6 +35,13 @@
                     "action_arguments": {}, 
                     "action_type": "HideDatasetAction", 
                     "output_name": "outfile"
+                }, 
+                "TagDatasetActionoutfile": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "outfile"
                 }
             }, 
             "tool_errors": null, 
@@ -75,6 +82,13 @@
                 "HideDatasetActionoutfile": {
                     "action_arguments": {}, 
                     "action_type": "HideDatasetAction", 
+                    "output_name": "outfile"
+                }, 
+                "TagDatasetActionoutfile": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
                     "output_name": "outfile"
                 }
             }, 
@@ -257,8 +271,8 @@
                 }
             ], 
             "position": {
-                "left": 443.5, 
-                "top": 217
+                "left": 453.5, 
+                "top": 180
             }, 
             "post_job_actions": {
                 "HideDatasetActionoutput_bam_1": {
@@ -310,6 +324,76 @@
                     "action_arguments": {}, 
                     "action_type": "HideDatasetAction", 
                     "output_name": "output_bam_9"
+                }, 
+                "TagDatasetActionoutput_bam_1": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_bam_1"
+                }, 
+                "TagDatasetActionoutput_bam_10": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_bam_10"
+                }, 
+                "TagDatasetActionoutput_bam_2": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_bam_2"
+                }, 
+                "TagDatasetActionoutput_bam_3": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_bam_3"
+                }, 
+                "TagDatasetActionoutput_bam_4": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_bam_4"
+                }, 
+                "TagDatasetActionoutput_bam_5": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_bam_5"
+                }, 
+                "TagDatasetActionoutput_bam_6": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_bam_6"
+                }, 
+                "TagDatasetActionoutput_bam_7": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_bam_7"
+                }, 
+                "TagDatasetActionoutput_bam_8": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_bam_8"
+                }, 
+                "TagDatasetActionoutput_bam_9": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_bam_9"
                 }
             }, 
             "tool_errors": null, 
@@ -327,6 +411,80 @@
                 "input_bam": {
                     "id": 6, 
                     "output_name": "output_bam_1"
+                }
+            }, 
+            "inputs": [], 
+            "label": null, 
+            "name": "TCGA ReHeader", 
+            "outputs": [
+                {
+                    "name": "output_bam", 
+                    "type": "bam"
+                }
+            ], 
+            "position": {
+                "left": 797, 
+                "top": 169.5
+            }, 
+            "post_job_actions": {
+                "HideDatasetActionoutput_bam": {
+                    "action_arguments": {}, 
+                    "action_type": "HideDatasetAction", 
+                    "output_name": "output_bam"
+                }
+            }, 
+            "tool_errors": null, 
+            "tool_id": "tcga_reheader", 
+            "tool_state": "{\"__page__\": 0, \"center_name\": \"\\\"\\\"\", \"sample_info\": \"{\\\"defined\\\": \\\"no\\\", \\\"__current_case__\\\": 1}\", \"platform\": \"\\\"ILLUMINA\\\"\", \"__rerun_remap_job_id__\": null, \"input_bam\": \"null\", \"platform_model\": \"\\\"Illumina HiSeq\\\"\"}", 
+            "tool_version": "0.1.0", 
+            "type": "tool", 
+            "user_outputs": [], 
+            "uuid": "733c6932-94cc-411e-9215-96fc44561017"
+        }, 
+        "8": {
+            "annotation": "", 
+            "id": 8, 
+            "input_connections": {
+                "input_bam": {
+                    "id": 6, 
+                    "output_name": "output_bam_2"
+                }
+            }, 
+            "inputs": [], 
+            "label": null, 
+            "name": "TCGA ReHeader", 
+            "outputs": [
+                {
+                    "name": "output_bam", 
+                    "type": "bam"
+                }
+            ], 
+            "position": {
+                "left": 797, 
+                "top": 445.5
+            }, 
+            "post_job_actions": {
+                "HideDatasetActionoutput_bam": {
+                    "action_arguments": {}, 
+                    "action_type": "HideDatasetAction", 
+                    "output_name": "output_bam"
+                }
+            }, 
+            "tool_errors": null, 
+            "tool_id": "tcga_reheader", 
+            "tool_state": "{\"__page__\": 0, \"center_name\": \"\\\"\\\"\", \"sample_info\": \"{\\\"defined\\\": \\\"no\\\", \\\"__current_case__\\\": 1}\", \"platform\": \"\\\"ILLUMINA\\\"\", \"__rerun_remap_job_id__\": null, \"input_bam\": \"null\", \"platform_model\": \"\\\"Illumina HiSeq\\\"\"}", 
+            "tool_version": "0.1.0", 
+            "type": "tool", 
+            "user_outputs": [], 
+            "uuid": "b790bf93-cf20-451d-8644-9796d7f8cfe8"
+        }, 
+        "9": {
+            "annotation": "", 
+            "id": 9, 
+            "input_connections": {
+                "input_bam": {
+                    "id": 7, 
+                    "output_name": "output_bam"
                 }, 
                 "known_sites": {
                     "id": 5, 
@@ -351,8 +509,8 @@
                 }
             ], 
             "position": {
-                "left": 800.5, 
-                "top": 188
+                "left": 1036.5, 
+                "top": 210
             }, 
             "post_job_actions": {
                 "HideDatasetActionoutput_report": {
@@ -366,6 +524,20 @@
                     }, 
                     "action_type": "RenameDatasetAction", 
                     "output_name": "output_bam"
+                }, 
+                "TagDatasetActionoutput_bam": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_bam"
+                }, 
+                "TagDatasetActionoutput_report": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_report"
                 }
             }, 
             "tool_errors": null, 
@@ -376,13 +548,13 @@
             "user_outputs": [], 
             "uuid": "b75cb979-1d68-4efb-9b6d-39e8d5d92523"
         }, 
-        "8": {
+        "10": {
             "annotation": "", 
-            "id": 8, 
+            "id": 10, 
             "input_connections": {
                 "input_bam": {
-                    "id": 6, 
-                    "output_name": "output_bam_2"
+                    "id": 8, 
+                    "output_name": "output_bam"
                 }, 
                 "known_sites": {
                     "id": 5, 
@@ -407,8 +579,8 @@
                 }
             ], 
             "position": {
-                "left": 808.5, 
-                "top": 435
+                "left": 1047.5, 
+                "top": 485
             }, 
             "post_job_actions": {
                 "HideDatasetActionoutput_report": {
@@ -422,6 +594,20 @@
                     }, 
                     "action_type": "RenameDatasetAction", 
                     "output_name": "output_bam"
+                }, 
+                "TagDatasetActionoutput_bam": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_bam"
+                }, 
+                "TagDatasetActionoutput_report": {
+                    "action_arguments": {
+                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
+                    }, 
+                    "action_type": "TagDatasetAction", 
+                    "output_name": "output_report"
                 }
             }, 
             "tool_errors": null, 
@@ -433,5 +619,5 @@
             "uuid": "b1be8ac2-1cae-4ab9-a104-6c97efd9e39b"
         }
     }, 
-    "uuid": "e8fa3693-c6e3-4816-b3b0-b1a5aca5e137"
+    "uuid": "c2a3ee50-bd9b-411f-90d5-c6e9b4a689ac"
 }
