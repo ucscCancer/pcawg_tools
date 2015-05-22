@@ -6,3 +6,4 @@ smp:
     - [gatk_bqsr, 12]
     - [gatk_indel, 12]
     - [bwa_mem, 12]
+    - [broad_variant_pipline, 24]
