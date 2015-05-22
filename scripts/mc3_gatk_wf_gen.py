@@ -88,7 +88,7 @@ if __name__ == "__main__":
     tasks = TaskGroup()
 
     for ent in synqueue.listAssignments(syn, **config):
-        bam_set = list( a[0] for a in ent['meta'].items() if a[0].startswith("id_") and isinstance(a[1], basestring)  )
+        bam_set = list( a[1] for a in ent['meta'].items() if a[0].startswith("id_") and isinstance(a[1], basestring)  )
         if len(bam_set) == 2:
             task = GalaxyWorkflowTask("workflow_%s" % (ent['id']),
                 workflow,
@@ -139,5 +139,6 @@ if __name__ == "__main__":
         with open("%s.service" % (args.out_base), "w") as handle:
             s = service.get_config()
             if args.scratch:
-                s.set_docstore_config(cache_dir=args.scratch)
-                s.store(handle)
+                print "Using scratch", args.scratch
+                s.set_docstore_config(cache_path=args.scratch, open_perms=True)
+            s.store(handle)
