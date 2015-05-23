@@ -51,11 +51,11 @@ def config(inputBamFiles, meanInsertSizes, tags, tempDir):
 
 def pindel(reference, configFile, args, tempDir, chrome=None):
     if chrome is None:
-        pindelTempDir=tempDir + "/pindel"
+        pindel_file_base = tempDir + "/pindel"
     else:
-        pindelTempDir=tempDir + "/pindel_" + chrome
+        pindel_file_base = tempDir + "/pindel_" + chrome
 
-    cmd = "pindel -f %s -i %s -o %s " %(reference, configFile, pindelTempDir)
+    cmd = "pindel -f %s -i %s -o %s " %(reference, configFile, pindel_file_base )
     cmd += " --number_of_threads %d --max_range_index %d --window_size %d --sequencing_error_rate %f --sensitivity %f" %(args.number_of_threads, args.max_range_index, args.window_size, args.sequencing_error_rate, args.sensitivity)
     cmd += " -u %f -n %d -a %d -m %d -v %d -d %d -B %d -A %d -M %d " %(args.maximum_allowed_mismatch_rate, args.NM, args.additional_mismatch, args.min_perfect_match_around_BP, args.min_inversion_size, args.min_num_matched_bases, args.balance_cutoff, args.anchor_quality, args.minimum_support_for_event)
 
@@ -97,7 +97,7 @@ def pindel(reference, configFile, args, tempDir, chrome=None):
     if args.DD_REPORT_DUPLICATION_READS:
         cmd += ' --DD_REPORT_DUPLICATION_READS '
 
-    return (cmd, pindelTempDir)
+    return (cmd, pindel_file_base )
 
 
 def move(avant, apres):
@@ -105,15 +105,10 @@ def move(avant, apres):
         execute("mv %s %s" %(avant, apres))
 
 
-def pindel2vcf(inputFastaFile, refName, pindelTempDir, chrome=None):
+def pindel2vcf(inputFastaFile, refName, pindel_file, vcf_file):
     date = str(time.strftime('%d/%m/%y',time.localtime()))
-    if chrome is None:
-        cmd = "pindel2vcf -P %s -r %s -R %s -d %s" %(pindelTempDir, inputFastaFile, refName, date)
-        return (cmd, pindelTempDir+".vcf")
-    else:
-        output = "%s.%s.vcf" % (pindelTempDir, chrome)
-        cmd = "pindel2vcf -P %s -r %s -R %s -d %s -v %s" %(pindelTempDir, inputFastaFile, refName, date, output)
-        return (cmd, output)
+    cmd = "pindel2vcf -p %s -r %s -R %s -d %s -v %s" % (pindel_file, inputFastaFile, refName, date, vcf_file)
+    return cmd
 
 
 
@@ -139,6 +134,7 @@ def get_bam_seq(inputBamFile, min_size=1):
 
 
 def getMeanInsertSize(bamFile):
+    logging.info("Getting insert size of %s" % (bamFile))
     cmd = "samtools view -f66 %s | head -n 1000000" % (bamFile)
     process = subprocess.Popen(args=cmd, shell=True, stdout=subprocess.PIPE)
     b_sum = 0L
@@ -159,6 +155,7 @@ def getMeanInsertSize(bamFile):
 
 
 def __main__():
+    logging.basicConfig(level=logging.INFO)
     time.sleep(1) #small hack, sometimes it seems like docker file systems aren't avalible instantly
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('-r', dest='inputFastaFile', required=True, help='the reference file')
@@ -235,13 +232,14 @@ def __main__():
         logging.error("Sample Tags need to match input file count")
         sys.exit(1)
 
-    tempDir = tempfile.mkdtemp(dir="./", prefix="pindel_work_")
+    tempDir = tempfile.mkdtemp(dir=args.workdir, prefix="pindel_work_")
     print(tempDir)
     try:
         meanInsertSizes = []
         seq_hash = {}
         newInputFiles = []
         i = 0
+        #make sure the BAMs are indexed and get the mean insert sizes
         for inputBamFile, inputBamIndex, insertSize, sampleTag in zip(inputBamFiles, inputBamFileIndexes, insertSizes, sampleTags ):
             inputFastaFile, inputBamFile = indexBam(args.workdir, args.inputFastaFile, inputBamFile, i, inputBamIndex)
             i += 1
@@ -256,37 +254,38 @@ def __main__():
         seqs = seq_hash.keys()
         configFile = config(newInputFiles, meanInsertSizes, sampleTags, tempDir)
 
+        #run pindel
+        pindel_files = []
         if args.procs == 1:
-            cmd, pindelTempDir = pindel(inputFastaFile, configFile, args, tempDir)
+            cmd, pindelFileBase = pindel(inputFastaFile, configFile, args, tempDir)
             execute(cmd)
-            cmd, pindelTmpVCF = pindel2vcf(inputFastaFile, args.inputFastaName, pindelTempDir)
-            execute(cmd)
-            shutil.copy(pindelTmpVCF, args.outputVcfFile)
+            for suffix in ["_D", "_SI", "_LI", "_INV", "_TD"]:
+                if os.path.exists(pindelFileBase + suffix):
+                    pindel_files.append( pindelFileBase + suffix )
         else:
             cmds = []
             runs = []
             for a in seqs:
-                cmd, pindelTempDir = pindel(inputFastaFile, configFile, args, tempDir, a)
+                cmd, pindelFileBase = pindel(inputFastaFile, configFile, args, tempDir, a)
                 cmds.append(cmd)
-                runs.append(pindelTempDir)
+                runs.append(pindelFileBase)
             p = Pool(args.procs)
             values = p.map(execute, cmds, 1)
-            cmds = []
-            outs = []
-            for a, b in zip(runs, seqs):
-                cmd, out = pindel2vcf(inputFastaFile, args.inputFastaName, a, chrome=b)
-                cmds.append(cmd)
-                outs.append(out)
-            values = p.map(execute, cmds, 1)
+            for pindelFileBase in runs:
+                for suffix in ["_D", "_SI", "_LI", "_INV", "_TD"]:
+                    if os.path.exists(pindelFileBase + suffix):
+                        pindel_files.append( pindelFileBase + suffix )
 
-            vcf_writer = None
-            for file in outs:
-                vcf_reader = vcf.Reader(filename=file)
-                if vcf_writer is None:
-                    vcf_writer = vcf.Writer(open(args.outputVcfFile, "w"), vcf_reader)
-                for record in vcf_reader:
-                    vcf_writer.write_record(record)
-            vcf_writer.close()
+        #run pindel2vcf
+        with open(os.path.join(args.workdir, "pindel_all"), "w") as handle:
+            for p in pindel_files:
+                with open(p) as ihandle:
+                    for line in ihandle:
+                        handle.write(line)
+
+        cmd = pindel2vcf(inputFastaFile, args.inputFastaName, os.path.join(args.workdir, "pindel_all"), args.outputVcfFile)
+        execute(cmd)
+
 
     finally:
         if not args.no_clean and os.path.exists(tempDir):
