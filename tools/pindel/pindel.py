@@ -165,8 +165,8 @@ def __main__():
     parser.add_argument('-bi', dest='inputBamFileIndexes', default=[], action="append", help='the bam file')
     parser.add_argument('-s', dest='insert_sizes', type=int, default=[], action="append", required=False, help='the insert size')
     parser.add_argument('-t', dest='sampleTags', default=[], action="append", help='the sample tag')
-    # parser.add_argument('-o1', dest='outputRaw', help='the output raw', required=True)
-    parser.add_argument('-o2', dest='outputVcfFile', help='the output vcf', required=True)
+    parser.add_argument('-o1', dest='outputRaw', help='the output raw', default=None)
+    parser.add_argument('-o2', dest='outputVcfFile', help='the output vcf', default=None)
     parser.add_argument('--number_of_threads', dest='number_of_threads', type=int, default='1')
     parser.add_argument('--number_of_procs', dest='procs', type=int, default=1)
 
@@ -283,8 +283,11 @@ def __main__():
                     for line in ihandle:
                         handle.write(line)
 
-        cmd = pindel2vcf(inputFastaFile, args.inputFastaName, os.path.join(args.workdir, "pindel_all"), args.outputVcfFile)
-        execute(cmd)
+        if args.outputRaw is not None:
+            shutil.copy(os.path.join(args.workdir, "pindel_all"), args.outputRaw)
+        if args.outputVcfFile is not None:
+            cmd = pindel2vcf(inputFastaFile, args.inputFastaName, os.path.join(args.workdir, "pindel_all"), args.outputVcfFile)
+            execute(cmd)
 
 
     finally:

@@ -18,7 +18,7 @@
         -s $s.defineInsertSize.insertSize
 #end if
 #end for
-        <!-- -o1 $outputRaw -->
+        -o1 $outputRawFile
         -o2 $outputVcfFile
 
         --number_of_procs \${GALAXY_SLOTS:-4}
@@ -250,7 +250,7 @@
     </inputs>
 
     <outputs>
-        <!-- <data format="tabular" name="outputRawFile" /> -->
+        <data format="tabular" name="outputRawFile" />
         <data format="vcf" name="outputVcfFile" />
     </outputs>
 
