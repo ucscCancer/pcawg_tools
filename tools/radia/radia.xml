@@ -7,12 +7,12 @@
     </stdio>
     <macros>
       <macro name="input_params">
-        <param name="inputbam" type="data" format="bam" help="Input BAM"/>
-        <param name="MinTotalBases" type="integer" value="4" help="the minimum number of overall reads covering a position"/>
-        <param name="MinAltBases" type="integer" value="2" help="the minimum number of alternative reads supporting a variant at a position"/>
-        <param name="MinBaseQuality" type="integer" value="10" help="the minimum base quality"/>
-        <param name="MinMappingQuality" type="integer" value="10" help="the minimum mapping quality"/>
-        <param name="Description" value="Normal DNA Sample" type="text" help="the description for the sample in the VCF header"/>
+        <param name="inputbam" label="InputBam" type="data" format="bam" help="Input BAM"/>
+        <param name="MinTotalBases" label="MinTotalBases" type="integer" value="4" help="the minimum number of overall reads covering a position"/>
+        <param name="MinAltBases" label="MinAltBases" type="integer" value="2" help="the minimum number of alternative reads supporting a variant at a position"/>
+        <param name="MinBaseQuality" label="MinBaseQuality" type="integer" value="10" help="the minimum base quality"/>
+        <param name="MinMappingQuality" label="MinMappingQuality" type="integer" value="10" help="the minimum mapping quality"/>
+        <param name="Description" label="Description" value="Normal DNA Sample" type="text" help="the description for the sample in the VCF header"/>
       </macro>
     </macros>
     <command interpreter="python"><![CDATA[

@@ -37,6 +37,9 @@ class Record:
             self.seq, "%d" % (self.pos), self.id, self.ref, self.alt,
             self.qual, self.filter, self.info, self.format] + self.samples )
 
+def atoi(text):
+    return int(text) if text.isdigit() else text.lower()
+
 class VCF:
 
     def __init__(self):
@@ -51,7 +54,7 @@ class VCF:
                 self.metadata.append( MetaData(line) )
             elif line.startswith("#CHROM"):
                 self.header = line.rstrip("\n\r")
-                self.samples = line.split("\t")[8:]
+                self.samples = line.rstrip("\n\r").split("\t")[9:]
             else:
                 self.records.append( Record(line) )
 
@@ -60,53 +63,72 @@ class VCF:
         for b in bam_files:
             bams.append(pysam.AlignmentFile(b, "rb"))
 
+        self.records.sort(key=lambda x: [atoi(x.seq), x.pos])
+
         #loop through each record
         for rec in self.records:
             all_reads = []
+            good_reads = []
             all_quals = []
+            good_quals = []
             for sample in bams:
                 #for each sample grab the pileup
                 pileup = sample.pileup(rec.seq, rec.pos-1, rec.pos)
                 for pile in pileup:
                     #we're only concered about one specific position
                     if pile.reference_pos == rec.pos-1:
-                        sread = []
-                        squal = []
+                        all_sread = []
+                        all_squal = []
+                        good_sread = []
+                        good_squal = []
                         #grab all the reads and quality scores that map to this postion
                         for row in pile.pileups:
                             if not row.indel and not row.is_del:
-                                sread.append( row.alignment.query_sequence[row.query_position] )
-                                squal.append( row.alignment.query_qualities[row.query_position] )
-                        all_reads.append(sread)
-                        all_quals.append(squal)
-            counts = []
-            bqs = []
+                                good_read = True
+                                c_read = row.alignment.query_sequence[row.query_position]
+                                c_qual = row.alignment.query_qualities[row.query_position]
+                                if row.alignment.mapping_quality <= 0:
+                                    good_read = False
+                                if c_qual < 5:
+                                    good_read = False
+                                #remove reads that have been mapped by BWA 'mate rescue'
+                                if row.alignment.has_tag('XT') and row.alignment.get_tag('XT') == 'M':
+                                    good_read = False
+                                soft_clip_size = sum( a[1] for a in row.alignment.cigar if a[0] == 4 )
+                                if float(soft_clip_size) / float(row.alignment.query_length) >= 0.3:
+                                    good_read = False
+                                if good_read:
+                                    good_sread.append( c_read )
+                                    good_squal.append( c_qual )
+                                all_sread.append( c_read )
+                                all_squal.append( c_qual )
+                        all_reads.append(all_sread)
+                        all_quals.append(all_squal)
+                        good_reads.append(good_sread)
+                        good_quals.append(good_squal)
+            sample_fields = []
             #for each of the samples, count the reads and average the quailiy scores for the alt reads
-            for sample_reads, sample_quals in zip(all_reads, all_quals):
+            for sample_all_reads, sample_all_quals, sample_good_reads, sample_good_quals in zip(all_reads, all_quals, good_reads, good_quals):
+                out = {}
                 #create True/False arrays for the reads
-                refs = map(lambda x: x == rec.ref, sample_reads)
-                alts = map(lambda x: x == rec.alt, sample_reads)
-                #multiply a number and a boolean works in python  2 * True == 2, 3 * False == 0
-                alt_quals = list( q * a for q,a in zip(sample_quals, alts) )
-                #sum to get the counts
-                alt_count = sum(alts)
-                ref_count = sum(refs)
-                #get the average quaility score of reads that support the alt
-                if alt_count:
-                    bqs.append( sum(alt_quals) / float(alt_count) )
+                refs = map(lambda x: x == rec.ref, sample_all_reads)
+                alts = map(lambda x: x == rec.alt, sample_all_reads)
+                good_alts = map(lambda x: x == rec.alt, sample_good_reads)
+                good_alt_quals = list( q * a for q,a in zip(sample_good_quals, good_alts) )
+                if sum(good_alts):
+                    out['BQ'] = sum(good_alt_quals) / float(sum(good_alts))
                 else:
-                    bqs.append(0)
-                counts.append( (ref_count, alt_count) )
+                    out['BQ'] = 0
+                out['AD'] = sum(good_alts)
+                out['DP'] = len(sample_all_reads)
+                out['DP4'] = len(sample_good_reads)
+                sample_fields.append(out)
 
             #FIXME: This may also need the SS field to be TCGA compliant
-            rec.format = "GT:DP:AD:BQ"
+            rec.format = "DP:DP4:AD:BQ" #"GT:DP:AD:BQ"
             rec.samples = []
-            for i, c in enumerate(counts):
-                GT = 0
-                if c[1] > 3 and rec.filter == 'PASS': #FIXME: massive assumptions about how to assign genotype here
-                    GT = 1
-                #FIXME: assumption about phasing '/' vs '|'
-                info = "%s/%d:%d:%d" % (GT, len(all_reads[i]), c[1], int(bqs[i]))
+            for i, c in enumerate(sample_fields):
+                info = "%d:%d:%d:%d" % ( c['DP'], c['DP4'], c['AD'], c['BQ'] )
                 rec.samples.append(info)
 
         for b in bams:
@@ -126,9 +148,7 @@ class VCF:
         for record in self.records:
             handle.write("%s\n" % (record) )
 
-
-
-def run_adjust(vcf, samples):
+def run_adjust(vcf, samples, out):
 
     input = VCF()
     with open(vcf) as handle:
@@ -147,13 +167,18 @@ def run_adjust(vcf, samples):
             s.append(b)
     input.samples = s
     input.adjust_format( list(a[1] for a in samples) )
-    input.write(sys.stdout)
+    if out is None:
+        input.write(sys.stdout)
+    else:
+        with open(out, "w") as handle:
+            input.write(handle)
 
 
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("vcf")
     parser.add_argument("-b", dest="samples", nargs=2, action="append")
+    parser.add_argument("-o", "--out", default=None)
 
     args = parser.parse_args()
     v = vars(args)
