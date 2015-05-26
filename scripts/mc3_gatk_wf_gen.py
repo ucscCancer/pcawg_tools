@@ -19,7 +19,6 @@ REFDATA_PROJECT="syn3241088"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("docstore", help="DocStore")
     parser.add_argument("--out-base", default="mc3_gatk")
     parser.add_argument("--ref-download", action="store_true", default=False)
     parser.add_argument("--create-service", action="store_true", default=False)
@@ -31,7 +30,7 @@ if __name__ == "__main__":
     syn = synapseclient.Synapse()
     syn.login()
 
-    docstore = from_url(args.docstore)
+    docstore = from_url(args.out_base)
 
     if args.ref_download:
         #download reference files from Synapse and populate the document store
