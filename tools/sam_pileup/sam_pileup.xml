@@ -9,7 +9,7 @@
   <command interpreter="python">
     sam_pileup.py
       --input1=$input1
-      --output=$output1
+      --output1=$output1
       --ref=$refOrHistory.reference
       #if $refOrHistory.reference == "history":
         --ownFile=$refOrHistory.ownFile
