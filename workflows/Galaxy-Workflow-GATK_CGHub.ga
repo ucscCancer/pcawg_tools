@@ -27,20 +27,13 @@
                 }
             ], 
             "position": {
-                "left": 142, 
+                "left": 146, 
                 "top": 167
             }, 
             "post_job_actions": {
                 "HideDatasetActionoutfile": {
                     "action_arguments": {}, 
                     "action_type": "HideDatasetAction", 
-                    "output_name": "outfile"
-                }, 
-                "TagDatasetActionoutfile": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
                     "output_name": "outfile"
                 }
             }, 
@@ -75,20 +68,13 @@
                 }
             ], 
             "position": {
-                "left": 147, 
+                "left": 151, 
                 "top": 275
             }, 
             "post_job_actions": {
                 "HideDatasetActionoutfile": {
                     "action_arguments": {}, 
                     "action_type": "HideDatasetAction", 
-                    "output_name": "outfile"
-                }, 
-                "TagDatasetActionoutfile": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
                     "output_name": "outfile"
                 }
             }, 
@@ -114,8 +100,8 @@
             "name": "Input dataset", 
             "outputs": [], 
             "position": {
-                "left": 150.5, 
-                "top": 365
+                "left": 161.5, 
+                "top": 371
             }, 
             "tool_errors": null, 
             "tool_id": null, 
@@ -139,7 +125,7 @@
             "name": "Input dataset", 
             "outputs": [], 
             "position": {
-                "left": 154.5, 
+                "left": 158.5, 
                 "top": 459
             }, 
             "tool_errors": null, 
@@ -164,7 +150,7 @@
             "name": "Input dataset", 
             "outputs": [], 
             "position": {
-                "left": 151, 
+                "left": 155, 
                 "top": 560
             }, 
             "tool_errors": null, 
@@ -189,7 +175,7 @@
             "name": "Input dataset", 
             "outputs": [], 
             "position": {
-                "left": 149, 
+                "left": 153, 
                 "top": 694
             }, 
             "tool_errors": null, 
@@ -271,7 +257,7 @@
                 }
             ], 
             "position": {
-                "left": 453.5, 
+                "left": 457.5, 
                 "top": 180
             }, 
             "post_job_actions": {
@@ -324,76 +310,6 @@
                     "action_arguments": {}, 
                     "action_type": "HideDatasetAction", 
                     "output_name": "output_bam_9"
-                }, 
-                "TagDatasetActionoutput_bam_1": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_bam_1"
-                }, 
-                "TagDatasetActionoutput_bam_10": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_bam_10"
-                }, 
-                "TagDatasetActionoutput_bam_2": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_bam_2"
-                }, 
-                "TagDatasetActionoutput_bam_3": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_bam_3"
-                }, 
-                "TagDatasetActionoutput_bam_4": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_bam_4"
-                }, 
-                "TagDatasetActionoutput_bam_5": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_bam_5"
-                }, 
-                "TagDatasetActionoutput_bam_6": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_bam_6"
-                }, 
-                "TagDatasetActionoutput_bam_7": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_bam_7"
-                }, 
-                "TagDatasetActionoutput_bam_8": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_bam_8"
-                }, 
-                "TagDatasetActionoutput_bam_9": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_bam_9"
                 }
             }, 
             "tool_errors": null, 
@@ -423,7 +339,7 @@
                 }
             ], 
             "position": {
-                "left": 797, 
+                "left": 801, 
                 "top": 169.5
             }, 
             "post_job_actions": {
@@ -460,7 +376,7 @@
                 }
             ], 
             "position": {
-                "left": 797, 
+                "left": 801, 
                 "top": 445.5
             }, 
             "post_job_actions": {
@@ -509,7 +425,7 @@
                 }
             ], 
             "position": {
-                "left": 1036.5, 
+                "left": 1040.5, 
                 "top": 210
             }, 
             "post_job_actions": {
@@ -524,20 +440,6 @@
                     }, 
                     "action_type": "RenameDatasetAction", 
                     "output_name": "output_bam"
-                }, 
-                "TagDatasetActionoutput_bam": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_bam"
-                }, 
-                "TagDatasetActionoutput_report": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_report"
                 }
             }, 
             "tool_errors": null, 
@@ -579,7 +481,7 @@
                 }
             ], 
             "position": {
-                "left": 1047.5, 
+                "left": 1051.5, 
                 "top": 485
             }, 
             "post_job_actions": {
@@ -594,20 +496,6 @@
                     }, 
                     "action_type": "RenameDatasetAction", 
                     "output_name": "output_bam"
-                }, 
-                "TagDatasetActionoutput_bam": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_bam"
-                }, 
-                "TagDatasetActionoutput_report": {
-                    "action_arguments": {
-                        "tags": "sample:880befcf-2bb1-4d37-b65b-5f2970bfb18b"
-                    }, 
-                    "action_type": "TagDatasetAction", 
-                    "output_name": "output_report"
                 }
             }, 
             "tool_errors": null, 
@@ -619,5 +507,5 @@
             "uuid": "b1be8ac2-1cae-4ab9-a104-6c97efd9e39b"
         }
     }, 
-    "uuid": "c2a3ee50-bd9b-411f-90d5-c6e9b4a689ac"
+    "uuid": "e6ca9a0f-69f3-4fd5-a644-999a9ec59c0e"
 }
