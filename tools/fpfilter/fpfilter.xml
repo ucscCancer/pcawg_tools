@@ -5,6 +5,20 @@
   </requirements>
   <command interpreter="perl">
 fpfilter.pl
+--vcf-file ${vcf}
+--bam-file ${bam}
+--sample ${sample}
+--reference ${reference}
+--output ${output}
+--min-read-pos ${min_read_pos}
+--min-var-freq ${min_var_freq}
+--min-var-count ${min_var_count}
+--min-strandedness ${min_strandness}
+--max-mm-qualsum-diff ${max_mm_qualsum_diff}
+--max_var_mm_qualsum ${max_var_mm_qualsum}
+--max-mapqual-diff ${max_mapqual_diff}
+--max-readlen-diff ${max_readlen_diff}
+--min-var-dist-3 ${min_var_dist_3}
   </command>
 
   <inputs>
@@ -13,18 +27,18 @@ fpfilter.pl
     <param name="sample" type="text" label="Sample" value="sample" help="The sample name of the sample you want to filter on in the VCF file." />
     <param name="reference" format="fasta" type="data" label="Reference Genome" help="A fasta containing the reference sequence the BAM file was aligned to"/>
 
-    <param name="min_read_pos" type="text" value="" label="Min Read Pos" help="Minimum average relative distance from start/end of read." />
-    <param name="min_var_freq" type="text" value="" label="Min Var Freq" help="Minimum variant allele frequency." />
-    <param name="min_var_count" type="text" value="" label="Min Var Count" help="Minimum number of variant-supporting reads." />
+    <param name="min_read_pos" type="text" value="0.10" label="Min Read Pos" help="Minimum average relative distance from start/end of read." />
+    <param name="min_var_freq" type="text" value="0.05" label="Min Var Freq" help="Minimum variant allele frequency." />
+    <param name="min_var_count" type="text" value="4" label="Min Var Count" help="Minimum number of variant-supporting reads." />
 
-    <param name="min_strandness" type="text" value="" label="Min Strandness" help="Minimum representation of variant allele on each strand." />
-    <param name="max_mm_qualsum_diff" type="text" value="" label="Max mm qualsum diff" help="Maximum difference of mismatch quality sum between variant and reference reads (paralog filter)." />
+    <param name="min_strandness" type="text" value="0.01" label="Min Strandness" help="Minimum representation of variant allele on each strand." />
+    <param name="max_mm_qualsum_diff" type="text" value="50" label="Max mm qualsum diff" help="Maximum difference of mismatch quality sum between variant and reference reads (paralog filter)." />
 
-    <param name="max_var_mm_qualsum" type="text" value="" label="Max var mm qualsum" help="Maximum mismatch quality sum of reference-supporting reads." />
-    <param name="max_mapqual_diff" type="text" value="" label="Max mapqual diff" help="Maximum difference of mapping quality between variant and reference reads." />
+    <param name="max_var_mm_qualsum" type="text" value="100" label="Max var mm qualsum" help="Maximum mismatch quality sum of reference-supporting reads." />
+    <param name="max_mapqual_diff" type="text" value="30" label="Max mapqual diff" help="Maximum difference of mapping quality between variant and reference reads." />
 
-    <param name="max_readlen_diff" type="text" value="" label="Max readlen diff" help="Maximum difference of average supporting read length between variant and reference reads (paralog filter)" />
-    <param name="min_var_dist_3 " type="text" value="" label="Min var dist 3 " help="minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads" />
+    <param name="max_readlen_diff" type="text" value="25" label="Max readlen diff" help="Maximum difference of average supporting read length between variant and reference reads (paralog filter)" />
+    <param name="min_var_dist_3" type="text" value="0.20" label="Min var dist 3 " help="minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads" />
 
   </inputs>
 
@@ -33,7 +47,6 @@ fpfilter.pl
   </outputs>
 
   <help>
-
     --vcf-file              the input VCF file. Must have a GT field.
     --bam-file              the BAM file of the sample you are filtering on. Typically the tumor.
     --sample                the sample name of the sample you want to filter on in the VCF file.
@@ -48,9 +61,6 @@ fpfilter.pl
     --max-mapqual-diff      maximum difference of mapping quality between variant and reference reads
     --max-readlen-diff      maximum difference of average supporting read length between variant and reference reads (paralog filter)
     --min-var-dist-3        minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads
-    --help                  this message
-
-
   </help>
 
   <tests>
