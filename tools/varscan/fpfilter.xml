@@ -1,0 +1,64 @@
+<tool id="varscan_fpfilter" name="VarScan FPFilter" version="2.3.8">
+  <description>
+    filter variants
+  </description>
+  <requirements>
+    <container type="docker">varscan:2.3.8</container>
+  </requirements>
+
+  <command>
+java -Xmx7g -jar /opt/VarScan.v2.3.8.jar
+fpfilter
+$variant_file
+$readcount_file
+#if $keep_failures
+--keep-failures
+#end if
+--min-var-count $min_var_count
+--min-var-freq $min_var_freq
+--min-var-readpos $min_var_readpos
+--min-var-dist3 $min_var_dist3
+--min-strandedness $min_strandedness
+--min-strand-reads $min_strand_reads
+--min-ref-basequal $min_ref_basequal
+--min-var-basequal $min_var_basequal
+--max-rl-diff $max_rl_diff
+--max-var-mmqs $max_var_mmqs
+--max-mmqs-diff $max_mmqs_diff
+--min-ref-mapqual $min_ref_mapqual
+--min-var-mapqual $min_var_mapqual
+--max-mapqual-diff $max_mapqual_diff
+  </command>
+
+  <inputs>
+    <param name="variant_file" type="data" format="vcf" label="Variant File" help="A file of SNPs or indels in VCF format" />
+    <param name="readcount_file" type="data" format="txt" label="Readcount File" help="The output file from bam-readcount for those positions" />
+
+    <param name="keep_failures" type="boolean" label="Keep Failures" help="Include failures in the output file"/>
+    <param name="min_var_count" type="integer" label="Min Variant Count" help="Minimum number of variant-supporting reads" value="4"/>
+    <param name="min_var_freq" type="float" label="Min Variant Frequency" help="Minimum variant allele frequency" value="0.05"/>
+    <param name="min_var_readpos" type="float" label="Min Variant ReadPos" help="Minimum average read position of var-supporting reads" value="0.10"/>
+    <param name="min_var_dist3" type="float" label="Min Variant Dist3" help="Minimum average relative distance to effective 3' end" value="0.10"/>
+    <param name="min_strandedness" type="float" label="Min Strandedness" help="Minimum fraction of variant reads from each strand" value="0.01"/>
+    <param name="min_strand_reads" type="integer" label="Min Strang Reads" help="Minimum allele depth required to perform the strand tests" value="5"/>
+    <param name="min_ref_basequal" type="integer" label="Min Ref Base Quality" help="Minimum average base quality for ref allele" value="30"/>
+    <param name="min_var_basequal" type="integer" label="Min Variant Base Quality" help="Minimum average base quality for var allele" value="30"/>
+    <param name="max_rl_diff" type="float" label="Max Readlen Diff" help="Maximum average relative read length difference (ref - var)" value="0.25"/>
+    <param name="max_var_mmqs" type="integer" label="Max MMQ" help="Maximum mismatch quality sum of variant-supporting reads" value="100"/>
+    <param name="max_mmqs_diff" type="integer" label="Max MMQ Diff" help="Maximum average mismatch quality sum (var - ref)" value="50"/>
+    <param name="min_ref_mapqual" type="integer" label="Min Ref map quality" help="Minimum average mapping quality for ref allele" value="30"/>
+    <param name="min_var_mapqual" type="integer" label="Min Var map quality" help="Minimum average mapping quality for var allele" value="30"/>
+    <param name="max_mapqual_diff" type="integer" label="Max MapQual Diff" help="Maximum average mapping quality (ref - var)" value="50"/>
+  </inputs>
+  <outputs>
+    <data type="data" format="vcf" name="out_vcf" label="${tool.name} result on ${on_string}"/>
+  </outputs>
+  <stdio>
+    <exit_code range="1:" level="fatal" />
+  </stdio>
+  
+  <help>
+
+
+  </help>
+</tool>
