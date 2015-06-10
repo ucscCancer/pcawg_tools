@@ -167,7 +167,7 @@ def __main__():
     parser.add_argument('-t', dest='sampleTags', default=[], action="append", help='the sample tag')
     parser.add_argument('-o1', dest='outputRaw', help='the output raw', default=None)
     parser.add_argument('-o2', dest='outputVcfFile', help='the output vcf', default=None)
-    parser.add_argument('--number_of_threads', dest='number_of_threads', type=int, default='1')
+    parser.add_argument('--number_of_threads', dest='number_of_threads', type=int, default=2)
     parser.add_argument('--number_of_procs', dest='procs', type=int, default=1)
 
     parser.add_argument('-x', '--max_range_index', dest='max_range_index', type=int, default='4')
