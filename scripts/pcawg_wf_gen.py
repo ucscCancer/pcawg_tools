@@ -19,16 +19,18 @@ REFDATA_PROJECT="syn3241088"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("docstore", help="DocStore")
+    parser.add_argument("--out-base", default="pcawg")
     parser.add_argument("--ref-download", action="store_true", default=False)
     parser.add_argument("--create-service", action="store_true", default=False)
+    parser.add_argument("--lite", action="store_true", default=False)
+    parser.add_argument("--scratch", default=None)
 
     args = parser.parse_args()
 
     syn = synapseclient.Synapse()
     syn.login()
 
-    docstore = from_url(args.docstore)
+    docstore = from_url(args.out_base)
 
     if args.ref_download:
         #download reference files from Synapse and populate the document store
@@ -61,7 +63,8 @@ if __name__ == "__main__":
         "dbsnp" : "dbsnp_132_b37.leftAligned.vcf",
         "cosmic" : "b37_cosmic_v54_120711.vcf",
         "gold_indels" : "Mills_and_1000G_gold_standard.indels.hg19.sites.fixed.vcf",
-        "phase_one_indels" : "1000G_phase1.indels.hg19.sites.fixed.vcf"
+        "phase_one_indels" : "1000G_phase1.indels.hg19.sites.fixed.vcf",
+        "centromere" : "centromere_hg19.bed"
     }
 
     dm = {}
@@ -70,43 +73,54 @@ if __name__ == "__main__":
         for a in docstore.filter(name=v):
             hit = a[0]
         if hit is None:
-            raise Exception("%s not found" %s (v))
+            raise Exception("%s not found" % (v))
         dm[k] = { "uuid" : hit }
 
-    workflow = GalaxyWorkflow(ga_file="workflows/Galaxy-Workflow-PCAWG_BROAD_MUSE.ga")
+    #if args.lite:
+    workflow = GalaxyWorkflow(ga_file="workflows/Galaxy-Workflow-PCAWG_CGHUB_Pilot.ga")
+    #else:
+    #workflow = GalaxyWorkflow(ga_file="workflows/Galaxy-Workflow-PCAWG_BROAD_MUSE.ga")
 
-    config = synqueue.find_config()
+    config = {
+      "table_id" : "syn3498886",
+      "primary_col" : "Donor_ID",
+      "assignee_col" : "Assignee",
+      "state_col" : "Processing State"
+    }
+
 
     tasks = TaskGroup()
 
     for ent in synqueue.listAssignments(syn, **config):
-        task = GalaxyWorkflowTask("workflow_%s" % (ent['id']),
-            workflow,
-            inputs=dm,
-            parameters={
-                'normal_bam_download' : {
-                    "uuid" : ent['meta']['Normal_Analysis_ID'],
-                    "gnos_endpoint" : "https://cghub.ucsc.edu",
-                    "cred_file" : "/tool_data/files/cghub.key"
+        if ent['meta']['Normal_GNOS_endpoint'] == "https://cghub.ucsc.edu/":
+            task = GalaxyWorkflowTask("workflow_%s" % (ent['id']),
+                workflow,
+                inputs=dm,
+                parameters={
+                    'normal_bam_download' : {
+                        "uuid" : ent['meta']['Normal_Analysis_ID'],
+                        "gnos_endpoint" : "https://cghub.ucsc.edu",
+                        "cred_file" : "/tool_data/files/cghub.key"
+                    },
+                    'tumor_bam_download' : {
+                        "uuid" : ent['meta']['Tumour_Analysis_ID'],
+                        "gnos_endpoint" : "https://cghub.ucsc.edu",
+                        "cred_file" : "/tool_data/files/cghub.key"
+                    },
+                    'broad_variant_pipeline' : {
+                        "broad_ref_dir" : "/tool_data/files/refdata",
+                        "sample_id" : ent['meta']['Donor_ID']
+                    }
                 },
-                'tumor_bam_download' : {
-                    "uuid" : ent['meta']['Tumour_Analysis_ID'],
-                    "gnos_endpoint" : "https://cghub.ucsc.edu",
-                    "cred_file" : "/tool_data/files/cghub.key"
-                },
-                'broad_variant_pipeline' : {
-                    "broad_ref_dir" : "/tool_data/files/refdata",
-                    "sample_id" : ent['meta']['Donor_ID']
-                }
-            },
-            tags=[ "sample:%s" % (ent['meta']['Donor_ID']) ]
-        )
-        tasks.append(task)
+                tags=[ "sample:%s" % (ent['meta']['Donor_ID']) ]
+            )
+            tasks.append(task)
 
-    if not os.path.exists("pcawg.tasks"):
-        os.mkdir("pcawg.tasks")
+    if not os.path.exists("%s.tasks" % (args.out_base)):
+        os.mkdir("%s.tasks" % (args.out_base))
+
     for data in tasks:
-        with open("pcawg.tasks/%s" % (data.task_id), "w") as handle:
+        with open("%s.tasks/%s" % (args.out_base, data.task_id), "w") as handle:
             handle.write(json.dumps(data.to_dict()))
 
     if args.create_service:
@@ -122,10 +136,14 @@ if __name__ == "__main__":
                 ["muTect", 8],
                 ["delly", 4],
                 ["gatk_bqsr", 12],
-                ["gatk_indel", 12],
+                ["gatk_indel", 24],
                 ["bwa_mem", 12],
-                ["broad_variant_pipline", 28]
+                ["broad_variant_pipline", 24]
             ]
         )
-        with open("pcawg.service", "w") as handle:
-            service.get_config().store(handle)
+        with open("%s.service" % (args.out_base), "w") as handle:
+            s = service.get_config()
+            if args.scratch:
+                print "Using scratch", args.scratch
+                s.set_docstore_config(cache_path=args.scratch, open_perms=True)
+            s.store(handle)
