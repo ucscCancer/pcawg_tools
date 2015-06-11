@@ -1,26 +1,65 @@
 #!/usr/bin/env python
 
-import argparse, os, shutil, subprocess, tempfile, time
+import sys, argparse, os, shutil, subprocess, tempfile, time
 from multiprocessing import Pool
 
 def execute(cmd, output=None):
     import sys, shlex
-    # function to execute a cmd and report if an error occur
+    # function to execute a cmd and report if an error occurs
     print(cmd)
     try:
         process = subprocess.Popen(args=shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout,stderr = process.communicate()
-    except Exception, e: # une erreur de ma commande : stderr
+    except Exception, e: # error from my command : stderr
         sys.stderr.write("problem doing : %s\n%s\n" %(cmd, e))
         return 1
     if output:
         output = open(output, 'w')
         output.write(stdout)
         output.close()
-    if stderr != '': # une erreur interne au programme : stdout (sinon, souvent des warning arrete les programmes)
+    if stderr != '': # internal program error : stdout 
         sys.stdout.write("warning or error while doing : %s\n-----\n%s-----\n\n" %(cmd, stderr))
         return 1
     return 0
+
+class pileupSplit(object):
+    """split pileups in chromosomes"""
+    def __init__(self, args):
+        self.i_dnaNormalPileupsList = []
+        self.i_rnaNormalPileupsList = []
+        self.i_rnaTumorPileupsList = []
+        self.i_dnaTumorPileupsList = []
+	if (args.dnaNormalPileupsFilename != None):
+            self.i_dnaNormalPileupsList = splitPileup(workdir=args.workdir, inputPileup=args.dnaNormalPileupsFilename, prefix='dnaNormal')
+
+	if (args.rnaNormalPileupsFilename != None):
+            self.i_rnaNormalPileupsList = splitPileup(workdir=args.workdir, inputPileup=args.rnaNormalPileupsFilename, prefix='rnaNormal')
+
+	if (args.dnaTumorPileupsFilename != None):
+            self.i_dnaTumorPileupsList = splitPileup(workdir=args.workdir, inputPileup=args.dnaTumorPileupsFilename, prefix='dnaTumor')
+
+	if (args.rnaTumorPileupsFilename != None):
+            self.i_rnaTumorPileupsList = splitPileup(workdir=args.workdir, inputPileup=args.rnaTumorPileupsFilename, prefix='rnaTumor')
+
+
+def splitPileup(workdir, inputPileup, prefix):
+    """Splits up pileup file in chromosomes, returns dict of chromosome names with filenames"""
+    chrNames = dict()
+    f = open(inputPileup, 'r')
+    for line in f:
+        fields = line.split("\t")
+        if not fields[0] in chrNames:
+            try:
+                o.close()
+            except:
+                pass
+            outfile = os.path.join(os.path.abspath(workdir), prefix + "." + fields[0] + ".pileup" )
+            o = open(outfile, 'w')      # append not necessary
+            chrNames[fields[0]] = outfile
+        o.write(line)
+    o.close
+    f.close()
+    return chrNames
 
 
 def indexBam(workdir, prefix, inputBamFile, inputBamFileIndex=None):
@@ -44,19 +83,34 @@ def indexFasta(workdir, inputFastaFile, inputFastaFileIndex=None, prefix="dna"):
         os.symlink(inputFastaFileIndex, inputFastaLink + ".fai")
     return inputFastaLink
 
-def bamChrScan(bamfile):
+def idxStats(bamfile):
+    """runs samtools idxstats"""
     samtools = which("samtools")
     cmd = [samtools, "idxstats", bamfile]
     process = subprocess.Popen(args=cmd, stdout=subprocess.PIPE)
     stdout, stderr = process.communicate()
+    return stdout
+
+def mitName(idx):
+    """Returns the mitochondrion chromosome ID used in the bam file if it starts with M (usually it is called M or MT)"""
+    for line in idx.split("\n"):
+        tmp = line.split("\t")
+        if len(tmp) == 4 and tmp[0].startswith("chrM"):
+            return tmp[0][3:]	# remove chr
+        if len(tmp) == 4 and tmp[0].startswith("M"):
+            return tmp[0]
+    return 'M'	# not found, so does not matter
+
+def bamChrScan(idx):
+    """Checks if the bam chromosome IDs start with chr"""
     found = False
-    for line in stdout.split("\n"):
+    for line in idx.split("\n"):
         tmp = line.split("\t")
         if len(tmp) == 4 and tmp[0].startswith("chr"):
             found = True
     return found
 
-def radia(chrom, args,
+def radia(chrom, args, pileupInfo,
           dnaNormalFilename=None, rnaNormalFilename=None, dnaTumorFilename=None, rnaTumorFilename=None,
           dnaNormalFastaFilename=None, rnaNormalFastaFilename=None, dnaTumorFastaFilename=None, rnaTumorFastaFilename=None):
 
@@ -77,37 +131,83 @@ def radia(chrom, args,
     # --disease GBM
     # --log=INFO
 
+    if chrom in pileupInfo.i_dnaNormalPileupsList:
+        dnaNormalPileupsFilename = pileupInfo.i_dnaNormalPileupsList[chrom]
+    else:
+        pileupInfo.i_dnaNormalPileupsList.append(chr)
+        sys.exit(pileupInfo.i_dnaNormalPileupsList)
+        dnaNormalPileupsFilename = None
+
+    if chrom in pileupInfo.i_rnaNormalPileupsList:
+        rnaNormalPileupsFilename = pileupInfo.i_rnaNormalPileupsList[chrom]
+    else:
+        rnaNormalPileupsFilename = None
+
+    if chrom in pileupInfo.i_dnaTumorPileupsList:
+        dnaTumorPileupsFilename = pileupInfo.i_dnaTumorPileupsList[chrom]
+    else:
+        dnaTumorPileupsFilename = None
+
+    if chrom in pileupInfo.i_rnaTumorPileupsList:
+        rnaTumorPileupsFilename = pileupInfo.i_rnaTumorPileupsList[chrom]
+    else:
+        rnaTumorPileupsFilename = None
+
+
     # quadruplets
     if (rnaNormalFilename != None and rnaTumorFilename != None):
-        cmd = "python %s/radia.pyc %s %s -n %s -x % -t %s -r %s --dnaNormalFasta %s --rnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
+        cmd = "python %s/radia.pyc %s %s -n %s --np %s -x %s --xp %s -t %s --tp %s -r %s --rp %s --dnaNormalFasta %s --rnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
                 args.scriptsDir,
                 args.patientId, chrom,
-                dnaNormalFilename, rnaNormalFilename, dnaTumorFilename, rnaTumorFilename,
+                dnaNormalFilename, dnaNormalPileupsFilename, 
+                rnaNormalFilename, rnaNormalPileupsFilename,
+                dnaTumorFilename, dnaTumorPileupsFilename,
+                rnaTumorFilename, rnaTumorPileupsFilename,
                 dnaNormalFastaFilename, rnaNormalFastaFilename, dnaTumorFastaFilename, rnaTumorFastaFilename)
     # triplets
     elif (rnaTumorFilename != None):
-        cmd = "python %s/radia.pyc %s %s -n %s -t %s -r %s --dnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
+        cmd = "python %s/radia.pyc %s %s -n %s --np %s -t %s --tp %s -r %s --rp %s --dnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
                 args.scriptsDir,
                 args.patientId, chrom,
-                dnaNormalFilename, dnaTumorFilename, rnaTumorFilename,
+                dnaNormalFilename, dnaNormalPileupsFilename, 
+                dnaTumorFilename, dnaTumorPileupsFilename,
+                rnaTumorFilename, rnaTumorPileupsFilename,
                 dnaNormalFastaFilename, dnaTumorFastaFilename, rnaTumorFastaFilename)
     # pairs
     else:
         cmd = "python %s/radia.pyc %s %s -n %s -t %s --dnaNormalFasta %s --dnaTumorFasta %s " % (
                 args.scriptsDir,
                 args.patientId, chrom,
-                dnaNormalFilename, dnaTumorFilename,
+                dnaNormalFilename,
+                dnaTumorFilename,
                 dnaNormalFastaFilename, dnaTumorFastaFilename
         )
+        if dnaNormalPileupsFilename is not None:
+	    cmd += ' --np=' + dnaNormalPileupsFilename
+        if dnaTumorPileupsFilename is not None:
+	    cmd += ' --tp=' + dnaTumorPileupsFilename
 
-    if dnaNormalFilename is not None and bamChrScan(dnaNormalFilename):
-        cmd += ' --dnaNormalUseChr '
-    if rnaNormalFilename is not None and bamChrScan(rnaNormalFilename):
-        cmd += ' --rnaNormalUseChr '
-    if dnaTumorFilename is not None and bamChrScan(dnaTumorFilename):
-        cmd += ' --dnaTumorUseChr '
-    if rnaTumorFilename is not None and bamChrScan(rnaTumorFilename):
-        cmd += ' --rnaTumorUseChr '
+    # determine naming for chromosomes (with or without 'chr') and mitochondrion (M or something starting with M)
+    if dnaNormalFilename is not None:
+        idx = idxStats(dnaNormalFilename)
+        if bamChrScan(idx):
+            cmd += ' --dnaNormalUseChr '
+        cmd += ' --dnaNormalMitochon=' + mitName(idx)
+    if rnaNormalFilename is not None: 
+        idx = idxStats(rnaNormalFilename)
+        if bamChrScan(idx):
+            cmd += ' --rnaNormalUseChr '
+        cmd += ' --rnaNormalMitochon=' + mitName(idx)
+    if dnaTumorFilename is not None: 
+        idx = idxStats(dnaTumorFilename)
+        if bamChrScan(idx):
+            cmd += ' --dnaTumorUseChr '
+        cmd += ' --dnaTumorMitochon=' + mitName(idx)
+    if rnaTumorFilename is not None:
+        idx = idxStats(rnaTumorFilename)
+        if bamChrScan(idx):
+            cmd += ' --rnaTumorUseChr '
+        cmd += ' --rnaTumorMitochon=' + mitName(idx)
     if args.gzip:
         cmd += ' --gzip '
     return cmd, args.outputFilename
@@ -205,7 +305,7 @@ def __main__():
     #############################
     #    RADIA params    #
     #############################
-    parser.add_argument("-o", "--outputFilename", dest="outputFilename", required=True, metavar="OUTPUT_FILE", help="the name of the output file")
+    parser.add_argument("-o", "--outputFilename", dest="outputFilename", required=True, metavar="OUTPUT_FILE", default='out.vcf', help="the name of the output file")
     parser.add_argument("--patientId", dest="patientId", required=True, metavar="PATIENT_ID", help="a unique patient Id that will be used to name the output file")
 
     parser.add_argument("-b", "--batchSize", type=int, dest="batchSize", default=int(250000000), metavar="BATCH_SIZE", help="the size of the samtool selections that are loaded into memory at one time, %default by default")
@@ -230,6 +330,7 @@ def __main__():
     # params for normal DNA
     parser.add_argument("-n", "--dnaNormalFilename", dest="dnaNormalFilename", metavar="DNA_NORMAL_FILE", help="the name of the normal DNA .bam file")
     parser.add_argument("--dnaNormalBaiFilename", dest="dnaNormalBaiFilename", metavar="DNA_NORMAL_BAI_FILE", help="the name of the normal DNA .bai file")
+    parser.add_argument("-np", "--dnaNormalPileupsFilename", dest="dnaNormalPileupsFilename", metavar="DNA_NORMAL_PILEUPS_FILE", help="the name of the normal DNA pileup file")
     parser.add_argument("--dnaNormalMinTotalBases", type=int, default=int(4), dest="dnaNormalMinTotalNumBases", metavar="DNA_NOR_MIN_TOTAL_BASES", help="the minimum number of overall normal DNA reads covering a position, %default by default")
     parser.add_argument("--dnaNormalMinAltBases", type=int, default=int(2), dest="dnaNormalMinAltNumBases", metavar="DNA_NOR_MIN_ALT_BASES", help="the minimum number of alternative normal DNA reads supporting a variant at a position, %default by default")
     parser.add_argument("--dnaNormalBaseQual", type=int, default=int(10), dest="dnaNormalMinBaseQuality", metavar="DNA_NOR_BASE_QUAL", help="the minimum normal DNA base quality, %default by default")
@@ -242,6 +343,7 @@ def __main__():
     # params for normal RNA
     parser.add_argument("-x", "--rnaNormalFilename", dest="rnaNormalFilename", metavar="RNA_NORMAL_FILE", help="the name of the normal RNA-Seq .bam file")
     parser.add_argument("--rnaNormalBaiFilename", dest="rnaNormalBaiFilename", metavar="RNA_NORMAL_BAI_FILE", help="the name of the normal RNA .bai file")
+    parser.add_argument("-xp", "--rnaNormalPileupsFilename", dest="rnaNormalPileupsFilename", metavar="RNA_NORMAL_PILEUPS_FILE", help="the name of the normal RNA pileup file")
     parser.add_argument("--rnaNormalMinTotalBases", type=int, default=int(4), dest="rnaNormalMinTotalNumBases", metavar="RNA_NOR_MIN_TOTAL_BASES", help="the minimum number of overall normal RNA-Seq reads covering a position, %default by default")
     parser.add_argument("--rnaNormalMinAltBases", type=int, default=int(2), dest="rnaNormalMinAltNumBases", metavar="RNA_NOR_MIN_ALT_BASES", help="the minimum number of alternative normal RNA-Seq reads supporting a variant at a position, %default by default")
     parser.add_argument("--rnaNormalBaseQual", type=int, default=int(10), dest="rnaNormalMinBaseQuality", metavar="RNA_NOR_BASE_QUAL", help="the minimum normal RNA-Seq base quality, %default by default")
@@ -254,6 +356,7 @@ def __main__():
     # params for tumor DNA
     parser.add_argument("-t", "--dnaTumorFilename", dest="dnaTumorFilename", metavar="DNA_TUMOR_FILE", help="the name of the tumor DNA .bam file")
     parser.add_argument("--dnaTumorBaiFilename", dest="dnaTumorBaiFilename", metavar="DNA_TUMOR_BAI_FILE", help="the name of the tumor DNA .bai file")
+    parser.add_argument("-tp", "--dnaTumorPileupsFilename", dest="dnaTumorPileupsFilename", metavar="DNA_TUMOR_PILEUPS_FILE", help="the name of the tumor DNA pileup file")
     parser.add_argument("--dnaTumorMinTotalBases", type=int, default=int(4), dest="dnaTumorMinTotalNumBases", metavar="DNA_TUM_MIN_TOTAL_BASES", help="the minimum number of overall tumor DNA reads covering a position, %default by default")
     parser.add_argument("--dnaTumorMinAltBases", type=int, default=int(2), dest="dnaTumorMinAltNumBases", metavar="DNA_TUM_MIN_ALT_BASES", help="the minimum number of alternative tumor DNA reads supporting a variant at a position, %default by default")
     parser.add_argument("--dnaTumorBaseQual", type=int, default=int(10), dest="dnaTumorMinBaseQuality", metavar="DNA_TUM_BASE_QUAL", help="the minimum tumor DNA base quality, %default by default")
@@ -266,6 +369,7 @@ def __main__():
     # params for tumor RNA
     parser.add_argument("-r", "--rnaTumorFilename", dest="rnaTumorFilename", metavar="RNA_TUMOR_FILE", help="the name of the tumor RNA-Seq .bam file")
     parser.add_argument("--rnaTumorBaiFilename", dest="rnaTumorBaiFilename", metavar="RNA_TUMOR_BAI_FILE", help="the name of the tumor RNA .bai file")
+    parser.add_argument("-rp", "--rnaTumorPileupsFilename", dest="rnaTumorPileupsFilename", metavar="RNA_TUMOR_PILEUPS_FILE", help="the name of the tumor RNA pileup file")
     parser.add_argument("--rnaTumorMinTotalBases", type=int, default=int(4), dest="rnaTumorMinTotalNumBases", metavar="RNA_TUM_MIN_TOTAL_BASES", help="the minimum number of overall tumor RNA-Seq reads covering a position, %default by default")
     parser.add_argument("--rnaTumorMinAltBases", type=int, default=int(2), dest="rnaTumorMinAltNumBases", metavar="RNA_TUM_MIN_ALT_BASES", help="the minimum number of alternative tumor RNA-Seq reads supporting a variant at a position, %default by default")
     parser.add_argument("--rnaTumorBaseQual", type=int, default=int(10), dest="rnaTumorMinBaseQuality", metavar="RNA_TUM_BASE_QUAL", help="the minimum tumor RNA-Seq base quality, %default by default")
@@ -366,6 +470,10 @@ def __main__():
         else:
             i_rnaTumorFilename = None
 
+
+	# if there are pileup files, split them and put filenames in the pileupInfo object
+        pileupInfo = pileupSplit(args)
+
         # the BLAT fasta file is different from the other ones, it should contain the extra contigs and hla genes
         if (args.blatFastaFilename != None):
             blatFastaFile = indexFasta(args.workdir, args.blatFastaFilename, args.blatFastaFilename + ".fai", "blat")
@@ -377,21 +485,31 @@ def __main__():
             chroms = get_bam_seq(i_dnaNormalFilename)
             for chrom in chroms:
                 # first run the RADIA command
-                cmd, rawOutput = radia(chrom, args,
+                chrom = '22'
+#                if chrom in i_dnaNormalPileupsList:
+#                    i_dnaNormalPileupsFile = i_dnaNormalPileupsList[chrom]
+#		else:
+#                    i_dnaNormalPileupsFile = None
+                cmd, rawOutput = radia(chrom, args, pileupInfo, 
                             i_dnaNormalFilename, i_rnaNormalFilename, i_dnaTumorFilename, i_rnaTumorFilename,
                             i_dnaNormalFastaFilename, i_rnaNormalFastaFilename, i_dnaTumorFastaFilename, i_rnaTumorFastaFilename)
-                if execute(cmd):
+                if execute(cmd, rawOutput):	# now you create out.vcf, which is not a unique name. How do I capture STDOUT?
                     raise Exception("Radia Call failed")
+# must make unique rawoutput
+#		print rawOutput
+#                rawOuts.append(rawOutput)
+                break
                 # then filter it
-                cmd, out = radiaFilter(args=args, chrom=chrom, rawFile=rawOutput, outputDir=args.outputDir, scriptsDir=args.scriptsDir, blatFastaFilename=blatFastaFile)
-                if execute(cmd):
-                    raise Exception("RadiaFilter Call failed")
+#                cmd, out = radiaFilter(args=args, chrom=chrom, rawFile=rawOutput, outputDir=args.outputDir, scriptsDir=args.scriptsDir, blatFastaFilename=blatFastaFile)
+#                if execute(cmd):
+#                    raise Exception("RadiaFilter Call failed")
         else:
             chroms = get_bam_seq(i_dnaNormalFilename)
             cmds = []
             rawOuts = []
             for chrom in chroms:
                 # create the RADIA commands
+                chrom = '22'
                 cmd, rawOutput = radia(chrom, args,
                             i_dnaNormalFilename, i_rnaNormalFilename, i_dnaTumorFilename, i_rnaTumorFilename,
                             i_dnaNormalFastaFilename, i_rnaNormalFastaFilename, i_dnaTumorFastaFilename, i_rnaTumorFastaFilename)
@@ -401,24 +519,26 @@ def __main__():
             p = Pool(args.procs)
             values = p.map(execute, cmds, 1)
 
-            cmds = []
-            filteredOuts = []
-            for rawOutput in rawOuts:
-                # create the filter commands
-                cmd, filteredOut = radiaFilter(args=args, chrom=chrom, rawFile=rawOutput, outputDir=args.outputDir, scriptsDir=args.scriptsDir, blatFastaFilename=blatFastaFile)
-                cmds.append(cmd)
-                filteredOuts.append(filteredOut)
-            values = p.map(execute, cmds, 1)
+# do not filter, just print the raw radia output (it will get a vcf header)
+#            filteredOuts = rawOuts
+#            cmds = []
+#            filteredOuts = []
+#            for rawOutput in rawOuts:
+#                # create the filter commands
+#                cmd, filteredOut = radiaFilter(args=args, chrom=chrom, rawFile=rawOutput, outputDir=args.outputDir, scriptsDir=args.scriptsDir, blatFastaFilename=blatFastaFile)
+#                cmds.append(cmd)
+#                filteredOuts.append(filteredOut)
+#            values = p.map(execute, cmds, 1)
 
-            vcf_writer = None
-            for file in filteredOuts:
-                print file
-                vcf_reader = vcf.Reader(filename=file)
-                if vcf_writer is None:
-                    vcf_writer = vcf.Writer(open(args.outputVcfFile, "w"), vcf_reader)
-                for record in vcf_reader:
-                    vcf_writer.write_record(record)
-            vcf_writer.close()
+#            vcf_writer = None
+#            for file in filteredOuts:
+#                print file
+#                vcf_reader = vcf.Reader(filename=file)
+#                if vcf_writer is None:
+#                    vcf_writer = vcf.Writer(open(args.outputVcfFile, "w"), vcf_reader)
+#                for record in vcf_reader:
+#                    vcf_writer.write_record(record)
+#            vcf_writer.close()
 
     finally:
         if not args.no_clean and os.path.exists(tempDir):
