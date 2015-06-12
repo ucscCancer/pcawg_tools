@@ -114,9 +114,9 @@ def radia(chrom, args, pileupInfo,
           dnaNormalFilename=None, rnaNormalFilename=None, dnaTumorFilename=None, rnaTumorFilename=None,
           dnaNormalFastaFilename=None, rnaNormalFastaFilename=None, dnaTumorFastaFilename=None, rnaTumorFastaFilename=None):
 
-    # python radia.pyc id chrom [Options]
+    # python radia.py id chrom [Options]
 
-    # python radia.pyc TCGA-02-0047 1
+    # python radia.py TCGA-02-0047 1
     # -n TCGA-02-0047-10A-01D-1490-08.bam
     # -t TCGA-02-0047-01A-01D-1490-08.bam
     # -r TCGA-02-0047-01A*.bam
@@ -134,8 +134,6 @@ def radia(chrom, args, pileupInfo,
     if chrom in pileupInfo.i_dnaNormalPileupsList:
         dnaNormalPileupsFilename = pileupInfo.i_dnaNormalPileupsList[chrom]
     else:
-        pileupInfo.i_dnaNormalPileupsList.append(chr)
-        sys.exit(pileupInfo.i_dnaNormalPileupsList)
         dnaNormalPileupsFilename = None
 
     if chrom in pileupInfo.i_rnaNormalPileupsList:
@@ -156,7 +154,7 @@ def radia(chrom, args, pileupInfo,
 
     # quadruplets
     if (rnaNormalFilename != None and rnaTumorFilename != None):
-        cmd = "python %s/radia.pyc %s %s -n %s --np %s -x %s --xp %s -t %s --tp %s -r %s --rp %s --dnaNormalFasta %s --rnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
+        cmd = "python %s/radia.py %s %s -n %s --np %s -x %s --xp %s -t %s --tp %s -r %s --rp %s --dnaNormalFasta %s --rnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
                 args.scriptsDir,
                 args.patientId, chrom,
                 dnaNormalFilename, dnaNormalPileupsFilename, 
@@ -166,7 +164,7 @@ def radia(chrom, args, pileupInfo,
                 dnaNormalFastaFilename, rnaNormalFastaFilename, dnaTumorFastaFilename, rnaTumorFastaFilename)
     # triplets
     elif (rnaTumorFilename != None):
-        cmd = "python %s/radia.pyc %s %s -n %s --np %s -t %s --tp %s -r %s --rp %s --dnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
+        cmd = "python %s/radia.py %s %s -n %s --np %s -t %s --tp %s -r %s --rp %s --dnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
                 args.scriptsDir,
                 args.patientId, chrom,
                 dnaNormalFilename, dnaNormalPileupsFilename, 
@@ -175,7 +173,7 @@ def radia(chrom, args, pileupInfo,
                 dnaNormalFastaFilename, dnaTumorFastaFilename, rnaTumorFastaFilename)
     # pairs
     else:
-        cmd = "python %s/radia.pyc %s %s -n %s -t %s --dnaNormalFasta %s --dnaTumorFasta %s " % (
+        cmd = "python %s/radia.py %s %s -n %s -t %s --dnaNormalFasta %s --dnaTumorFasta %s " % (
                 args.scriptsDir,
                 args.patientId, chrom,
                 dnaNormalFilename,
@@ -208,16 +206,42 @@ def radia(chrom, args, pileupInfo,
         if bamChrScan(idx):
             cmd += ' --rnaTumorUseChr '
         cmd += ' --rnaTumorMitochon=' + mitName(idx)
+    outfile = os.path.join(os.path.abspath(args.workdir), args.patientId + "_chr" + chrom + ".vcf")
     if args.gzip:
         cmd += ' --gzip '
-    return cmd, args.outputFilename
+        outfile += '.gz'
+    return cmd, outfile
 
+
+#def radiaMerge(scriptsDir, patientId, inDir, outDir, outfile):
+def radiaMerge(args):
+    """Merges vcf files if they follow the pattern patientID_chr<N>.vcf(.gz)"""
+
+    # having the same inputdir and outputdir works fine (tested on command line)
+
+    # python mergeChroms.py patientId /radia/filteredChroms/ /radia/filteredPatients/ --gzip
+    #  -h, --help            show this help message and exit
+    #  -o OUTPUT_FILE, --outputFilename=OUTPUT_FILE
+    #                   the name of the output file, <id>.vcf(.gz) by default
+
+    #  -l LOG, --log=LOG     the logging level (DEBUG, INFO, WARNING, ERROR,
+    #                        CRITICAL), WARNING by default
+    #  -g LOG_FILE, --logFilename=LOG_FILE
+    #                        the name of the log file, STDOUT by default
+    #  --gzip                include this argument if the final VCF should be
+    #                        compressed with gzip
+    # radia works in the workdir
+    cmd = "python %s/mergeChroms.py %s %s %s -o %s" % (
+        args.scriptsDir,
+        args.patientId, args.workdir, args.workdir,
+        args.outputFilename)
+    return cmd
 
 def radiaFilter(args, chrom, rawFile, outputDir, scriptsDir, blatFastaFilename):
 
-    # python filterRadia.pyc id chrom inputFile outputDir scriptsDir [Options]
+    # python filterRadia.py id chrom inputFile outputDir scriptsDir [Options]
 
-    # python filterRadia.pyc TCGA-02-0047-10A-01D-1490-08_TCGA-02-0047-01A-01D-1490-08 1
+    # python filterRadia.py TCGA-02-0047-10A-01D-1490-08_TCGA-02-0047-01A-01D-1490-08 1
     # TCGA-02-0047-10A-01D-1490-08_TCGA-02-0047-01A-01D-1490-08_chr1.vcf.gz
     # /radia/finalChromVCFs/
     # /rnaEditing/scripts/
@@ -235,7 +259,7 @@ def radiaFilter(args, chrom, rawFile, outputDir, scriptsDir, blatFastaFilename):
     # --log=INFO
     # --gzip
 
-    cmd = "python %s/filterRadia.pyc %s %s %s %s %s --blatFastaFilename %s " % (
+    cmd = "python %s/filterRadia.py %s %s %s %s %s --blatFastaFilename %s " % (
         args.scriptsDir,
         args.patientId, chrom, rawFile,
         outputDir, scriptsDir, blatFastaFilename)
@@ -300,7 +324,6 @@ def get_bam_seq(inputBamFile):
 def __main__():
     time.sleep(1) #small hack, sometimes it seems like docker file systems are avalible instantly
     parser = argparse.ArgumentParser(description="RNA and DNA Integrated Analysis (RADIA)")
-
 
     #############################
     #    RADIA params    #
@@ -470,7 +493,6 @@ def __main__():
         else:
             i_rnaTumorFilename = None
 
-
 	# if there are pileup files, split them and put filenames in the pileupInfo object
         pileupInfo = pileupSplit(args)
 
@@ -481,65 +503,42 @@ def __main__():
             blatFastaFile = None
 
 
+        radiaOuts = []
         if args.procs == 1:
             chroms = get_bam_seq(i_dnaNormalFilename)
-            for chrom in chroms:
+            for chrom in chroms[20:21]:
+#            for chrom in chroms:
                 # first run the RADIA command
-                chrom = '22'
-#                if chrom in i_dnaNormalPileupsList:
-#                    i_dnaNormalPileupsFile = i_dnaNormalPileupsList[chrom]
-#		else:
-#                    i_dnaNormalPileupsFile = None
-                cmd, rawOutput = radia(chrom, args, pileupInfo, 
+#                chrom = '22'
+                cmd, radiaOutput = radia(chrom, args, pileupInfo, 
                             i_dnaNormalFilename, i_rnaNormalFilename, i_dnaTumorFilename, i_rnaTumorFilename,
                             i_dnaNormalFastaFilename, i_rnaNormalFastaFilename, i_dnaTumorFastaFilename, i_rnaTumorFastaFilename)
-                if execute(cmd, rawOutput):	# now you create out.vcf, which is not a unique name. How do I capture STDOUT?
+                if execute(cmd, radiaOutput):
                     raise Exception("Radia Call failed")
-# must make unique rawoutput
-#		print rawOutput
-#                rawOuts.append(rawOutput)
-                break
-                # then filter it
-#                cmd, out = radiaFilter(args=args, chrom=chrom, rawFile=rawOutput, outputDir=args.outputDir, scriptsDir=args.scriptsDir, blatFastaFilename=blatFastaFile)
-#                if execute(cmd):
-#                    raise Exception("RadiaFilter Call failed")
+                radiaOuts.append(radiaOutput)
+#                break
         else:
+# this hasn't been tested yet
             chroms = get_bam_seq(i_dnaNormalFilename)
             cmds = []
-            rawOuts = []
             for chrom in chroms:
                 # create the RADIA commands
                 chrom = '22'
-                cmd, rawOutput = radia(chrom, args,
+                cmd, radiaOutput = radia(chrom, args, pileupInfo, 
                             i_dnaNormalFilename, i_rnaNormalFilename, i_dnaTumorFilename, i_rnaTumorFilename,
                             i_dnaNormalFastaFilename, i_rnaNormalFastaFilename, i_dnaTumorFastaFilename, i_rnaTumorFastaFilename)
                 cmds.append(cmd)
-                rawOuts.append(rawOutput)
-
+                radiaOuts.append(radiaOutput)
             p = Pool(args.procs)
             values = p.map(execute, cmds, 1)
 
-# do not filter, just print the raw radia output (it will get a vcf header)
-#            filteredOuts = rawOuts
-#            cmds = []
-#            filteredOuts = []
-#            for rawOutput in rawOuts:
-#                # create the filter commands
-#                cmd, filteredOut = radiaFilter(args=args, chrom=chrom, rawFile=rawOutput, outputDir=args.outputDir, scriptsDir=args.scriptsDir, blatFastaFilename=blatFastaFile)
-#                cmds.append(cmd)
-#                filteredOuts.append(filteredOut)
-#            values = p.map(execute, cmds, 1)
+        # even though we have a list of radia output files, we don't really need it:
+        # the radiaMerge command only uses the working directory and patient name
 
-#            vcf_writer = None
-#            for file in filteredOuts:
-#                print file
-#                vcf_reader = vcf.Reader(filename=file)
-#                if vcf_writer is None:
-#                    vcf_writer = vcf.Writer(open(args.outputVcfFile, "w"), vcf_reader)
-#                for record in vcf_reader:
-#                    vcf_writer.write_record(record)
-#            vcf_writer.close()
-
+	#cmd = radiaMerge(args.scriptsDir, args.patientId, args.workdir, args.workdir, args.outputFilename)
+	cmd = radiaMerge(args)
+        if execute(cmd):
+            raise Exception("RadiaMerge Call failed")
     finally:
         if not args.no_clean and os.path.exists(tempDir):
             shutil.rmtree(tempDir)
