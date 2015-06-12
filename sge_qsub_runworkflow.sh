@@ -24,7 +24,7 @@ export PYTHONPATH=$NEBULA
 
 echo "RUNNING" > ${TASK}.state
 
-$NEBULA/bin/nebula run --hold-error \
+$NEBULA/bin/nebula run \
 $SERVICE \
 $TASK 2> ${TASK}.err > ${TASK}.out
 

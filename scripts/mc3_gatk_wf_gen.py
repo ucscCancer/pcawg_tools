@@ -83,22 +83,22 @@ if __name__ == "__main__":
         "assignee_col" : "assignee",
         "state_col" : "state"
     }
-    
+
     ref_rename = {
         "HG19_Broad_variant" : "Homo_sapiens_assembly19"
     }
 
     tasks = TaskGroup()
 
-    for ent in synqueue.listAssignments(syn, username='anurpa', **config):
+    for ent in synqueue.listAssignments(syn, **config):
         bam_set = list( a[1] for a in ent['meta'].items() if a[0].startswith("id_") and isinstance(a[1], basestring)  )
-        
+
         ref_set = set( a[1] for a in ent['meta'].items() if a[0].startswith("ref_assembly_") and isinstance(a[1], basestring) )
         assert(len(ref_set) == 1)
         ref_name = ref_set.pop()
         if ref_name in ref_rename:
             ref_name = ref_rename[ref_name]
-        
+
         hit = None
         for a in docstore.filter(name=ref_name + ".fasta"):
             hit = a[0]
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                 }
             )
             tasks.append(task)
-            
+
 
     if not os.path.exists("%s.tasks" % (args.out_base)):
         os.mkdir("%s.tasks" % (args.out_base))
