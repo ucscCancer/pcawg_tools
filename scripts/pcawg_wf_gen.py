@@ -22,7 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("--out-base", default="pcawg")
     parser.add_argument("--ref-download", action="store_true", default=False)
     parser.add_argument("--create-service", action="store_true", default=False)
-    parser.add_argument("--lite", action="store_true", default=False)
+    parser.add_argument("--pilot", action="store_true", default=False)
     parser.add_argument("--scratch", default=None)
 
     args = parser.parse_args()
@@ -76,10 +76,10 @@ if __name__ == "__main__":
             raise Exception("%s not found" % (v))
         dm[k] = { "uuid" : hit }
 
-    #if args.lite:
-    workflow = GalaxyWorkflow(ga_file="workflows/Galaxy-Workflow-PCAWG_CGHUB_Pilot.ga")
-    #else:
-    #workflow = GalaxyWorkflow(ga_file="workflows/Galaxy-Workflow-PCAWG_BROAD_MUSE.ga")
+    if args.pilot:
+        workflow = GalaxyWorkflow(ga_file="workflows/Galaxy-Workflow-PCAWG_CGHUB_Pilot.ga")
+    else:
+        workflow = GalaxyWorkflow(ga_file="workflows/Galaxy-Workflow-PCAWG_CGHUB.ga")
 
     config = {
       "table_id" : "syn3498886",
@@ -87,7 +87,6 @@ if __name__ == "__main__":
       "assignee_col" : "Assignee",
       "state_col" : "Processing State"
     }
-
 
     tasks = TaskGroup()
 
@@ -112,7 +111,7 @@ if __name__ == "__main__":
                         "sample_id" : ent['meta']['Donor_ID']
                     }
                 },
-                tags=[ "sample:%s" % (ent['meta']['Donor_ID']) ]
+                tags=[ "donor:%s" % (ent['meta']['Donor_ID']) ]
             )
             tasks.append(task)
 
@@ -126,7 +125,7 @@ if __name__ == "__main__":
     if args.create_service:
         service = GalaxyService(
             docstore=docstore,
-            galaxy="bgruening/galaxy-stable:dev",
+            galaxy="bgruening/galaxy-stable",
             sudo=True,
             tool_data=os.path.abspath("tool_data"),
             tool_dir=os.path.abspath("tools"),

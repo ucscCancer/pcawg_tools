@@ -59,7 +59,6 @@ if __name__ == "__main__":
             docstore.put(id, meta)
 
     data_mapping = {
-        "reference_genome" : "GRCh37-lite.fa",
         "dbsnp" : "dbsnp_132_b37.leftAligned.vcf",
         "cosmic" : "b37_cosmic_v54_120711.vcf",
         "gold_indels" : "Mills_and_1000G_gold_standard.indels.hg19.sites.fixed.vcf",
@@ -75,7 +74,8 @@ if __name__ == "__main__":
             raise Exception("%s not found" % (v))
         dm[k] = { "uuid" : hit }
 
-    workflow = GalaxyWorkflow(ga_file="workflows/Galaxy-Workflow-GATK_CGHub.ga")
+    workflow_2 = GalaxyWorkflow(ga_file="workflows/Galaxy-Workflow-GATK_CGHub_2.ga")
+    workflow_3 = GalaxyWorkflow(ga_file="workflows/Galaxy-Workflow-GATK_CGHub_3.ga")
 
     config = {
         "table_id" : "syn4214588",
@@ -83,14 +83,33 @@ if __name__ == "__main__":
         "assignee_col" : "assignee",
         "state_col" : "state"
     }
+    
+    ref_rename = {
+        "HG19_Broad_variant" : "Homo_sapiens_assembly19"
+    }
 
     tasks = TaskGroup()
 
-    for ent in synqueue.listAssignments(syn, **config):
+    for ent in synqueue.listAssignments(syn, username='anurpa', **config):
         bam_set = list( a[1] for a in ent['meta'].items() if a[0].startswith("id_") and isinstance(a[1], basestring)  )
+        
+        ref_set = set( a[1] for a in ent['meta'].items() if a[0].startswith("ref_assembly_") and isinstance(a[1], basestring) )
+        assert(len(ref_set) == 1)
+        ref_name = ref_set.pop()
+        if ref_name in ref_rename:
+            ref_name = ref_rename[ref_name]
+        
+        hit = None
+        for a in docstore.filter(name=ref_name + ".fasta"):
+            hit = a[0]
+        for a in docstore.filter(name=ref_name + ".fa"):
+            hit = a[0]
+        if hit is None:
+            raise Exception("%s not found" % (ref_name))
+
         if len(bam_set) == 2:
             task = GalaxyWorkflowTask("workflow_%s" % (ent['id']),
-                workflow,
+                workflow_2,
                 inputs=dm,
                 parameters={
                     'INPUT_BAM_1' : {
@@ -104,7 +123,7 @@ if __name__ == "__main__":
                         "cred_file" : "/tool_data/files/cghub.key"
                     }
                 },
-                tags=[ "sample:%s" % (ent['meta']['participant_id']) ],
+                tags=[ "donor:%s" % (ent['meta']['participant_id']) ],
                 tool_tags = {
                     "OUTPUT_BAM_1" : {
                         "output_bam" : [ "original_bam:%s" % (bam_set[0]) ]
@@ -116,6 +135,42 @@ if __name__ == "__main__":
                 }
             )
             tasks.append(task)
+        elif len(bam_set) == 3:
+            task = GalaxyWorkflowTask("workflow_%s" % (ent['id']),
+                workflow_3,
+                inputs=dm,
+                parameters={
+                    'INPUT_BAM_1' : {
+                        "uuid" : bam_set[0],
+                        "gnos_endpoint" : "https://cghub.ucsc.edu",
+                        "cred_file" : "/tool_data/files/cghub.key"
+                    },
+                    'INPUT_BAM_2' : {
+                        "uuid" : bam_set[1],
+                        "gnos_endpoint" : "https://cghub.ucsc.edu",
+                        "cred_file" : "/tool_data/files/cghub.key"
+                    },
+                    'INPUT_BAM_3' : {
+                        "uuid" : bam_set[2],
+                        "gnos_endpoint" : "https://cghub.ucsc.edu",
+                        "cred_file" : "/tool_data/files/cghub.key"
+                    }
+                },
+                tags=[ "donor:%s" % (ent['meta']['participant_id']) ],
+                tool_tags = {
+                    "OUTPUT_BAM_1" : {
+                        "output_bam" : [ "original_bam:%s" % (bam_set[0]) ]
+                    },
+                    "OUTPUT_BAM_2" : {
+                        "output_bam" : [ "original_bam:%s" % (bam_set[1]) ]
+                    },
+                    "OUTPUT_BAM_3" : {
+                        "output_bam" : [ "original_bam:%s" % (bam_set[2]) ]
+                    }
+                }
+            )
+            tasks.append(task)
+            
 
     if not os.path.exists("%s.tasks" % (args.out_base)):
         os.mkdir("%s.tasks" % (args.out_base))
