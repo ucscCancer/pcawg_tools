@@ -16,17 +16,7 @@ import tempfile
 
 REFDATA_PROJECT="syn3241088"
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--out-base", default="mc3_gatk")
-    parser.add_argument("--ref-download", action="store_true", default=False)
-    parser.add_argument("--create-service", action="store_true", default=False)
-    parser.add_argument("--scratch", default=None)
-
-
-    args = parser.parse_args()
-
+def run_gen(args):
     syn = synapseclient.Synapse()
     syn.login()
 
@@ -90,7 +80,7 @@ if __name__ == "__main__":
 
     tasks = TaskGroup()
 
-    for ent in synqueue.listAssignments(syn, **config):
+    for ent in synqueue.listAssignments(syn, username='anurpa', **config):
         bam_set = list( a[1] for a in ent['meta'].items() if a[0].startswith("id_") and isinstance(a[1], basestring)  )
 
         ref_set = set( a[1] for a in ent['meta'].items() if a[0].startswith("ref_assembly_") and isinstance(a[1], basestring) )
@@ -106,11 +96,12 @@ if __name__ == "__main__":
             hit = a[0]
         if hit is None:
             raise Exception("%s not found" % (ref_name))
-
+        workflow_dm = dict(dm)
+        workflow_dm['reference_genome'] = { "uuid" : hit }
         if len(bam_set) == 2:
             task = GalaxyWorkflowTask("workflow_%s" % (ent['id']),
                 workflow_2,
-                inputs=dm,
+                inputs=workflow_dm,
                 parameters={
                     'INPUT_BAM_1' : {
                         "uuid" : bam_set[0],
@@ -125,10 +116,10 @@ if __name__ == "__main__":
                 },
                 tags=[ "donor:%s" % (ent['meta']['participant_id']) ],
                 tool_tags = {
-                    "OUTPUT_BAM_1" : {
+                    "BQSR_1" : {
                         "output_bam" : [ "original_bam:%s" % (bam_set[0]) ]
                     },
-                    "OUTPUT_BAM_2" : {
+                    "BQSR_2" : {
                         "output_bam" : [ "original_bam:%s" % (bam_set[1]) ]
                     }
 
@@ -138,7 +129,7 @@ if __name__ == "__main__":
         elif len(bam_set) == 3:
             task = GalaxyWorkflowTask("workflow_%s" % (ent['id']),
                 workflow_3,
-                inputs=dm,
+                inputs=workflow_dm,
                 parameters={
                     'INPUT_BAM_1' : {
                         "uuid" : bam_set[0],
@@ -158,13 +149,13 @@ if __name__ == "__main__":
                 },
                 tags=[ "donor:%s" % (ent['meta']['participant_id']) ],
                 tool_tags = {
-                    "OUTPUT_BAM_1" : {
+                    "BQSR_1" : {
                         "output_bam" : [ "original_bam:%s" % (bam_set[0]) ]
                     },
-                    "OUTPUT_BAM_2" : {
+                    "BQSR_2" : {
                         "output_bam" : [ "original_bam:%s" % (bam_set[1]) ]
                     },
-                    "OUTPUT_BAM_3" : {
+                    "BQSR_3" : {
                         "output_bam" : [ "original_bam:%s" % (bam_set[2]) ]
                     }
                 }
@@ -196,3 +187,36 @@ if __name__ == "__main__":
                 print "Using scratch", args.scratch
                 s.set_docstore_config(cache_path=args.scratch, open_perms=True)
             s.store(handle)
+
+def run_submit(args):
+    syn = synapseclient.Synapse()
+    syn.login()
+
+    docstore = from_url(args.out_base)
+
+    for id, doc in docstore.filter(visible=True, state='ok'):
+        print doc['name'], doc['tags']
+
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    subparsers = parser.add_subparsers( title='commands')
+
+    parser_gen = subparsers.add_parser('gen')
+    parser_gen.add_argument("--out-base", default="mc3_gatk")
+    parser_gen.add_argument("--ref-download", action="store_true", default=False)
+    parser_gen.add_argument("--create-service", action="store_true", default=False)
+    parser_gen.add_argument("--scratch", default=None)
+    parser_gen.set_defaults(func=run_gen)
+
+
+
+    parser_submit = subparsers.add_parser('submit')
+    parser_submit.add_argument("--out-base", default="mc3_gatk")
+    parser_submit.set_defaults(func=run_submit)
+
+    args = parser.parse_args()
+
+    args.func(args)

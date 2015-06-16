@@ -494,7 +494,7 @@
                 }
             }, 
             "inputs": [], 
-            "label": null, 
+            "label": "BQSR_1", 
             "name": "GATK BQSR", 
             "outputs": [
                 {
@@ -550,7 +550,7 @@
                 }
             }, 
             "inputs": [], 
-            "label": null, 
+            "label": "BQSR_2", 
             "name": "GATK BQSR", 
             "outputs": [
                 {
@@ -606,7 +606,7 @@
                 }
             }, 
             "inputs": [], 
-            "label": null, 
+            "label": "BQSR_3", 
             "name": "GATK BQSR", 
             "outputs": [
                 {
