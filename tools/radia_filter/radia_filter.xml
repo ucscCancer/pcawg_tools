@@ -4,7 +4,7 @@
         <param name="inputbam" label="InputBam" type="data" format="bam" help="Input BAM"/>
       </macro>
       <macro name="input_filter">
-        <param name="filterfile" label="InputFile" type="data" format="tabular" help="Input coordinate file"/>
+        <param name="filterfile" label="InputFile" type="data" format="bed" help="Input coordinate file"/>
       </macro>
     </macros>
     <requirements>
@@ -33,6 +33,23 @@ radia_filter.py
 #if $dnaTumor.use == "yes":
 --dnaTumorFilename ${dnaTumor.inputbam}
 --dnaTumorBaiFilename ${dnaTumor.inputbam.metadata.bam_index}
+#end if
+
+## filters
+#if $blacklist.use == "yes":
+--blacklistFilename ${blacklist.filterfile}
+#end if
+#if $target.use == "yes":
+--targetFilename ${target.filterfile}
+#end if
+#if $retrogenes.use == "yes":
+--retroGenesFilename ${retrogenes.filterfile}
+#end if
+#if $pseudogenes.use == "yes":
+--pseudoGenesFilename ${pseudogenes.filterfile}
+#end if
+#if $cosmic.use == "yes":
+--cosmicFilename ${cosmic.filterfile}
 #end if
 
 --outputDir ./
@@ -75,6 +92,16 @@ radia_filter.py
         </when>
       </conditional>
 
+      <conditional name="target">
+        <param name="use" type="select" label="Use exon capture targets">
+          <option value="yes">yes</option>
+          <option value="no" selected="True">no</option>
+        </param>
+        <when value="yes">
+          <expand macro="input_filter"/>
+        </when>
+      </conditional>
+
       <conditional name="dbsnp">
         <param name="use" type="select" label="Use SNP filter">
           <option value="yes">yes</option>
@@ -97,6 +124,16 @@ radia_filter.py
 
       <conditional name="pseudogenes">
         <param name="use" type="select" label="Use pseudogenes filter">
+          <option value="yes">yes</option>
+          <option value="no" selected="True">no</option>
+        </param>
+        <when value="yes">
+          <expand macro="input_filter"/>
+        </when>
+      </conditional>
+
+      <conditional name="cosmic">
+        <param name="use" type="select" label="Use Catalogue Of Somatic Mutations In Cancer (COSMIC) annotation filter">
           <option value="yes">yes</option>
           <option value="no" selected="True">no</option>
         </param>

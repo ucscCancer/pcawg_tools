@@ -106,7 +106,30 @@ def splitVcf(args, outdir, dnaNormalFilename, dnaTumorFilename, universalFastaFi
     f.close()
     return chrNames
 
-def radiaFilter(args, chrom, inputVcf, outputDir):
+def splitBed(bedfile, outdir):
+    """Splits bed file in chromosome files, returns list of chromosome names"""
+    chrNames=[]
+    header=""
+    f = get_read_fileHandler(bedfile)
+    for line in f:
+            fields = line.split("\t")
+            chrom = fields[0]
+            if not chrom.startswith('chr'):
+                chrom = 'chr' + chrom
+            if not chrom in chrNames:
+                try:
+                    o.close()
+                except:
+                    pass
+                outfile = os.path.join(outdir, chrom + ".bed" )
+                o = open(outfile, 'w')      # append not necessary
+                chrNames.append(chrom)
+            o.write(line)
+    o.close
+    f.close()
+    return chrNames
+
+def radiaFilter(filterDirs, args, chrom, inputVcf, outputDir):
 
     # python filterRadia.pyc id chrom inputFile outputDir scriptsDir [Options]
 
@@ -127,8 +150,8 @@ def radiaFilter(args, chrom, inputVcf, outputDir):
     # --canonical
     # --log=INFO
     # --gzip
-    justSayNo='--noBlacklist --noTargets --noDbSnp --noRetroGenes --noPseudoGenes ' + \
-              '--noCosmic --noBlat --noPositionalBias --noRnaBlacklist --noSnpEff'
+    justSayNo='--noDbSnp ' + \
+              '--noBlat --noPositionalBias --noRnaBlacklist --noSnpEff'
 #    cmd = "python %s/filterRadia.py %s %s %s %s %s --blatFastaFilename %s " % (
 #        args.scriptsDir,
 #        args.patientId, chrom, rawFile,
@@ -139,6 +162,30 @@ def radiaFilter(args, chrom, inputVcf, outputDir):
         outputDir, args.scriptsDir, 
         justSayNo)
 
+    if "blacklist" in filterDirs:
+        cmd += " --blacklistDir %s" % filterDirs["blacklist"]
+    else:
+        cmd += ' --noBlacklist'
+
+    if "target" in filterDirs:
+        cmd += " --targetDir %s" % filterDirs["target"]
+    else:
+        cmd += ' --noTargets'
+
+    if "pseudoGenes" in filterDirs:
+        cmd += " --pseudoGenesDir %s" % filterDirs["pseudoGenes"]
+    else:
+        cmd += ' --noPseudoGenes'
+
+    if "retroGenes" in filterDirs:
+        cmd += " --retroGenesDir %s" % filterDirs["retroGenes"]
+    else:
+        cmd += ' --noRetroGenes'
+
+    if "cosmic" in filterDirs:
+        cmd += " --cosmicDir %s" % filterDirs["cosmic"]
+    else:
+        cmd += ' --noCosmic'
 #    if args.canonical:
 #        cmd += ' --canonical '
 #    if args.noBlacklist:
@@ -194,13 +241,13 @@ def __main__():
     parser.add_argument("-t", "--dnaTumorFilename", dest="dnaTumorFilename", metavar="DNA_TUMOR_FILE", help="the name of the tumor DNA .bam file")
     parser.add_argument("--dnaTumorBaiFilename", dest="dnaTumorBaiFilename", metavar="DNA_TUMOR_BAI_FILE", help="the name of the tumor DNA .bai file")
 
-#    parser.add_argument("--blacklistFile", dest="blacklistFile", metavar="BLACKLIST_FILE", help="the path to the blacklist directory")
+    parser.add_argument("--blacklistFilename", dest="blacklistFilename", metavar="BLACKLIST_FILE", help="the name of the blacklist bed file")
 
-#    parser.add_argument("--targetFile", dest="targetFile", metavar="TARGET_FILE", help="the path to the exon capture targets directory")
+    parser.add_argument("--targetFilename", dest="targetFilename", metavar="TARGET_FILE", help="the name of the exon capture targets file")
 #    parser.add_argument("--dbSnpFile", dest="dbSnpFile", metavar="SNP_FILE", help="the path to the dbSNP directory")
-#    parser.add_argument("--retroGenesFile", dest="retroGenesFile", metavar="RETRO_FILE", help="the path to the retrogenes directory")
-#    parser.add_argument("--pseudoGenesFile", dest="pseudoGenesFile", metavar="PSEUDO_FILE", help="the path to the pseudogenes directory")
-#    parser.add_argument("--cosmicFile", dest="cosmicFile", metavar="COSMIC_FILE", help="the path to the cosmic directory")
+    parser.add_argument("--retroGenesFilename", dest="retroGenesFilename", metavar="RETRO_FILE", help="the name of the retrogenes bed file")
+    parser.add_argument("--pseudoGenesFilename", dest="pseudoGenesFilename", metavar="PSEUDO_FILE", help="the name of the pseudogenes bed file")
+    parser.add_argument("--cosmicFilename", dest="cosmicFilename", metavar="COSMIC_FILE", help="the name of the Catalogue Of Somatic Mutations In Cancer (COSMIC) annotations file")
 ##    parser.add_argument("--snpEffDir", dest="snpEffDir", metavar="SNP_EFF_DIR", help="the path to the snpEff directory")
 #    parser.add_argument("--snpEffGenome", dest="snpEffGenome", default="GRCh37.69", metavar="SNP_EFF_GENOME", help="the snpEff Genome, %default by default")
 #    parser.add_argument("--blatFastaFilename", dest="blatFastaFilename", metavar="FASTA_FILE", help="the fasta file that can be used during the BLAT filtering, default is the one specified in the VCF header")
@@ -284,12 +331,46 @@ def __main__():
 	# split vcf in chromosomes
 	chromDict=splitVcf(args, args.workdir, i_dnaNormalFilename, i_dnaTumorFilename, universalFastaFile)
 
+	filterDirs = dict()	# this will be passed to the radia filter
+
+
+	# split blacklist
+        if (args.blacklistFilename != None):
+            blacklistDir = os.path.join(args.workdir, "blacklistDir")
+            os.mkdir(blacklistDir)
+            splitBed(args.blacklistFilename, blacklistDir)
+            filterDirs["blacklist"] = blacklistDir
+	# split target
+        if (args.targetFilename != None):
+            targetDir = os.path.join(args.workdir, "targetDir")
+            os.mkdir(targetDir)
+            splitBed(args.targetFilename, targetDir)
+            filterDirs["target"] = targetDir
+	# split retrogenes
+        if (args.retroGenesFilename != None):
+            retroGenesDir = os.path.join(args.workdir, "retroGenesDir")
+            os.mkdir(retroGenesDir)
+            splitBed(args.retroGenesFilename, retroGenesDir)
+            filterDirs["retroGenes"] = retroGenesDir
+	# split pseudogenes
+        if (args.pseudoGenesFilename != None):
+            pseudoGenesDir = os.path.join(args.workdir, "pseudoGenesDir")
+            os.mkdir(pseudoGenesDir)
+            splitBed(args.pseudoGenesFilename, pseudoGenesDir)
+            filterDirs["pseudoGenes"] = pseudoGenesDir
+	# split cosmic
+        if (args.cosmicFilename != None):
+            cosmicDir = os.path.join(args.workdir, "cosmicDir")
+            os.mkdir(cosmicDir)
+            splitBed(args.cosmicFilename, cosmicDir)
+            filterDirs["cosmic"] = cosmicDir
 #        time.sleep(3600)
+
         rfOuts = []
         if args.procs == 1:
             for chrom in chromDict:
                 chrom = '21'	# DEBUG setting
-                cmd, rfOutput = radiaFilter(args, chrom, chromDict[chrom], args.workdir)
+                cmd, rfOutput = radiaFilter(filterDirs, args, chrom, chromDict[chrom], args.workdir)
 		# the output is generated by the filter, not on stdout
                 if execute(cmd):
                     raise Exception("RadiaFilter Call failed")
