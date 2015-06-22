@@ -170,12 +170,14 @@ def run_gen(args):
             handle.write(json.dumps(data.to_dict()))
 
     if args.create_service:
+        
         service = GalaxyService(
             docstore=docstore,
-            galaxy="bgruening/galaxy-stable:dev",
+            galaxy="bgruening/galaxy-stable",
             sudo=True,
-            tool_data=os.path.abspath("tool_data"),
-            tool_dir=os.path.abspath("tools"),
+            tool_data=args.tool_data,
+            tool_dir=args.tool_dir,
+            work_dir=args.work_dir,
             smp=[
                 ["gatk_bqsr", 12],
                 ["gatk_indel", 24]
@@ -197,8 +199,6 @@ def run_submit(args):
     for id, doc in docstore.filter(visible=True, state='ok'):
         print doc['name'], doc['tags']
 
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -209,6 +209,10 @@ if __name__ == "__main__":
     parser_gen.add_argument("--ref-download", action="store_true", default=False)
     parser_gen.add_argument("--create-service", action="store_true", default=False)
     parser_gen.add_argument("--scratch", default=None)
+    parser_gen.add_argument("--work-dir", default=None)
+    parser_gen.add_argument("--tool-data", default=os.path.abspath("tool_data"))
+    parser_gen.add_argument("--tool-dir", default=os.path.abspath("tools"))
+    
     parser_gen.set_defaults(func=run_gen)
 
 
