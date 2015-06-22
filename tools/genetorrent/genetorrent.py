@@ -2,6 +2,7 @@
 
 import sys
 import subprocess
+import argparse
 import os
 import shutil
 from glob import glob
@@ -15,14 +16,14 @@ def which(cmd):
 	return res
 
 if __name__ == "__main__":
-	uuid = sys.argv[1]
-	output = sys.argv[2]
-	output_id = int(sys.argv[3])
-	if len(sys.argv) > 4:
-		cred_file = sys.argv[4]
-	else:
-		cred_file = "https://cghub.ucsc.edu/software/downloads/cghub_public.key"
-
+	parser = argparse.ArgumentParser()
+	parser.add_argument("uuid")
+	parser.add_argument("output")
+	parser.add_argument("output_id")
+	parser.add_argument("--cred-file", default="https://cghub.ucsc.edu/software/downloads/cghub_public.key")
+	parser.add_argument("--server", default="cghub.ucsc.edu")
+	args = parser.parse_args()
+	
 	gtdownload = which("gtdownload")
 	if gtdownload is None:
 		sys.stderr.write("gtdownload not found\n")
@@ -32,9 +33,9 @@ if __name__ == "__main__":
 	serr = open("std.error", "w")
 	
 	#proc = subprocess.Popen( [gtdownload, "-c", cred_file, "-C", cred_dir, "-d", uuid, "-vv"], stderr=serr )
-	proc = subprocess.Popen( [gtdownload, "-c", cred_file, "-d", uuid, "-vv"], stderr=serr )
+	proc = subprocess.Popen( [gtdownload, "-c", args.cred_file, "-d", "https://%s/cghub/data/analysis/download/%s" % (args.server, args.uuid), "-vv"], stderr=serr )
 	proc.communicate()
-	serr.close()	
+	serr.close()
 
 	copied = False
 	for f in glob(os.path.join(uuid, "*.bam")):
