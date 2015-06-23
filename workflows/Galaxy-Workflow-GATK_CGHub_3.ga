@@ -27,8 +27,8 @@
                 }
             ], 
             "position": {
-                "left": 148, 
-                "top": 124
+                "left": 154, 
+                "top": 127
             }, 
             "post_job_actions": {
                 "HideDatasetActionoutfile": {
@@ -39,7 +39,7 @@
             }, 
             "tool_errors": null, 
             "tool_id": "cghub_genetorrent", 
-            "tool_state": "{\"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\"}", 
+            "tool_state": "{\"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
@@ -80,7 +80,7 @@
             }, 
             "tool_errors": null, 
             "tool_id": "cghub_genetorrent", 
-            "tool_state": "{\"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\"}", 
+            "tool_state": "{\"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
@@ -109,7 +109,7 @@
                 }
             ], 
             "position": {
-                "left": 132.5, 
+                "left": 151.5, 
                 "top": 283.5
             }, 
             "post_job_actions": {
@@ -121,7 +121,7 @@
             }, 
             "tool_errors": null, 
             "tool_id": "cghub_genetorrent", 
-            "tool_state": "{\"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\"}", 
+            "tool_state": "{\"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
@@ -645,5 +645,5 @@
             "uuid": "6be89ebf-2ac5-488a-9f5e-60bedf4ab61f"
         }
     }, 
-    "uuid": "2572edf6-78ea-4fa6-aeaa-58aef4da1e21"
+    "uuid": "abdf5d5b-3c70-49ca-9d0e-628db75ba141"
 }
