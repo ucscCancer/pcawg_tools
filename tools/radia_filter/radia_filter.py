@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-import argparse, os, shutil, subprocess, tempfile, time, gzip
+import argparse, os, shutil, subprocess, tempfile, time, gzip, zipfile, sys
 from multiprocessing import Pool
 
 def execute(cmd, output=None):
-    import sys, shlex
+    import shlex
     # function to execute a cmd and report if an error occurs
     print(cmd)
     try:
@@ -47,37 +47,63 @@ def indexFasta(workdir, inputFastaFile, inputFastaFileIndex=None, prefix="dna"):
     return inputFastaLink
 
 def get_read_fileHandler(aFilename):
-    '''
-    ' Open aFilename for reading and return
-    ' the file handler.  The file can be
-    ' gzipped or not.
-    '''
+    """ Open aFilename for reading and return the file handler.  The file can be gzipped or not."""
     if aFilename.endswith('.gz'):
         return gzip.open(aFilename,'rb')
     else:
         return open(aFilename,'r')
 
-def rewriteVcfGenerator(vcfline, dnaNormalFilename, dnaTumorFilename, universalFastaFile):
+def rewriteVcfGenerator(vcfline, dnaNormalFilename, dnaTumorFilename, rnaNormalFilename, rnaTumorFilename, dnaNormalFastaFilename, dnaTumorFastaFilename, rnaNormalFastaFilename, rnaTumorFastaFilename):
     """Replace filenames in vcfGenerator field to match local files."""
-    # NOTE: This is NOT complete, needs rna files too
     fields = vcfline.split(',')
     for i in xrange(len(fields)):
         try:
             key, value = fields[i].split('=')
-            if key == 'dnaNormalFilename':
-                fields[i] = ('').join([key, "=<", dnaNormalFilename, ">"])
-            if key == 'dnaNormalFastaFilename':
-                fields[i] = ('').join([key, "=<", universalFastaFile, ">"])
-            if key == 'dnaTumorFilename':
-                fields[i] = ('').join([key, "=<", dnaTumorFilename, ">"])
-            if key == 'dnaTumorFastaFilename':
-                fields[i] = ('').join([key, "=<", universalFastaFile, ">"])
         except:
             continue
+        if key == 'dnaNormalFilename':
+            if dnaNormalFilename == None:
+                sys.stderr.write("VCF header contains DNA normal bam, please input corresponding bam file")
+                sys.exit(1)
+            fields[i] = ('').join([key, "=<", dnaNormalFilename, ">"])
+        elif key == 'dnaTumorFilename':
+            if dnaTumorFilename == None:
+                sys.stderr.write("VCF header contains DNA tumor bam, please input corresponding bam file")
+                sys.exit(1)
+            fields[i] = ('').join([key, "=<", dnaTumorFilename, ">"])
+        elif key == 'rnaNormalFilename':
+            if rnaNormalFilename == None:
+                sys.stderr.write("VCF header contains RNA normal bam, please input corresponding bam file")
+                sys.exit(1)
+            fields[i] = ('').join([key, "=<", rnaNormalFilename, ">"])
+        elif key == 'rnaTumorFilename':
+            if rnaTumorFilename == None:
+                sys.stderr.write("VCF header contains RNA tumor bam, please input corresponding bam file")
+                sys.exit(1)
+        elif key == 'dnaNormalFastaFilename':
+            if dnaNormalFastaFilename == None:
+                sys.stderr.write("VCF header contains DNA normal fasta, please input corresponding fasta file")
+                sys.exit(1)
+            fields[i] = ('').join([key, "=<", dnaNormalFastaFilename, ">"])
+        elif key == 'dnaTumorFastaFilename':
+            if dnaTumorFastaFilename == None:
+                sys.stderr.write("VCF header contains DNA tumor fasta, please input corresponding fasta file")
+                sys.exit(1)
+            fields[i] = ('').join([key, "=<", dnaTumorFastaFilename, ">"])
+        elif key == 'rnaNormalFastaFilename':
+            if rnaNormalFastaFilename == None:
+                sys.stderr.write("VCF header contains RNA normal fasta, please input corresponding fasta file")
+                sys.exit(1)
+            fields[i] = ('').join([key, "=<", rnaNormalFastaFilename, ">"])
+        elif key == 'rnaTumorFastaFilename':
+            if rnaTumorFastaFilename == None:
+                sys.stderr.write("VCF header contains RNA tumor fasta, please input corresponding fasta file")
+                sys.exit(1)
+            fields[i] = ('').join([key, "=<", rnaTumorFastaFilename, ">"])
     newline = (',').join(fields)
     return newline
     
-def splitVcf(args, outdir, dnaNormalFilename, dnaTumorFilename, universalFastaFile):
+def splitVcf(args, outdir, dnaNormalFilename, dnaTumorFilename, rnaNormalFilename, rnaTumorFilename, dnaNormalFastaFilename, dnaTumorFastaFilename, rnaNormalFastaFilename, rnaTumorFastaFilename):
     """Splits up VCF file in chromosome files, returns dict of chromosome names and corresponding vcf files"""
     chrNames=dict()
     header=""
@@ -86,7 +112,7 @@ def splitVcf(args, outdir, dnaNormalFilename, dnaTumorFilename, universalFastaFi
     for line in f:
         if headFlag:
 	    if line.startswith('##vcfGenerator'):
-                line = rewriteVcfGenerator(line, dnaNormalFilename, dnaTumorFilename, universalFastaFile)
+                line = rewriteVcfGenerator(line, dnaNormalFilename, dnaTumorFilename, rnaNormalFilename, rnaTumorFilename, dnaNormalFastaFilename, dnaTumorFastaFilename, rnaNormalFastaFilename, rnaTumorFastaFilename)
             header += line
             if line.startswith('#CHROM'):
                 headFlag = False
@@ -129,7 +155,21 @@ def splitBed(bedfile, outdir):
     f.close()
     return chrNames
 
-def radiaFilter(filterDirs, args, chrom, inputVcf, outputDir):
+def makeSnpEffConfig(workdir, genome, datadir):
+    """Creates a short config file for snpEff. Assumes a human genome."""
+    configFile = os.path.join(workdir, "snpEff.config")
+    f = open(configFile, 'w')
+    f.write("data.dir = %s\n" % datadir)
+    f.write("lof.ignoreProteinCodingAfter : 0.95\n")
+    f.write("lof.ignoreProteinCodingBefore : 0.05\n")
+    f.write("lof.deleteProteinCodingBases : 0.50\n")
+    f.write("codon.Standard : TTT/F, TTC/F, TTA/L, TTG/L+, TCT/S, TCC/S, TCA/S, TCG/S, TAT/Y, TAC/Y, TAA/*, TAG/*, TGT/C, TGC/C, TGA/*, TGG/W, CTT/L, CTC/L, CTA/L, CTG/L+, CCT/P, CCC/P, CCA/P, CCG/P, CAT/H, CAC/H, CAA/Q, CAG/Q, CGT/R, CGC/R, CGA/R, CGG/R, ATT/I, ATC/I, ATA/I, ATG/M+, ACT/T, ACC/T, ACA/T, ACG/T, AAT/N, AAC/N, AAA/K, AAG/K, AGT/S, AGC/S, AGA/R, AGG/R, GTT/V, GTC/V, GTA/V, GTG/V, GCT/A, GCC/A, GCA/A, GCG/A, GAT/D, GAC/D, GAA/E, GAG/E, GGT/G, GGC/G, GGA/G, GGG/G\n")
+    f.write("codon.Vertebrate_Mitochondrial : TTT/F, TTC/F, TTA/L, TTG/L, TCT/S, TCC/S, TCA/S, TCG/S, TAT/Y, TAC/Y, TAA/*, TAG/*, TGT/C, TGC/C, TGA/W, TGG/W, CTT/L, CTC/L, CTA/L, CTG/L, CCT/P, CCC/P, CCA/P, CCG/P, CAT/H, CAC/H, CAA/Q, CAG/Q, CGT/R, CGC/R, CGA/R, CGG/R, ATT/I+, ATC/I+, ATA/M+, ATG/M+, ACT/T, ACC/T, ACA/T, ACG/T, AAT/N, AAC/N, AAA/K, AAG/K, AGT/S, AGC/S, AGA/*, AGG/*, GTT/V, GTC/V, GTA/V, GTG/V+, GCT/A, GCC/A, GCA/A, GCG/A, GAT/D, GAC/D, GAA/E, GAG/E, GGT/G, GGC/G, GGA/G, GGG/G\n")
+    f.write("%s.genome : Homo_sapiens\n" % genome)
+    f.close()
+    return configFile
+
+def radiaFilter(filterDirs, snpEffGenome, snpEffConfig, args, chrom, inputVcf, outputDir ):
 
     # python filterRadia.pyc id chrom inputFile outputDir scriptsDir [Options]
 
@@ -151,7 +191,7 @@ def radiaFilter(filterDirs, args, chrom, inputVcf, outputDir):
     # --log=INFO
     # --gzip
     justSayNo='--noDbSnp ' + \
-              '--noBlat --noPositionalBias --noRnaBlacklist --noSnpEff'
+              '--noPositionalBias --noRnaBlacklist '
 #    cmd = "python %s/filterRadia.py %s %s %s %s %s --blatFastaFilename %s " % (
 #        args.scriptsDir,
 #        args.patientId, chrom, rawFile,
@@ -161,6 +201,11 @@ def radiaFilter(filterDirs, args, chrom, inputVcf, outputDir):
         args.patientId, chrom, inputVcf,
         outputDir, args.scriptsDir, 
         justSayNo)
+
+    if args.blatFastaFilename != None:
+        cmd += " --blatFastaFilename %s" % args.blatFastaFilename
+    else:
+        cmd += ' --noBlat'
 
     if "blacklist" in filterDirs:
         cmd += " --blacklistDir %s" % filterDirs["blacklist"]
@@ -186,6 +231,11 @@ def radiaFilter(filterDirs, args, chrom, inputVcf, outputDir):
         cmd += " --cosmicDir %s" % filterDirs["cosmic"]
     else:
         cmd += ' --noCosmic'
+
+    if "snpEff" in filterDirs:
+        cmd += " --snpEffDir %s --snpEffGenome %s --snpEffConfig %s" % ([filterDirs["snpEffDir"], snpEffGenome, snpEffConfig])
+    else:
+        cmd += ' --noSnpEff'
 #    if args.canonical:
 #        cmd += ' --canonical '
 #    if args.noBlacklist:
@@ -236,10 +286,22 @@ def __main__():
     # normal DNA
     parser.add_argument("-n", "--dnaNormalFilename", dest="dnaNormalFilename", metavar="DNA_NORMAL_FILE", help="the name of the normal DNA .bam file")
     parser.add_argument("--dnaNormalBaiFilename", dest="dnaNormalBaiFilename", metavar="DNA_NORMAL_BAI_FILE", help="the name of the normal DNA .bai file")
+    parser.add_argument ("--dnaNormalFastaFilename", dest="dnaNormalFastaFilename", metavar="DNA_NORMAL_FASTA_FILE", help="the name of the fasta file that was used to create the BAM alignments")
 
     # tumor DNA
     parser.add_argument("-t", "--dnaTumorFilename", dest="dnaTumorFilename", metavar="DNA_TUMOR_FILE", help="the name of the tumor DNA .bam file")
     parser.add_argument("--dnaTumorBaiFilename", dest="dnaTumorBaiFilename", metavar="DNA_TUMOR_BAI_FILE", help="the name of the tumor DNA .bai file")
+    parser.add_argument("--dnaTumorFastaFilename", dest="dnaTumorFastaFilename", metavar="DNA_TUMOR_FASTA_FILE", help="the name of the fasta file that was used to create the BAM alignments")
+
+    # normal RNA
+    parser.add_argument("-x", "--rnaNormalFilename", dest="rnaNormalFilename", metavar="RNA_NORMAL_FILE", help="the name of the normal RNA .bam file")
+    parser.add_argument("--rnaNormalBaiFilename", dest="rnaNormalBaiFilename", metavar="RNA_NORMAL_BAI_FILE", help="the name of the normal RNA .bai file")
+    parser.add_argument ("--rnaNormalFastaFilename", dest="rnaNormalFastaFilename", metavar="RNA_NORMAL_FASTA_FILE", help="the name of the fasta file that was used to create the BAM alignments")
+
+    # tumor RNA
+    parser.add_argument("-r", "--rnaTumorFilename", dest="rnaTumorFilename", metavar="RNA_TUMOR_FILE", help="the name of the tumor RNA .bam file")
+    parser.add_argument("--rnaTumorBaiFilename", dest="rnaTumorBaiFilename", metavar="RNA_TUMOR_BAI_FILE", help="the name of the tumor RNA .bai file")
+    parser.add_argument("--rnaTumorFastaFilename", dest="rnaTumorFastaFilename", metavar="RNA_TUMOR_FASTA_FILE", help="the name of the fasta file that was used to create the BAM alignments")
 
     parser.add_argument("--blacklistFilename", dest="blacklistFilename", metavar="BLACKLIST_FILE", help="the name of the blacklist bed file")
 
@@ -248,9 +310,9 @@ def __main__():
     parser.add_argument("--retroGenesFilename", dest="retroGenesFilename", metavar="RETRO_FILE", help="the name of the retrogenes bed file")
     parser.add_argument("--pseudoGenesFilename", dest="pseudoGenesFilename", metavar="PSEUDO_FILE", help="the name of the pseudogenes bed file")
     parser.add_argument("--cosmicFilename", dest="cosmicFilename", metavar="COSMIC_FILE", help="the name of the Catalogue Of Somatic Mutations In Cancer (COSMIC) annotations file")
-##    parser.add_argument("--snpEffDir", dest="snpEffDir", metavar="SNP_EFF_DIR", help="the path to the snpEff directory")
-#    parser.add_argument("--snpEffGenome", dest="snpEffGenome", default="GRCh37.69", metavar="SNP_EFF_GENOME", help="the snpEff Genome, %default by default")
-#    parser.add_argument("--blatFastaFilename", dest="blatFastaFilename", metavar="FASTA_FILE", help="the fasta file that can be used during the BLAT filtering, default is the one specified in the VCF header")
+    parser.add_argument("--snpEffDir", dest="snpEffDir", metavar="SNP_EFF_DIR", help="the path to the snpEff directory")
+    parser.add_argument("--snpEffFilename", dest="snpEffFilename", metavar="SNP_EFF_FILE", help="the snpEff input database zip file")
+    parser.add_argument("--blatFastaFilename", dest="blatFastaFilename", metavar="FASTA_FILE", help="the fasta file that can be used during the BLAT filtering")
 #    parser.add_argument("--canonical", action="store_true", default=False, dest="canonical", help="include this argument if only the canonical transcripts from snpEff should be used, %default by default")
 #
 #    parser.add_argument("--rnaGeneBlckFile", dest="rnaGeneBlckFile", metavar="RNA_GENE_FILE", help="the RNA gene blacklist file")
@@ -268,6 +330,7 @@ def __main__():
 #    parser.add_argument("--noPositionalBias", action="store_false", default=True, dest="noPositionalBias", help="include this argument if the positional bias filter should not be applied")
 #    parser.add_argument("--noRnaBlacklist", action="store_false", default=True, dest="noRnaBlacklist", help="include this argument if the RNA blacklist filter should not be applied")
 #    parser.add_argument("--noSnpEff", action="store_false", default=True, dest="noSnpEff", help="include this argument if the snpEff annotation should not be applied (without the snpEff annotation, filtering of RNA blacklisted genes will also not be applied")
+
 #    parser.add_argument("--dnaOnly", action="store_true", default=False, dest="dnaOnly", help="include this argument if you only have DNA or filtering should only be done on the DNA")
 #    parser.add_argument("--rnaOnly", action="store_true", default=False, dest="rnaOnly", help="include this argument if the filtering should only be done on the RNA")
 #    parser.add_argument("--gzip", action="store_true", default=False, dest="gzip", help="include this argument if the final VCF should be compressed with gzip")
@@ -282,58 +345,56 @@ def __main__():
     args = parser.parse_args()
     tempDir = tempfile.mkdtemp(dir="./", prefix="radia_work_")
 
-    # All files come in as complete genome files, so first split them
         
     try:
-        # if a universal fasta file is specified, then use it
         if (args.fastaFilename != None):
             universalFastaFile = indexFasta(args.workdir, args.fastaFilename, args.fastaFilename + ".fai", "universal")
 
         # if individual fasta files are specified, they over-ride the universal one
-#        if (args.dnaNormalFastaFilename != None):
-#            i_dnaNormalFastaFilename = indexFasta(args.workdir, args.dnaNormalFastaFilename, args.dnaNormalFastaFilename + ".fai", "dna")
-#        else:
-#            i_dnaNormalFastaFilename = universalFastaFile
-#        if (args.rnaNormalFastaFilename != None):
-#            i_rnaNormalFastaFilename = indexFasta(args.workdir, args.rnaNormalFastaFilename, args.rnaNormalFastaFilename + ".fai", "rna")
-#        else:
-#            i_rnaNormalFastaFilename = universalFastaFile
-#        if (args.dnaTumorFastaFilename != None):
-#            i_dnaTumorFastaFilename = indexFasta(args.workdir, args.dnaTumorFastaFilename, args.dnaTumorFastaFilename + ".fai", "dna")
-#        else:
-#            i_dnaTumorFastaFilename = universalFastaFile
-#        if (args.rnaTumorFastaFilename != None):
-#            i_rnaTumorFastaFilename = indexFasta(args.workdir, args.rnaTumorFastaFilename, args.rnaTumorFastaFilename + ".fai", "rna")
-#        else:
-#            i_rnaTumorFastaFilename = universalFastaFile
+        if (args.dnaNormalFastaFilename != None):
+            i_dnaNormalFastaFilename = indexFasta(args.workdir, args.dnaNormalFastaFilename, args.dnaNormalFastaFilename + ".fai", "dna")
+        else:
+            i_dnaNormalFastaFilename = universalFastaFile
+        if (args.rnaNormalFastaFilename != None):
+            i_rnaNormalFastaFilename = indexFasta(args.workdir, args.rnaNormalFastaFilename, args.rnaNormalFastaFilename + ".fai", "rna")
+        else:
+            i_rnaNormalFastaFilename = universalFastaFile
+        if (args.dnaTumorFastaFilename != None):
+            i_dnaTumorFastaFilename = indexFasta(args.workdir, args.dnaTumorFastaFilename, args.dnaTumorFastaFilename + ".fai", "dna")
+        else:
+            i_dnaTumorFastaFilename = universalFastaFile
+        if (args.rnaTumorFastaFilename != None):
+            i_rnaTumorFastaFilename = indexFasta(args.workdir, args.rnaTumorFastaFilename, args.rnaTumorFastaFilename + ".fai", "rna")
+        else:
+            i_rnaTumorFastaFilename = universalFastaFile
 
-
+        # index bam files
         if (args.dnaNormalFilename != None):
             i_dnaNormalFilename = indexBam(workdir=args.workdir, inputBamFile=args.dnaNormalFilename, inputBamFileIndex=args.dnaNormalBaiFilename, prefix="dnaNormal")
         else:
             i_dnaNormalFilename = None
 
-#        if (args.rnaNormalFilename != None):
-#            i_rnaNormalFilename = indexBam(workdir=args.workdir, inputBamFile=args.rnaNormalFilename, inputBamFileIndex=args.rnaNormalBaiFilename, prefix="rnaNormal")
-#        else:
-#            i_rnaNormalFilename = None
+        if (args.rnaNormalFilename != None):
+            i_rnaNormalFilename = indexBam(workdir=args.workdir, inputBamFile=args.rnaNormalFilename, inputBamFileIndex=args.rnaNormalBaiFilename, prefix="rnaNormal")
+        else:
+            i_rnaNormalFilename = None
 
         if (args.dnaTumorFilename != None):
             i_dnaTumorFilename = indexBam(workdir=args.workdir, inputBamFile=args.dnaTumorFilename, inputBamFileIndex=args.dnaTumorBaiFilename, prefix="dnaTumor")
         else:
             i_dnaTumorFilename = None
 
-#        if (args.rnaTumorFilename != None):
-#            i_rnaTumorFilename = indexBam(workdir=args.workdir, inputBamFile=args.rnaTumorFilename, inputBamFileIndex=args.rnaTumorBaiFilename, prefix="rnaTumor")
-#        else:
-#            i_rnaTumorFilename = None
+        if (args.rnaTumorFilename != None):
+            i_rnaTumorFilename = indexBam(workdir=args.workdir, inputBamFile=args.rnaTumorFilename, inputBamFileIndex=args.rnaTumorBaiFilename, prefix="rnaTumor")
+        else:
+            i_rnaTumorFilename = None
 
 	# split vcf in chromosomes
-	chromDict=splitVcf(args, args.workdir, i_dnaNormalFilename, i_dnaTumorFilename, universalFastaFile)
+	chromDict=splitVcf(args, args.workdir, i_dnaNormalFilename, i_dnaTumorFilename, i_rnaNormalFilename, i_rnaTumorFilename, i_dnaNormalFastaFilename, i_dnaTumorFastaFilename, i_rnaNormalFastaFilename, i_rnaTumorFastaFilename)
 
 	filterDirs = dict()	# this will be passed to the radia filter
 
-
+        # All files come in as complete genome files, so first split them
 	# split blacklist
         if (args.blacklistFilename != None):
             blacklistDir = os.path.join(args.workdir, "blacklistDir")
@@ -364,18 +425,32 @@ def __main__():
             os.mkdir(cosmicDir)
             splitBed(args.cosmicFilename, cosmicDir)
             filterDirs["cosmic"] = cosmicDir
+        # setup snpEff database
+	if (args.snpEffFilename):
+            with zipfile.ZipFile(args.snpEffFilename, "r") as z:
+                z.extractall(args.workdir)
+            # this creates a directory named data, which holds the genome directory
+            # the name of that directory is used by snpEff
+            datadir = os.path.join(args.workdir, "data")
+            snpEffGenome = os.listdir(datadir)[0]
+            snpEffConfig = makeSnpEffConfig(args.workdir, snpEffGenome, datadir)
+        else:
+            snpEffGenome = None
+            snpEffConfig = None
+
 #        time.sleep(3600)
 
         rfOuts = []
         if args.procs == 1:
             for chrom in chromDict:
                 chrom = '21'	# DEBUG setting
-                cmd, rfOutput = radiaFilter(filterDirs, args, chrom, chromDict[chrom], args.workdir)
+                cmd, rfOutput = radiaFilter(filterDirs, snpEffGenome, snpEffConfig, args, chrom, chromDict[chrom], args.workdir)
 		# the output is generated by the filter, not on stdout
                 if execute(cmd):
                     raise Exception("RadiaFilter Call failed")
 		rfOuts.append(rfOutput)
                 move(rfOutput, args.outputFilename)
+                time.sleep(3600)
                 break
         else:
             cmds = []

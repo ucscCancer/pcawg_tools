@@ -2,6 +2,15 @@
     <macros>
       <macro name="input_params">
         <param name="inputbam" label="InputBam" type="data" format="bam" help="Input BAM"/>
+        <conditional name="fasta">
+        <param name="use" type="select" label="Use different fasta">
+          <option value="yes">yes</option>
+          <option value="no" selected="True">no</option>
+        </param>
+        <when value="yes">
+          <param name="inputfasta" label="Fasta file used to create Bam file (if different from top)" type="data" format="fasta" help="Fasta file used to create this bam file"/>
+        </when>
+      </conditional>
       </macro>
       <macro name="input_filter">
         <param name="filterfile" label="InputFile" type="data" format="bed" help="Input coordinate file"/>
@@ -21,7 +30,7 @@ radia_filter.py
 --patientId ${patientId}
 #end if
 --inputVCF ${inputVCF}
---fastaFilename ${fastaFile}
+--fastaFilename ${inputFasta}
 
 ## params for normal DNA
 #if $dnaNormal.use == "yes":
@@ -33,6 +42,24 @@ radia_filter.py
 #if $dnaTumor.use == "yes":
 --dnaTumorFilename ${dnaTumor.inputbam}
 --dnaTumorBaiFilename ${dnaTumor.inputbam.metadata.bam_index}
+#if $dnaTumor.fasta.use == "yes"
+--dnaTumorFastaFilename ${dnaTumor.fasta.inputfasta}
+#end if
+#end if
+
+## params for normal RNA
+#if $rnaNormal.use == "yes":
+--rnaNormalFilename ${rnaNormal.inputbam}
+--rnaNormalBaiFilename ${rnaNormal.inputbam.metadata.bam_index}
+#end if
+
+## params for tumor RNA
+#if $rnaTumor.use == "yes":
+--rnaTumorFilename ${rnaTumor.inputbam}
+--rnaTumorBaiFilename ${rnaTumor.inputbam.metadata.bam_index}
+#if $rnaTumor.blat.useBlat == "yes":
+--blatFastaFilename ${rnaTumor.blat.filterfile}
+#end if
 #end if
 
 ## filters
@@ -51,6 +78,10 @@ radia_filter.py
 #if $cosmic.use == "yes":
 --cosmicFilename ${cosmic.filterfile}
 #end if
+#if $snpeff.use == "yes":
+--snpEffFilename ${snpeff.zipfile}
+--snpEffDir /opt/snpEff
+#end if
 
 --outputDir ./
 --scriptsDir /opt/radia-1.1.3/scripts/
@@ -60,7 +91,7 @@ radia_filter.py
 
       <param name="patientId" label="Patient ID" type="text" value="MyPatient" help=""/>
       <param name="inputVCF" label="Radia VCF" type="data" format="vcf" help="Radia output vcf file"/>
-      <param name="fastaFile" label="Reference Genome" type="data" format="fasta" help="Fasta file used for read alignments"/>
+      <param name="inputFasta" label="Universal fasta file used to create Bam files" type="data" format="fasta" help="Fasta file used to create all Bam files"/>
 
       <conditional name="dnaNormal">
         <param name="use" type="select" label="Use DNA Normal">
@@ -79,6 +110,35 @@ radia_filter.py
         </param>
         <when value="yes">
           <expand macro="input_params"/>
+        </when>
+      </conditional>
+
+      <conditional name="rnaNormal">
+        <param name="use" type="select" label="Use RNA Normal">
+          <option value="yes">yes</option>
+          <option value="no" selected="True">no</option>
+        </param>
+        <when value="yes">
+          <expand macro="input_params"/>
+        </when>
+      </conditional>
+
+      <conditional name="rnaTumor">
+        <param name="use" type="select" label="Use RNA Tumor">
+          <option value="yes">yes</option>
+          <option value="no" selected="True">no</option>
+        </param>
+        <when value="yes">
+          <expand macro="input_params"/>
+          <conditional name="blat"> 
+              <param name="useBlat" type="select" label="Use blat filter">
+                <option value="yes">yes</option>
+                <option value="no" selected="True">no</option>
+              </param>
+              <when value="yes">
+                  <param name="filterfile" label="InputFile" type="data" format="fasta" help="Genome fasta file for blat"/>
+              </when>
+          </conditional>
         </when>
       </conditional>
 
@@ -142,13 +202,13 @@ radia_filter.py
         </when>
       </conditional>
 
-      <conditional name="cosmic">
-        <param name="use" type="select" label="Use cosmic filter">
+      <conditional name="snpeff">
+        <param name="use" type="select" label="Use snpEff to annotate VCF">
           <option value="yes">yes</option>
           <option value="no" selected="True">no</option>
         </param>
         <when value="yes">
-          <expand macro="input_filter"/>
+           <param name="zipfile" label="inputFile" type="data" format="snpeffdb" help="SnpEff zipped input file"/>
         </when>
       </conditional>
 
