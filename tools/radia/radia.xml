@@ -2,15 +2,6 @@
     <macros>
       <macro name="input_params">
         <param name="inputbam" label="InputBam" type="data" format="bam" help="Input BAM"/>
-        <conditional name="dopileup">
-          <param name="use" type="select" label="Use pileup (shortens runtime)">
-            <option value="yes">yes</option>
-            <option value="no" selected="True">no</option>
-          </param>
-          <when value="yes">
-            <param name="pileup" label="Pileup" type="data" format="pileup" help="Input pileup"/>
-           </when>
-        </conditional>
         <param name="MinTotalBases" label="MinTotalBases" type="integer" value="4" help="the minimum number of overall reads covering a position"/>
         <param name="MinAltBases" label="MinAltBases" type="integer" value="2" help="the minimum number of alternative reads supporting a variant at a position"/>
         <param name="MinBaseQuality" label="MinBaseQuality" type="integer" value="10" help="the minimum base quality"/>
@@ -51,24 +42,17 @@ radia.py
 --dnaNormalBaseQual ${dnaNormal.MinBaseQuality}
 --dnaNormalMapQual ${dnaNormal.MinMappingQuality}
 --dnaNormalDescription "${dnaNormal.Description}"
-#if $dnaNormal.dopileup.use == "yes":
---dnaNormalPileupsFilename ${dnaNormal.dopileup.pileup}
-#end if
 #end if
 
 ## params for normal RNA
 #if $rnaNormal.use == "yes":
 --rnaNormalFilename ${rnaNormal.inputbam}
 --rnaNormalBaiFilename ${rnaNormal.inputbam.metadata.bam_index}
---rnaNormalPileupsFilename ${rnaNormal.pileup}
 --rnaNormalMinTotalBases ${rnaNormal.MinTotalBases}
 --rnaNormalMinAltBases ${rnaNormal.MinAltBases}
 --rnaNormalBaseQual ${rnaNormal.MinBaseQuality}
 --rnaNormalMapQual ${rnaNormal.MinMappingQuality}
 --rnaNormalDescription "${rnaNormal.Description}"
-#if $rnaNormal.dopileup.use == "yes":
---rnaNormalPileupsFilename ${rnaNormal.dopileup.pileup}
-#end if
 #end if
 
 
@@ -81,9 +65,6 @@ radia.py
 --dnaTumorBaseQual ${dnaTumor.MinBaseQuality}
 --dnaTumorMapQual ${dnaTumor.MinMappingQuality}
 --dnaTumorDescription "${dnaTumor.Description}"
-#if $dnaTumor.dopileup.use == "yes":
---dnaTumorPileupsFilename ${dnaTumor.dopileup.pileup}
-#end if
 #end if
 
 ## params for tumor RNA
@@ -95,9 +76,6 @@ radia.py
 --rnaTumorBaseQual ${rnaTumor.MinBaseQuality}
 --rnaTumorMapQual ${rnaTumor.MinMappingQuality}
 --rnaTumorDescription "${rnaTumor.Description}"
-#if $rnaTumor.dopileup.use == "yes":
---rnaTumorPileupsFilename ${rnaTumor.dopileup.pileup}
-#end if
 #end if
 
 --outputDir ./
