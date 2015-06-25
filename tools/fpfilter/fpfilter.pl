@@ -130,7 +130,13 @@ while(my $entry = $input->getline) {
     @fields{@header_fields} = split("\t", $entry);
     
     my $filter_sample = $fields{$sample};
+    unless($filter_sample) {
+        die "Unable to find field for $sample\n";
+    }
     my @sample_fields = split /:/, $filter_sample;
+    unless(@sample_fields) {
+        die "Unable to parse field for $sample\n";
+    }
     my $index = 0;
     my %format_keys = map { $_ => $sample_fields[$index++] } split /:/, $fields{FORMAT};
     #these are in order ACGT
@@ -141,6 +147,7 @@ while(my $entry = $input->getline) {
         push @used_alleles, $alleles[$allele_index];
     }
     my ($var) = sort @used_alleles; #follow existing convention of fp filter using alphabetical order to choose a single base on triallelic sites
+    $var = q{} unless defined $var; #in the case where there is no variant allele, set this to the empty string. Later it will be filtered as NRC or IRC
     $var = uc($var);
     my $ref = uc($fields{REF});
     my $chrom = $fields{'#CHROM'};
