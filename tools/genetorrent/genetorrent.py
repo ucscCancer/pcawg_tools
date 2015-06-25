@@ -38,13 +38,13 @@ if __name__ == "__main__":
 	serr.close()
 
 	copied = False
-	for f in glob(os.path.join(uuid, "*.bam")):
+	for f in glob(os.path.join(args.uuid, "*.bam")):
 		copied = True
-		shutil.move(f, output)
+		shutil.move(f, args.output)
 	
 	if not copied:
 		handle = open("std.error")
-		sys.stderr.write("Not found in: %s" % (",".join( glob(os.path.join(uuid, "*" ))) ))
+		sys.stderr.write("Not found in: %s" % (",".join( glob(os.path.join(args.uuid, "*" ))) ))
 		sys.stderr.write(handle.read())
 		handle.close()
 		sys.exit(1)
@@ -52,9 +52,9 @@ if __name__ == "__main__":
 	json_file = open( 'galaxy.json', 'w' )
 	info = dict( type = 'dataset',
 				 ext = "bam",
-				 name = uuid + " CGHub BAM",
-				 uuid = uuid,
-				dataset_id = output_id 
+				 name = args.uuid + " CGHub BAM",
+				 uuid = args.uuid,
+				dataset_id = args.output_id 
 			)
 	json_file.write( json.dumps( info ) )
 	json_file.close()
