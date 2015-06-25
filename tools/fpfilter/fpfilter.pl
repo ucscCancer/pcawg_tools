@@ -130,7 +130,13 @@ while(my $entry = $input->getline) {
     @fields{@header_fields} = split("\t", $entry);
     
     my $filter_sample = $fields{$sample};
+    unless($filter_sample) {
+        die "Unable to find field for $sample\n";
+    }
     my @sample_fields = split /:/, $filter_sample;
+    unless(@sample_fields) {
+        die "Unable to parse field for $sample\n";
+    }
     my $index = 0;
     my %format_keys = map { $_ => $sample_fields[$index++] } split /:/, $fields{FORMAT};
     #these are in order ACGT
@@ -140,6 +146,11 @@ while(my $entry = $input->getline) {
     for my $allele_index (keys %gt_alleles) {
         push @used_alleles, $alleles[$allele_index];
     }
+    unless(@used_alleles) {
+        warn "No variant allele present for line $entry. Skipping.\n";
+        next;
+    }
+
     my ($var) = sort @used_alleles; #follow existing convention of fp filter using alphabetical order to choose a single base on triallelic sites
     $var = uc($var);
     my $ref = uc($fields{REF});
