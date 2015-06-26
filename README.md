@@ -55,7 +55,8 @@ Debugging and Development
 =========================
 To manually instance galaxy (with PCAWG Tools loaded) for interactive analysis and testing
 ```
-python nebula/nebula/warpdrive.py up -t tools/ -l data/ -a -f -w . -c
+python ./nebula/nebula/warpdrive.py up -t tools -l data -a -p 8080 --sudo -c run_config.yaml -td tool_data -f -d
+
 ```
 
 
