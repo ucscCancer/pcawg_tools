@@ -3,10 +3,16 @@
 import sys, argparse, os, shutil, subprocess, tempfile, time
 from multiprocessing import Pool
 
-def execute(cmd, output=None):
-    import sys, shlex
-    # function to execute a cmd and report if an error occurs
+def execute(cList):
+#def execute(cmd, output=None):
+    import  shlex
+    """ function to execute a cmd and report if an error occurs. Takes in a list with one or two arguments, the second one optionally being the output file"""
+    cmd = cList[0]
     print(cmd)
+    try:
+        output = cList[1]
+    except:
+        output = None
     try:
         process = subprocess.Popen(args=shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout,stderr = process.communicate()
@@ -27,7 +33,7 @@ def indexBam(workdir, prefix, inputBamFile, inputBamFileIndex=None):
     os.symlink(inputBamFile, inputBamLink)
     if inputBamFileIndex is None:
         cmd = "samtools index %s" %(inputBamLink)
-        execute(cmd)
+        execute([cmd])
     else:
         os.symlink(inputBamFileIndex, inputBamLink + ".bai")
     return inputBamLink
@@ -38,7 +44,7 @@ def indexFasta(workdir, inputFastaFile, inputFastaFileIndex=None, prefix="dna"):
     os.symlink(inputFastaFile, inputFastaLink)
     if inputFastaFileIndex is None:
         cmd = "samtools faidx %s" %(inputFastaLink)
-        execute(cmd)
+        execute([cmd])
     else:
         os.symlink(inputFastaFileIndex, inputFastaLink + ".fai")
     return inputFastaLink
@@ -70,7 +76,7 @@ def bamChrScan(idx):
             found = True
     return found
 
-def radia(chrom, args, 
+def radia(chrom, args, outputDir, 
           dnaNormalFilename=None, rnaNormalFilename=None, dnaTumorFilename=None, rnaTumorFilename=None,
           dnaNormalFastaFilename=None, rnaNormalFastaFilename=None, dnaTumorFastaFilename=None, rnaTumorFastaFilename=None):
 
@@ -141,17 +147,15 @@ def radia(chrom, args,
         if bamChrScan(idx):
             cmd += ' --rnaTumorUseChr '
         cmd += ' --rnaTumorMitochon=' + mitName(idx)
-    outfile = os.path.join(os.path.abspath(args.workdir), args.patientId + "_chr" + chrom + ".vcf")
+    outfile = os.path.join(outputDir, args.patientId + "_chr" + chrom + ".vcf")
     if args.gzip:
         cmd += ' --gzip '
         outfile += '.gz'
     return cmd, outfile
 
 
-def radiaMerge(args):
+def radiaMerge(args, inputDir):
     """Merges vcf files if they follow the pattern patientID_chr<N>.vcf(.gz)"""
-
-    # having the same inputdir and outputdir works fine (tested on command line)
 
     # python mergeChroms.py patientId /radia/filteredChroms/ /radia/filteredPatients/ --gzip
     #  -h, --help            show this help message and exit
@@ -167,7 +171,7 @@ def radiaMerge(args):
     # radia works in the workdir
     cmd = "python %s/mergeChroms.py %s %s %s -o %s" % (
         args.scriptsDir,
-        args.patientId, args.workdir, args.workdir,
+        args.patientId, inputDir, args.workdir,
         args.outputFilename)
     return cmd
 
@@ -274,7 +278,7 @@ def __main__():
 
     # some extra stuff
     parser.add_argument('--number_of_threads', dest='number_of_threads', type=int, default='1')
-    parser.add_argument('--number_of_procs', dest='procs', type=int, default=1)
+    parser.add_argument('--number_of_procs', dest='procs', type=int, default=3)
     parser.add_argument('--workdir', default="./")
     parser.add_argument('--no_clean', action="store_true", default=False)
 
@@ -325,42 +329,34 @@ def __main__():
         else:
             i_rnaTumorFilename = None
 
-        # the BLAT fasta file is different from the other ones, it should contain the extra contigs and hla genes
- #       if (args.blatFastaFilename != None):
- #           blatFastaFile = indexFasta(args.workdir, args.blatFastaFilename, args.blatFastaFilename + ".fai", "blat")
- #       else:
- #           blatFastaFile = None
-
-
         radiaOuts = []
+        chroms = get_bam_seq(i_dnaNormalFilename)
         if args.procs == 1:
-            chroms = get_bam_seq(i_dnaNormalFilename)
             for chrom in chroms:
-                cmd, radiaOutput = radia(chrom, args, 
+                cmd, radiaOutput = radia(chrom, args, tempDir,  
                             i_dnaNormalFilename, i_rnaNormalFilename, i_dnaTumorFilename, i_rnaTumorFilename,
                             i_dnaNormalFastaFilename, i_rnaNormalFastaFilename, i_dnaTumorFastaFilename, i_rnaTumorFastaFilename)
-                if execute(cmd, radiaOutput):
+                if execute([cmd, radiaOutput]):
                     raise Exception("Radia Call failed")
                 radiaOuts.append(radiaOutput)
         else:
-# this hasn't been tested yet
-            chroms = get_bam_seq(i_dnaNormalFilename)
             cmds = []
             for chrom in chroms:
                 # create the RADIA commands
-                cmd, radiaOutput = radia(chrom, args, 
+                cmd, radiaOutput = radia(chrom, args, tempDir,
                             i_dnaNormalFilename, i_rnaNormalFilename, i_dnaTumorFilename, i_rnaTumorFilename,
                             i_dnaNormalFastaFilename, i_rnaNormalFastaFilename, i_dnaTumorFastaFilename, i_rnaTumorFastaFilename)
                 cmds.append(cmd)
                 radiaOuts.append(radiaOutput)
             p = Pool(args.procs)
-            values = p.map(execute, cmds, 1)
+            # pool.map only accepts one input, so make that a list
+            combiCmds = zip(cmds, radiaOuts)
+            values = p.map(execute, combiCmds, 1)
 
         # even though we have a list of radia output files, we don't really need it:
-        # the radiaMerge command only uses the working directory and patient name
-        print radiaOuts
-	cmd = radiaMerge(args)
-        if execute(cmd):
+        # the radiaMerge command only uses the output directory and patient name
+	cmd = radiaMerge(args, tempDir)
+        if execute([cmd]):
             raise Exception("RadiaMerge Call failed")
     finally:
         if not args.no_clean and os.path.exists(tempDir):
