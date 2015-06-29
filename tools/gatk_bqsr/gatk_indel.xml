@@ -81,7 +81,6 @@
 --out output_10.bam
 #end if
 
---parallel-realign
 --mem 16
     </command>
     <inputs>

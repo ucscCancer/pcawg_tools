@@ -273,7 +273,6 @@ def run_indel_realign(args):
             java=args['java'],
             gatk=args['gatk_jar'],
             blocks=seqs,
-            input_files=input_files,
             input_list=input_list,
             output_map=output_map,
             #output_base=os.path.join(workdir, "output.file"),
