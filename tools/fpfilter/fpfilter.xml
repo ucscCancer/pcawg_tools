@@ -27,18 +27,18 @@ fpfilter.pl
     <param name="sample" type="text" label="Sample" value="sample" help="The sample name of the sample you want to filter on in the VCF file." />
     <param name="reference" format="fasta" type="data" label="Reference Genome" help="A fasta containing the reference sequence the BAM file was aligned to"/>
 
-    <param name="min_read_pos" type="text" value="0.10" label="Min Read Pos" help="Minimum average relative distance from start/end of read." />
-    <param name="min_var_freq" type="text" value="0.05" label="Min Var Freq" help="Minimum variant allele frequency." />
-    <param name="min_var_count" type="text" value="4" label="Min Var Count" help="Minimum number of variant-supporting reads." />
+    <param name="min_read_pos" type="float" value="0.10" label="Min Read Pos" help="Minimum average relative distance from start/end of read." />
+    <param name="min_var_freq" type="float" value="0.05" label="Min Var Freq" help="Minimum variant allele frequency." />
+    <param name="min_var_count" type="integer" value="4" label="Min Var Count" help="Minimum number of variant-supporting reads." />
 
-    <param name="min_strandness" type="text" value="0.01" label="Min Strandness" help="Minimum representation of variant allele on each strand." />
-    <param name="max_mm_qualsum_diff" type="text" value="50" label="Max mm qualsum diff" help="Maximum difference of mismatch quality sum between variant and reference reads (paralog filter)." />
+    <param name="min_strandness" type="float" value="0.01" label="Min Strandness" help="Minimum representation of variant allele on each strand." />
+    <param name="max_mm_qualsum_diff" type="integer" value="50" label="Max mm qualsum diff" help="Maximum difference of mismatch quality sum between variant and reference reads (paralog filter)." />
 
-    <param name="max_var_mm_qualsum" type="text" value="100" label="Max var mm qualsum" help="Maximum mismatch quality sum of reference-supporting reads." />
-    <param name="max_mapqual_diff" type="text" value="30" label="Max mapqual diff" help="Maximum difference of mapping quality between variant and reference reads." />
+    <param name="max_var_mm_qualsum" type="integer" value="100" label="Max var mm qualsum" help="Maximum mismatch quality sum of reference-supporting reads." />
+    <param name="max_mapqual_diff" type="integer" value="30" label="Max mapqual diff" help="Maximum difference of mapping quality between variant and reference reads." />
 
-    <param name="max_readlen_diff" type="text" value="25" label="Max readlen diff" help="Maximum difference of average supporting read length between variant and reference reads (paralog filter)" />
-    <param name="min_var_dist_3" type="text" value="0.20" label="Min var dist 3 " help="minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads" />
+    <param name="max_readlen_diff" type="integer" value="25" label="Max readlen diff" help="Maximum difference of average supporting read length between variant and reference reads (paralog filter)" />
+    <param name="min_var_dist_3" type="float" value="0.20" label="Min var dist 3 " help="minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads" />
 
   </inputs>
 
