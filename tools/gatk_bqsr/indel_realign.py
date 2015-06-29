@@ -71,6 +71,7 @@ def call_scan(java, gatk, ncpus, ref_seq, input_list, known_vcfs, intervals, mem
 ${JAVA}
 -Xmx${MEM} -XX:ParallelGCThreads=2 -jar ${GATK}
 -T RealignerTargetCreator
+-disable_auto_index_creation_and_locking_when_reading_rods
 -nt ${NCPUS}
 -R ${REF_SEQ}
 -I ${INPUT_LIST}
@@ -108,6 +109,7 @@ ${JAVA}
 -R ${REF_SEQ}
 -I ${INPUT_LIST}
 -L ${INTERVAL}
+-disable_auto_index_creation_and_locking_when_reading_rods
 -targetIntervals ${TARGET_INTERVALS}
 ${KNOWN_STR}
 -nWayOut ${OUTPUT_MAP}
@@ -150,6 +152,7 @@ ${JAVA}
 -Xmx${MEM} -XX:ParallelGCThreads=2 -jar ${GATK}
 -T IndelRealigner
 -R ${REF_SEQ}
+-disable_auto_index_creation_and_locking_when_reading_rods
 -I ${INPUT_LIST}
 -targetIntervals ${TARGET_INTERVALS}
 ${KNOWN_STR}
