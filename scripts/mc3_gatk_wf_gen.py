@@ -80,7 +80,7 @@ def run_gen(args):
 
     tasks = TaskGroup()
 
-    for ent in synqueue.listAssignments(syn, username='anurpa', **config):
+    for ent in synqueue.listAssignments(syn, **config):
         bam_set = list( a[1] for a in ent['meta'].items() if a[0].startswith("id_") and isinstance(a[1], basestring)  )
 
         ref_set = set( a[1] for a in ent['meta'].items() if a[0].startswith("ref_assembly_") and isinstance(a[1], basestring) )
