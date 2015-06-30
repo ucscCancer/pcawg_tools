@@ -66,7 +66,7 @@ def listAssignments(syn, table_id, primary_col, assignee_col, state_col, list_al
     df = results.asDataFrame()
     for row_name in df.index:
         row = df.loc[row_name]
-        if row[assignee_col] == username or list_all:
+        if str(row[assignee_col]) == str(username) or list_all:
             rec = {}
             for k,v in rbase.items():
                 rec[k] = row[v]
