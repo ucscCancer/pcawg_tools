@@ -15,6 +15,10 @@
                 }, 
                 {
                     "description": "runtime parameter for tool CGHub GeneTorrent", 
+                    "name": "gnos_endpoint"
+                }, 
+                {
+                    "description": "runtime parameter for tool CGHub GeneTorrent", 
                     "name": "uuid"
                 }
             ], 
@@ -39,7 +43,7 @@
             }, 
             "tool_errors": null, 
             "tool_id": "cghub_genetorrent", 
-            "tool_state": "{\"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
+            "tool_state": "{\"__page__\": 0, \"gnos_endpoint\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__rerun_remap_job_id__\": null, \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
@@ -53,6 +57,10 @@
                 {
                     "description": "runtime parameter for tool CGHub GeneTorrent", 
                     "name": "cred_file"
+                }, 
+                {
+                    "description": "runtime parameter for tool CGHub GeneTorrent", 
+                    "name": "gnos_endpoint"
                 }, 
                 {
                     "description": "runtime parameter for tool CGHub GeneTorrent", 
@@ -80,7 +88,7 @@
             }, 
             "tool_errors": null, 
             "tool_id": "cghub_genetorrent", 
-            "tool_state": "{\"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
+            "tool_state": "{\"__page__\": 0, \"gnos_endpoint\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__rerun_remap_job_id__\": null, \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
@@ -94,6 +102,10 @@
                 {
                     "description": "runtime parameter for tool CGHub GeneTorrent", 
                     "name": "cred_file"
+                }, 
+                {
+                    "description": "runtime parameter for tool CGHub GeneTorrent", 
+                    "name": "gnos_endpoint"
                 }, 
                 {
                     "description": "runtime parameter for tool CGHub GeneTorrent", 
@@ -121,7 +133,7 @@
             }, 
             "tool_errors": null, 
             "tool_id": "cghub_genetorrent", 
-            "tool_state": "{\"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
+            "tool_state": "{\"__page__\": 0, \"gnos_endpoint\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__rerun_remap_job_id__\": null, \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
@@ -645,5 +657,5 @@
             "uuid": "6be89ebf-2ac5-488a-9f5e-60bedf4ab61f"
         }
     }, 
-    "uuid": "abdf5d5b-3c70-49ca-9d0e-628db75ba141"
+    "uuid": "892fbaf0-97e9-489f-8feb-c2448d53382e"
 }

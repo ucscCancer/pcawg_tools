@@ -15,6 +15,10 @@
                 }, 
                 {
                     "description": "runtime parameter for tool CGHub GeneTorrent", 
+                    "name": "gnos_endpoint"
+                }, 
+                {
+                    "description": "runtime parameter for tool CGHub GeneTorrent", 
                     "name": "uuid"
                 }
             ], 
@@ -39,7 +43,7 @@
             }, 
             "tool_errors": null, 
             "tool_id": "cghub_genetorrent", 
-            "tool_state": "{\"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
+            "tool_state": "{\"__page__\": 0, \"gnos_endpoint\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__rerun_remap_job_id__\": null, \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
@@ -53,6 +57,10 @@
                 {
                     "description": "runtime parameter for tool CGHub GeneTorrent", 
                     "name": "cred_file"
+                }, 
+                {
+                    "description": "runtime parameter for tool CGHub GeneTorrent", 
+                    "name": "gnos_endpoint"
                 }, 
                 {
                     "description": "runtime parameter for tool CGHub GeneTorrent", 
@@ -80,7 +88,7 @@
             }, 
             "tool_errors": null, 
             "tool_id": "cghub_genetorrent", 
-            "tool_state": "{\"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
+            "tool_state": "{\"__page__\": 0, \"gnos_endpoint\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"uuid\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"cred_file\": \"{\\\"__class__\\\": \\\"RuntimeValue\\\"}\", \"__rerun_remap_job_id__\": null, \"server\": \"{\\\"cghub\\\": \\\"yes\\\", \\\"__current_case__\\\": 1}\"}", 
             "tool_version": "1.0.0", 
             "type": "tool", 
             "user_outputs": [], 
@@ -507,5 +515,5 @@
             "uuid": "b1be8ac2-1cae-4ab9-a104-6c97efd9e39b"
         }
     }, 
-    "uuid": "038f34ea-cac2-4f26-b3ab-b04fcb1eef06"
+    "uuid": "14817475-1417-41e6-ba5e-ca434e7f01ef"
 }
