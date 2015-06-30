@@ -108,7 +108,7 @@ ${JAVA}
 -T IndelRealigner
 -R ${REF_SEQ}
 -I ${INPUT_LIST}
--L ${INTERVAL}
+-L '${INTERVAL}'
 -disable_auto_index_creation_and_locking_when_reading_rods
 -targetIntervals ${TARGET_INTERVALS}
 ${KNOWN_STR}
