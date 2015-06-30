@@ -105,12 +105,12 @@ def run_gen(args):
                 parameters={
                     'INPUT_BAM_1' : {
                         "uuid" : bam_set[0],
-                        "gnos_endpoint" : "https://cghub.ucsc.edu",
+                        "gnos_endpoint" : "cghub.ucsc.edu",
                         "cred_file" : "/tool_data/files/cghub.key"
                     },
                     'INPUT_BAM_2' : {
                         "uuid" : bam_set[1],
-                        "gnos_endpoint" : "https://cghub.ucsc.edu",
+                        "gnos_endpoint" : "cghub.ucsc.edu",
                         "cred_file" : "/tool_data/files/cghub.key"
                     }
                 },
@@ -133,17 +133,17 @@ def run_gen(args):
                 parameters={
                     'INPUT_BAM_1' : {
                         "uuid" : bam_set[0],
-                        "gnos_endpoint" : "https://cghub.ucsc.edu",
+                        "gnos_endpoint" : "cghub.ucsc.edu",
                         "cred_file" : "/tool_data/files/cghub.key"
                     },
                     'INPUT_BAM_2' : {
                         "uuid" : bam_set[1],
-                        "gnos_endpoint" : "https://cghub.ucsc.edu",
+                        "gnos_endpoint" : "cghub.ucsc.edu",
                         "cred_file" : "/tool_data/files/cghub.key"
                     },
                     'INPUT_BAM_3' : {
                         "uuid" : bam_set[2],
-                        "gnos_endpoint" : "https://cghub.ucsc.edu",
+                        "gnos_endpoint" : "cghub.ucsc.edu",
                         "cred_file" : "/tool_data/files/cghub.key"
                     }
                 },
