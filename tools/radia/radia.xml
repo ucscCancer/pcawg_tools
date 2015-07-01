@@ -1,10 +1,4 @@
 <tool id="radia" name="radia" version="0.1.0">
-    <requirements>
-      <container type="docker">radia:1.1.0</container>
-    </requirements>
-    <stdio>
-        <exit_code range="1:" />
-    </stdio>
     <macros>
       <macro name="input_params">
         <param name="inputbam" label="InputBam" type="data" format="bam" help="Input BAM"/>
@@ -15,6 +9,12 @@
         <param name="Description" label="Description" value="Normal DNA Sample" type="text" help="the description for the sample in the VCF header"/>
       </macro>
     </macros>
+    <requirements>
+      <container type="docker">radia:1.1.4</container>
+    </requirements>
+    <stdio>
+        <exit_code range="1:" />
+    </stdio>
     <command interpreter="python"><![CDATA[
 radia.py
 
@@ -79,17 +79,17 @@ radia.py
 #end if
 
 --outputDir ./
---scriptsDir /opt/radia-1.1.0/scripts/
+--scriptsDir /opt/radia-1.1.4/scripts/
 
     ]]></command>
     <inputs>
-      <param name="patientId" label="Patient ID" type="text" value="Parient" help=""/>
-      <param name="fastaFile" label="Reference Genome" type="data" format="fasta" help=""/>
-      <param name="refId" label="Reference Genome ID" type="text" value="HG19" help=""/>
-      <param name="refUrl" label="Reference Genome URL" type="text" value="" help=""/>
-      <param name="dataSource" label="Data Source" type="text" value="" help=""/>
-      <param name="sequencingPlatform" label="SequencingPlatform" type="text" value="" help=""/>
-      <param name="disease" label="Disease Code" type="text" value="" help=""/>
+      <param name="patientId" label="Patient ID (no spaces)" type="text" value="thePatient" help="Patient's unique ID number"/>
+      <param name="fastaFile" label="Reference Genome" type="data" format="fasta" help="Fasta file used for read alignments"/>
+      <param name="refId" label="Reference Genome ID" type="text" value="HG19" help="Genome used for read alignments"/>
+      <param name="refUrl" label="Reference Genome URL" type="text" value="" help="URL for genome fasta file(s)"/>
+      <param name="dataSource" label="Data Source" type="text" value="" help="Original location of bam files"/>
+      <param name="sequencingPlatform" label="SequencingPlatform" type="text" value="" help="E.g. Illumina"/>
+      <param name="disease" label="Disease Code" type="text" value="" help="Short disease code such as BRCA or LGG"/>
 
       <param name="genotypeMinDepth" label="genotypeMinDepth" type="integer" value="2" help="the minimum number of bases required for the genotype"/>
       <param name="genotypeMinPct" label="genotypeMinPct" type="float" value=".10" help="the minimum percentage of reads required for the genotype"/>
