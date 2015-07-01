@@ -40,13 +40,15 @@ def indexBam(workdir, prefix, inputBamFile, inputBamFileIndex=None):
 
 
 def indexFasta(workdir, inputFastaFile, inputFastaFileIndex=None, prefix="dna"):
+    """Checks if fasta index exists. If so, creates link. If not, creates index"""
     inputFastaLink = os.path.join(os.path.abspath(workdir), prefix + "_reference.fa" )
     os.symlink(inputFastaFile, inputFastaLink)
-    if inputFastaFileIndex is None:
+    inputFastaFileIndex = inputFastaFile + ".fai"
+    if os.path.exists(inputFastaFileIndex):
+        os.symlink(inputFastaFileIndex, inputFastaLink + ".fai")
+    else:
         cmd = "samtools faidx %s" %(inputFastaLink)
         execute([cmd])
-    else:
-        os.symlink(inputFastaFileIndex, inputFastaLink + ".fai")
     return inputFastaLink
 
 def idxStats(bamfile):
@@ -288,23 +290,23 @@ def __main__():
     try:
         # if a universal fasta file is specified, then use it
         if (args.fastaFilename != None):
-            universalFastaFile = indexFasta(args.workdir, args.fastaFilename, args.fastaFilename + ".fai", "universal")
+            universalFastaFile = indexFasta(args.workdir, args.fastaFilename, prefix="universal")
 
         # if individual fasta files are specified, they over-ride the universal one
         if (args.dnaNormalFastaFilename != None):
-            i_dnaNormalFastaFilename = indexFasta(args.workdir, args.dnaNormalFastaFilename, args.dnaNormalFastaFilename + ".fai", "dna")
+            i_dnaNormalFastaFilename = indexFasta(args.workdir, args.dnaNormalFastaFilename, prefix="dnaN")
         else:
             i_dnaNormalFastaFilename = universalFastaFile
         if (args.rnaNormalFastaFilename != None):
-            i_rnaNormalFastaFilename = indexFasta(args.workdir, args.rnaNormalFastaFilename, args.rnaNormalFastaFilename + ".fai", "rna")
+            i_rnaNormalFastaFilename = indexFasta(args.workdir, args.rnaNormalFastaFilename, prefix="rnaN")
         else:
             i_rnaNormalFastaFilename = universalFastaFile
         if (args.dnaTumorFastaFilename != None):
-            i_dnaTumorFastaFilename = indexFasta(args.workdir, args.dnaTumorFastaFilename, args.dnaTumorFastaFilename + ".fai", "dna")
+            i_dnaTumorFastaFilename = indexFasta(args.workdir, args.dnaTumorFastaFilename, prefix="dnaT")
         else:
             i_dnaTumorFastaFilename = universalFastaFile
         if (args.rnaTumorFastaFilename != None):
-            i_rnaTumorFastaFilename = indexFasta(args.workdir, args.rnaTumorFastaFilename, args.rnaTumorFastaFilename + ".fai", "rna")
+            i_rnaTumorFastaFilename = indexFasta(args.workdir, args.rnaTumorFastaFilename, prefix="rnaT")
         else:
             i_rnaTumorFastaFilename = universalFastaFile
 

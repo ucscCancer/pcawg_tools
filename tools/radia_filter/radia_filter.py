@@ -37,13 +37,15 @@ def indexBam(workdir, prefix, inputBamFile, inputBamFileIndex=None):
     return inputBamLink
 
 def indexFasta(workdir, inputFastaFile, inputFastaFileIndex=None, prefix="dna"):
+    """Checks if fasta index exists. If so, creates link. If not, creates index"""
     inputFastaLink = os.path.join(os.path.abspath(workdir), prefix + "_reference.fa" )
     os.symlink(inputFastaFile, inputFastaLink)
-    if inputFastaFileIndex is None:
-        cmd = "samtools faidx %s" %(inputFastaLink)
-        execute(cmd)
-    else:
+    inputFastaFileIndex = inputFastaFile + ".fai"
+    if os.path.exists(inputFastaFileIndex):
         os.symlink(inputFastaFileIndex, inputFastaLink + ".fai")
+    else:
+        cmd = "samtools faidx %s" %(inputFastaLink)
+        execute([cmd])
     return inputFastaLink
 
 def get_read_fileHandler(aFilename):
@@ -314,21 +316,21 @@ class localFiles(object):
 
     def universalFasta(self, args):
         if (args.fastaFilename != None):
-            universalFastaFile = indexFasta(args.workdir, args.fastaFilename, args.fastaFilename + ".fai", "universal")
+            universalFastaFile = indexFasta(args.workdir, args.fastaFilename, prefix="universal")
             self.dnaNormalFilename, self.dnaTumorFilename, self.rnaNormalFilename, self.rnaTumorFilename, self.dnaNormalFastaFilename, self.dnaTumorFastaFilename, self.rnaNormalFastaFilename, self.rnaTumorFastaFilename = (universalFastaFile for i in xrange(8))
 
 
     def doFasta(self, args):
         # if individual fasta files are specified, they over-ride the universal one
         if (args.dnaNormalFastaFilename != None):
-            self.dnaNormalFastaFilename = indexFasta(args.workdir, args.dnaNormalFastaFilename, args.dnaNormalFastaFilename + ".fai", "dna")
+            self.dnaNormalFastaFilename = indexFasta(args.workdir, args.dnaNormalFastaFilename, prefix="dnaN")
 
         if (args.rnaNormalFastaFilename != None):
-            self.rnaNormalFastaFilename = indexFasta(args.workdir, args.rnaNormalFastaFilename, args.rnaNormalFastaFilename + ".fai", "rna")
+            self.rnaNormalFastaFilename = indexFasta(args.workdir, args.rnaNormalFastaFilename, prefix="rnaN")
         if (args.dnaTumorFastaFilename != None):
-            self.dnaTumorFastaFilename = indexFasta(args.workdir, args.dnaTumorFastaFilename, args.dnaTumorFastaFilename + ".fai", "dna")
+            self.dnaTumorFastaFilename = indexFasta(args.workdir, args.dnaTumorFastaFilename, prefix="dnaT")
         if (args.rnaTumorFastaFilename != None):
-            self.rnaTumorFastaFilename = indexFasta(args.workdir, args.rnaTumorFastaFilename, args.rnaTumorFastaFilename + ".fai", "rna")
+            self.rnaTumorFastaFilename = indexFasta(args.workdir, args.rnaTumorFastaFilename, prefix="rnaT")
 
 
     def doBam(self, args):
