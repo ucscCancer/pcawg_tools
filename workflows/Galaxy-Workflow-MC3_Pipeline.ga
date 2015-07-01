@@ -333,7 +333,7 @@
             "id": 10, 
             "input_connections": {
                 "bam": {
-                    "id": 1, 
+                    "id": 0, 
                     "output_name": "output"
                 }, 
                 "reference": {
@@ -361,7 +361,7 @@
             "post_job_actions": {}, 
             "tool_errors": null, 
             "tool_id": "fpfilter", 
-            "tool_state": "{\"min_strandness\": \"\\\"0.01\\\"\", \"max_mapqual_diff\": \"\\\"30\\\"\", \"bam\": \"null\", \"min_var_dist_3\": \"\\\"0.20\\\"\", \"reference\": \"null\", \"min_var_count\": \"\\\"4\\\"\", \"max_readlen_diff\": \"\\\"25\\\"\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"max_mm_qualsum_diff\": \"\\\"50\\\"\", \"min_var_dist_3 \": \"\\\"\\\"\", \"vcf\": \"null\", \"sample\": \"\\\"TUMOR\\\"\", \"min_read_pos\": \"\\\"0.10\\\"\", \"min_var_freq\": \"\\\"0.05\\\"\", \"max_var_mm_qualsum\": \"\\\"100\\\"\"}", 
+            "tool_state": "{\"min_strandness\": \"\\\"0.01\\\"\", \"max_mapqual_diff\": \"\\\"30\\\"\", \"bam\": \"null\", \"min_var_dist_3\": \"\\\"0.2\\\"\", \"reference\": \"null\", \"min_var_count\": \"\\\"4\\\"\", \"max_readlen_diff\": \"\\\"25\\\"\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"max_mm_qualsum_diff\": \"\\\"50\\\"\", \"min_var_dist_3 \": \"\\\"\\\"\", \"vcf\": \"null\", \"sample\": \"\\\"TUMOR\\\"\", \"min_read_pos\": \"\\\"0.1\\\"\", \"min_var_freq\": \"\\\"0.05\\\"\", \"max_var_mm_qualsum\": \"\\\"100\\\"\"}", 
             "tool_version": "0.0.1", 
             "type": "tool", 
             "user_outputs": [], 
@@ -401,7 +401,7 @@
             "tool_errors": null, 
             "tool_id": "varscan_somatic_vcf", 
             "tool_state": "{\"strand_filter\": \"\\\"0\\\"\", \"min_coverage\": \"\\\"8\\\"\", \"normal_purity\": \"\\\"1.0\\\"\", \"p_value\": \"\\\"0.99\\\"\", \"__page__\": 0, \"min_coverage_normal\": \"\\\"8\\\"\", \"min_freq_for_hom\": \"\\\"0.75\\\"\", \"normal_pileup\": \"null\", \"min_coverage_tumor\": \"\\\"6\\\"\", \"min_var_freq\": \"\\\"0.1\\\"\", \"tumor_pileup\": \"null\", \"somatic_p_value\": \"\\\"0.05\\\"\", \"validation\": \"\\\"0\\\"\", \"__rerun_remap_job_id__\": null, \"tumor_purity\": \"\\\"1.0\\\"\"}", 
-            "tool_version": "2.3.8", 
+            "tool_version": "2.3.9", 
             "type": "tool", 
             "user_outputs": [], 
             "uuid": "816ba9d1-1db4-4e51-bbe1-e0de69ec3f09"
@@ -425,8 +425,8 @@
                 }
             ], 
             "position": {
-                "left": 1333.5, 
-                "top": 290
+                "left": 1339.5, 
+                "top": 304
             }, 
             "post_job_actions": {}, 
             "tool_errors": null, 
@@ -487,8 +487,8 @@
                 }
             ], 
             "position": {
-                "left": 1336.5, 
-                "top": 493
+                "left": 1351.5, 
+                "top": 492
             }, 
             "post_job_actions": {}, 
             "tool_errors": null, 
@@ -504,7 +504,7 @@
             "id": 15, 
             "input_connections": {
                 "bam": {
-                    "id": 1, 
+                    "id": 0, 
                     "output_name": "output"
                 }, 
                 "reference": {
@@ -526,13 +526,13 @@
                 }
             ], 
             "position": {
-                "left": 1153.5, 
-                "top": 805
+                "left": 1149.5, 
+                "top": 810
             }, 
             "post_job_actions": {}, 
             "tool_errors": null, 
             "tool_id": "fpfilter", 
-            "tool_state": "{\"min_strandness\": \"\\\"0.01\\\"\", \"max_mapqual_diff\": \"\\\"30\\\"\", \"bam\": \"null\", \"min_var_dist_3\": \"\\\"0.20\\\"\", \"reference\": \"null\", \"min_var_count\": \"\\\"4\\\"\", \"max_readlen_diff\": \"\\\"25\\\"\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"max_mm_qualsum_diff\": \"\\\"50\\\"\", \"min_var_dist_3 \": \"\\\"\\\"\", \"vcf\": \"null\", \"sample\": \"\\\"TUMOR\\\"\", \"min_read_pos\": \"\\\"0.10\\\"\", \"min_var_freq\": \"\\\"0.05\\\"\", \"max_var_mm_qualsum\": \"\\\"100\\\"\"}", 
+            "tool_state": "{\"min_strandness\": \"\\\"0.01\\\"\", \"max_mapqual_diff\": \"\\\"30\\\"\", \"bam\": \"null\", \"min_var_dist_3\": \"\\\"0.2\\\"\", \"reference\": \"null\", \"min_var_count\": \"\\\"4\\\"\", \"max_readlen_diff\": \"\\\"25\\\"\", \"__page__\": 0, \"__rerun_remap_job_id__\": null, \"max_mm_qualsum_diff\": \"\\\"50\\\"\", \"min_var_dist_3 \": \"\\\"\\\"\", \"vcf\": \"null\", \"sample\": \"\\\"TUMOR\\\"\", \"min_read_pos\": \"\\\"0.1\\\"\", \"min_var_freq\": \"\\\"0.05\\\"\", \"max_var_mm_qualsum\": \"\\\"100\\\"\"}", 
             "tool_version": "0.0.1", 
             "type": "tool", 
             "user_outputs": [], 
@@ -694,5 +694,5 @@
             "uuid": "dcbce3dc-c431-47d0-a4cf-8ac297bdf9c5"
         }
     }, 
-    "uuid": "966e66f2-929b-4c12-9b74-18ae6e5205fd"
+    "uuid": "47dc415b-6581-474d-8b18-cb91fbcdadf7"
 }
