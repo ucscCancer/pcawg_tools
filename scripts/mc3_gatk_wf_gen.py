@@ -16,6 +16,13 @@ import tempfile
 
 REFDATA_PROJECT="syn3241088"
 
+config = {
+    "table_id" : "syn4214588",
+    "primary_col" : "participant_id",
+    "assignee_col" : "assignee",
+    "state_col" : "state"
+}
+
 def run_gen(args):
     syn = synapseclient.Synapse()
     syn.login()
@@ -66,13 +73,6 @@ def run_gen(args):
 
     workflow_2 = GalaxyWorkflow(ga_file="workflows/Galaxy-Workflow-GATK_CGHub_2.ga")
     workflow_3 = GalaxyWorkflow(ga_file="workflows/Galaxy-Workflow-GATK_CGHub_3.ga")
-
-    config = {
-        "table_id" : "syn4214588",
-        "primary_col" : "participant_id",
-        "assignee_col" : "assignee",
-        "state_col" : "state"
-    }
 
     ref_rename = {
         "HG19_Broad_variant" : "Homo_sapiens_assembly19"
@@ -190,14 +190,28 @@ def run_gen(args):
                 s.set_docstore_config(cache_path=args.scratch, open_perms=True)
             s.store(handle)
 
-def run_submit(args):
+def run_upload(args):
     syn = synapseclient.Synapse()
     syn.login()
 
     docstore = from_url(args.out_base)
+    
+    donor_map = {}
+    bam_map = {}
 
-    for id, doc in docstore.filter(visible=True, state='ok'):
+    for id, doc in docstore.filter(visible=True, state='ok', name=['OUTPUT_BAM_1', 'OUTPUT_BAM_2', 'OUTPUT_BAM_3']):
         print doc['name'], doc['tags']
+        for t in doc['tags']:
+            ts = t.split(":")
+            if ts[0] == 'donor':
+                if ts[1] not in donor_map:
+                    donor_map[ts[1]] = []
+                donor_map[ts[1]].append(id)
+            if ts[0] == 'original_bam':
+                bam_map[ts[1]] = id
+
+    print donor_map
+    print bam_map
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -217,9 +231,9 @@ if __name__ == "__main__":
 
 
 
-    parser_submit = subparsers.add_parser('submit')
-    parser_submit.add_argument("--out-base", default="mc3_gatk")
-    parser_submit.set_defaults(func=run_submit)
+    parser_upload = subparsers.add_parser('upload-prep')
+    parser_upload.add_argument("--out-base", default="mc3_gatk")
+    parser_upload.set_defaults(func=run_upload)
 
     args = parser.parse_args()
 
