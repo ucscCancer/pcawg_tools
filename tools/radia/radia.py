@@ -1,34 +1,39 @@
 #!/usr/bin/env python
 
-import argparse, os, shutil, subprocess, tempfile, time
+import sys, argparse, os, shutil, subprocess, tempfile, time
 from multiprocessing import Pool
 
-def execute(cmd, output=None):
-    import sys, shlex
-    # function to execute a cmd and report if an error occur
+def execute(cList):
+#def execute(cmd, output=None):
+    import  shlex
+    """ function to execute a cmd and report if an error occurs. Takes in a list with one or two arguments, the second one optionally being the output file"""
+    cmd = cList[0]
     print(cmd)
+    try:
+        output = cList[1]
+    except:
+        output = None
     try:
         process = subprocess.Popen(args=shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout,stderr = process.communicate()
-    except Exception, e: # une erreur de ma commande : stderr
+    except Exception, e: # error from my command : stderr
         sys.stderr.write("problem doing : %s\n%s\n" %(cmd, e))
         return 1
     if output:
         output = open(output, 'w')
         output.write(stdout)
         output.close()
-    if stderr != '': # une erreur interne au programme : stdout (sinon, souvent des warning arrete les programmes)
+    if stderr != '': # internal program error : stdout 
         sys.stdout.write("warning or error while doing : %s\n-----\n%s-----\n\n" %(cmd, stderr))
         return 1
     return 0
-
 
 def indexBam(workdir, prefix, inputBamFile, inputBamFileIndex=None):
     inputBamLink = os.path.join(os.path.abspath(workdir), prefix + ".bam" )
     os.symlink(inputBamFile, inputBamLink)
     if inputBamFileIndex is None:
         cmd = "samtools index %s" %(inputBamLink)
-        execute(cmd)
+        execute([cmd])
     else:
         os.symlink(inputBamFileIndex, inputBamLink + ".bai")
     return inputBamLink
@@ -39,30 +44,45 @@ def indexFasta(workdir, inputFastaFile, inputFastaFileIndex=None, prefix="dna"):
     os.symlink(inputFastaFile, inputFastaLink)
     if inputFastaFileIndex is None:
         cmd = "samtools faidx %s" %(inputFastaLink)
-        execute(cmd)
+        execute([cmd])
     else:
         os.symlink(inputFastaFileIndex, inputFastaLink + ".fai")
     return inputFastaLink
 
-def bamChrScan(bamfile):
+def idxStats(bamfile):
+    """runs samtools idxstats"""
     samtools = which("samtools")
     cmd = [samtools, "idxstats", bamfile]
     process = subprocess.Popen(args=cmd, stdout=subprocess.PIPE)
     stdout, stderr = process.communicate()
+    return stdout
+
+def mitName(idx):
+    """Returns the mitochondrion chromosome ID used in the bam file if it starts with M (usually it is called M or MT)"""
+    for line in idx.split("\n"):
+        tmp = line.split("\t")
+        if len(tmp) == 4 and tmp[0].startswith("chrM"):
+            return tmp[0][3:]	# remove chr
+        if len(tmp) == 4 and tmp[0].startswith("M"):
+            return tmp[0]
+    return 'M'	# not found, so does not matter
+
+def bamChrScan(idx):
+    """Checks if the bam chromosome IDs start with chr"""
     found = False
-    for line in stdout.split("\n"):
+    for line in idx.split("\n"):
         tmp = line.split("\t")
         if len(tmp) == 4 and tmp[0].startswith("chr"):
             found = True
     return found
 
-def radia(chrom, args,
+def radia(chrom, args, outputDir, 
           dnaNormalFilename=None, rnaNormalFilename=None, dnaTumorFilename=None, rnaTumorFilename=None,
           dnaNormalFastaFilename=None, rnaNormalFastaFilename=None, dnaTumorFastaFilename=None, rnaTumorFastaFilename=None):
 
-    # python radia.pyc id chrom [Options]
+    # python radia.py id chrom [Options]
 
-    # python radia.pyc TCGA-02-0047 1
+    # python radia.py TCGA-02-0047 1
     # -n TCGA-02-0047-10A-01D-1490-08.bam
     # -t TCGA-02-0047-01A-01D-1490-08.bam
     # -r TCGA-02-0047-01A*.bam
@@ -79,103 +99,81 @@ def radia(chrom, args,
 
     # quadruplets
     if (rnaNormalFilename != None and rnaTumorFilename != None):
-        cmd = "python %s/radia.pyc %s %s -n %s -x % -t %s -r %s --dnaNormalFasta %s --rnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
+        cmd = "python %s/radia.py %s %s -n %s --np %s -x %s --xp %s -t %s --tp %s -r %s --rp %s --dnaNormalFasta %s --rnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
                 args.scriptsDir,
                 args.patientId, chrom,
-                dnaNormalFilename, rnaNormalFilename, dnaTumorFilename, rnaTumorFilename,
-                dnaNormalFastaFilename, rnaNormalFastaFilename, dnaTumorFastaFilename, rnaTumorFastaFilename)
+                dnaNormalFilename, 
+                rnaNormalFilename,
+                dnaTumorFilename,
+                rnaTumorFilename,
+                dnaNormalFastaFilename, dnaTumorFastaFilename, rnaTumorFastaFilename)
     # triplets
     elif (rnaTumorFilename != None):
-        cmd = "python %s/radia.pyc %s %s -n %s -t %s -r %s --dnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
+        cmd = "python %s/radia.py %s %s -n %s --np %s -t %s --tp %s -r %s --rp %s --dnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
                 args.scriptsDir,
                 args.patientId, chrom,
-                dnaNormalFilename, dnaTumorFilename, rnaTumorFilename,
+                dnaNormalFilename,  
+                dnaTumorFilename, 
+                rnaTumorFilename, 
                 dnaNormalFastaFilename, dnaTumorFastaFilename, rnaTumorFastaFilename)
     # pairs
     else:
-        cmd = "python %s/radia.pyc %s %s -n %s -t %s --dnaNormalFasta %s --dnaTumorFasta %s " % (
+        cmd = "python %s/radia.py %s %s -n %s -t %s --dnaNormalFasta %s --dnaTumorFasta %s " % (
                 args.scriptsDir,
                 args.patientId, chrom,
-                dnaNormalFilename, dnaTumorFilename,
+                dnaNormalFilename,
+                dnaTumorFilename,
                 dnaNormalFastaFilename, dnaTumorFastaFilename
         )
 
-    if dnaNormalFilename is not None and bamChrScan(dnaNormalFilename):
-        cmd += ' --dnaNormalUseChr '
-    if rnaNormalFilename is not None and bamChrScan(rnaNormalFilename):
-        cmd += ' --rnaNormalUseChr '
-    if dnaTumorFilename is not None and bamChrScan(dnaTumorFilename):
-        cmd += ' --dnaTumorUseChr '
-    if rnaTumorFilename is not None and bamChrScan(rnaTumorFilename):
-        cmd += ' --rnaTumorUseChr '
+    # determine naming for chromosomes (with or without 'chr') and mitochondrion (M or something starting with M)
+    if dnaNormalFilename is not None:
+        idx = idxStats(dnaNormalFilename)
+        if bamChrScan(idx):
+            cmd += ' --dnaNormalUseChr '
+        cmd += ' --dnaNormalMitochon=' + mitName(idx)
+    if rnaNormalFilename is not None: 
+        idx = idxStats(rnaNormalFilename)
+        if bamChrScan(idx):
+            cmd += ' --rnaNormalUseChr '
+        cmd += ' --rnaNormalMitochon=' + mitName(idx)
+    if dnaTumorFilename is not None: 
+        idx = idxStats(dnaTumorFilename)
+        if bamChrScan(idx):
+            cmd += ' --dnaTumorUseChr '
+        cmd += ' --dnaTumorMitochon=' + mitName(idx)
+    if rnaTumorFilename is not None:
+        idx = idxStats(rnaTumorFilename)
+        if bamChrScan(idx):
+            cmd += ' --rnaTumorUseChr '
+        cmd += ' --rnaTumorMitochon=' + mitName(idx)
+    outfile = os.path.join(outputDir, args.patientId + "_chr" + chrom + ".vcf")
     if args.gzip:
         cmd += ' --gzip '
-    return cmd, args.outputFilename
+        outfile += '.gz'
+    return cmd, outfile
 
 
-def radiaFilter(args, chrom, rawFile, outputDir, scriptsDir, blatFastaFilename):
+def radiaMerge(args, inputDir):
+    """Merges vcf files if they follow the pattern patientID_chr<N>.vcf(.gz)"""
 
-    # python filterRadia.pyc id chrom inputFile outputDir scriptsDir [Options]
+    # python mergeChroms.py patientId /radia/filteredChroms/ /radia/filteredPatients/ --gzip
+    #  -h, --help            show this help message and exit
+    #  -o OUTPUT_FILE, --outputFilename=OUTPUT_FILE
+    #                   the name of the output file, <id>.vcf(.gz) by default
 
-    # python filterRadia.pyc TCGA-02-0047-10A-01D-1490-08_TCGA-02-0047-01A-01D-1490-08 1
-    # TCGA-02-0047-10A-01D-1490-08_TCGA-02-0047-01A-01D-1490-08_chr1.vcf.gz
-    # /radia/finalChromVCFs/
-    # /rnaEditing/scripts/
-    # --blacklistDir /rnaEditing/data/hg19/blacklists/1000Genomes/phase1/
-    # --dbSnpDir /rnaEditing/data/hg19/snp135/
-    # --retroGenesDir /rnaEditing/data/hg19/retroGenes/
-    # --pseudoGenesDir /rnaEditing/data/hg19/pseudoGenes/
-    # --cosmicDir /rnaEditing/data/hg19/cosmic/
-    # --targetDir /rnaEditing/data/hg19/broadTargets/
-    # --snpEffDir /snpEff/
-    # --rnaGeneBlckFile /rnaEditing/data/rnaGeneBlacklist.tab
-    # --rnaGeneFamilyBlckFile /rnaEditing/data/rnaGeneFamilyBlacklist.tab
-    # --blatFastaFilename hg19.fasta
-    # --canonical
-    # --log=INFO
-    # --gzip
-
-    cmd = "python %s/filterRadia.pyc %s %s %s %s %s --blatFastaFilename %s " % (
+    #  -l LOG, --log=LOG     the logging level (DEBUG, INFO, WARNING, ERROR,
+    #                        CRITICAL), WARNING by default
+    #  -g LOG_FILE, --logFilename=LOG_FILE
+    #                        the name of the log file, STDOUT by default
+    #  --gzip                include this argument if the final VCF should be
+    #                        compressed with gzip
+    # radia works in the workdir
+    cmd = "python %s/mergeChroms.py %s %s %s -o %s" % (
         args.scriptsDir,
-        args.patientId, chrom, rawFile,
-        outputDir, scriptsDir, blatFastaFilename)
-
-    if args.canonical:
-        cmd += ' --canonical '
-    if args.noBlacklist:
-        cmd += ' --noBlacklist '
-    if args.noTargets:
-        cmd += ' --noTargets '
-    if args.noDbSnp:
-        cmd += ' --noDbSnp '
-    if args.noRetroGenes:
-        cmd += ' --noRetroGenes '
-    if args.noPseudoGenes:
-        cmd += ' --noPseudoGenes '
-    if args.noCosmic:
-        cmd += ' --noCosmic '
-    if args.noBlat:
-        cmd += ' --noBlat '
-    if args.noPositionalBias:
-        cmd += ' --noPositionalBias '
-    if args.noRnaBlacklist:
-        cmd += ' --noRnaBlacklist '
-    if args.noSnpEff:
-        cmd += ' --noSnpEff '
-    if args.dnaOnly:
-        cmd += ' --dnaOnly '
-    if args.rnaOnly:
-        cmd += ' --rnaOnly '
-    if args.gzip:
-        cmd += ' --gzip '
-
-    filteredOut = outputDir + args.patientId + "_" + chrom + ".vcf"
-    return cmd, filteredOut
-
-
-def move(avant, apres):
-    if os.path.exists(avant):
-        execute("mv %s %s" %(avant, apres))
+        args.patientId, inputDir, args.workdir,
+        args.outputFilename)
+    return cmd
 
 def which(cmd):
     cmd = ["which",cmd]
@@ -201,11 +199,12 @@ def __main__():
     time.sleep(1) #small hack, sometimes it seems like docker file systems are avalible instantly
     parser = argparse.ArgumentParser(description="RNA and DNA Integrated Analysis (RADIA)")
 
-
     #############################
     #    RADIA params    #
     #############################
-    parser.add_argument("-o", "--outputFilename", dest="outputFilename", required=True, metavar="OUTPUT_FILE", help="the name of the output file")
+    parser.add_argument("-o", "--outputFilename", dest="outputFilename", required=True, metavar="OUTPUT_FILE", default='out.vcf', help="the name of the output file")
+    parser.add_argument("--outputDir", dest="outputDir", required=True, metavar="FILTER_OUT_DIR", help="the directory where temporary and final filtered output should be stored")
+    parser.add_argument("--scriptsDir", dest="scriptsDir", required=True, metavar="SCRIPTS_DIR", help="the directory that contains the RADIA filter scripts")
     parser.add_argument("--patientId", dest="patientId", required=True, metavar="PATIENT_ID", help="a unique patient Id that will be used to name the output file")
 
     parser.add_argument("-b", "--batchSize", type=int, dest="batchSize", default=int(250000000), metavar="BATCH_SIZE", help="the size of the samtool selections that are loaded into memory at one time, %default by default")
@@ -226,6 +225,7 @@ def __main__():
 
     parser.add_argument("--genotypeMinDepth", type=int, default=int(2), dest="genotypeMinDepth", metavar="GT_MIN_DP", help="the minimum number of bases required for the genotype, %default by default")
     parser.add_argument("--genotypeMinPct", type=float, default=float(.10), dest="genotypeMinPct", metavar="GT_MIN_PCT", help="the minimum percentage of reads required for the genotype, %default by default")
+    parser.add_argument("--gzip", action="store_true", default=False, dest="gzip", help="include this argument if the final VCF should be compressed with gzip")
 
     # params for normal DNA
     parser.add_argument("-n", "--dnaNormalFilename", dest="dnaNormalFilename", metavar="DNA_NORMAL_FILE", help="the name of the normal DNA .bam file")
@@ -274,43 +274,6 @@ def __main__():
     parser.add_argument("--rnaTumorFasta", dest="rnaTumorFastaFilename", metavar="RNA_TUM_FASTA_FILE", help="the name of the fasta file for the tumor RNA .bam file")
     parser.add_argument("--rnaTumorMitochon", default = "M", dest="rnaTumorMitochon", metavar="RNA_TUM_MITOCHON", help="the short name for the mitochondrial RNA (e.g 'M' or 'MT'), %default by default")
     parser.add_argument("--rnaTumorDescription", default = "Tumor RNA Sample", dest="rnaTumorDesc", metavar="RNA_TUM_DESC", help="the description for the sample in the VCF header, %default by default")
-
-
-    #############################
-    #    RADIA filter params    #
-    #############################
-    parser.add_argument("--outputDir", dest="outputDir", required=True, metavar="FILTER_OUT_DIR", help="the directory where temporary and final filtered output should be stored")
-    parser.add_argument("--scriptsDir", dest="scriptsDir", required=True, metavar="SCRIPTS_DIR", help="the directory that contains the RADIA filter scripts")
-
-    parser.add_argument("--blacklistDir", dest="blacklistDir", metavar="BLACKLIST_DIR", help="the path to the blacklist directory")
-    parser.add_argument("--targetDir", dest="targetDir", metavar="TARGET_DIR", help="the path to the exon capture targets directory")
-    parser.add_argument("--dbSnpDir", dest="dbSnpDir", metavar="SNP_DIR", help="the path to the dbSNP directory")
-    parser.add_argument("--retroGenesDir", dest="retroGenesDir", metavar="RETRO_DIR", help="the path to the retrogenes directory")
-    parser.add_argument("--pseudoGenesDir", dest="pseudoGenesDir", metavar="PSEUDO_DIR", help="the path to the pseudogenes directory")
-    parser.add_argument("--cosmicDir", dest="cosmicDir", metavar="COSMIC_DIR", help="the path to the cosmic directory")
-    parser.add_argument("--snpEffDir", dest="snpEffDir", metavar="SNP_EFF_DIR", help="the path to the snpEff directory")
-    parser.add_argument("--snpEffGenome", dest="snpEffGenome", default="GRCh37.69", metavar="SNP_EFF_GENOME", help="the snpEff Genome, %default by default")
-    parser.add_argument("--blatFastaFilename", dest="blatFastaFilename", metavar="FASTA_FILE", help="the fasta file that can be used during the BLAT filtering, default is the one specified in the VCF header")
-    parser.add_argument("--canonical", action="store_true", default=False, dest="canonical", help="include this argument if only the canonical transcripts from snpEff should be used, %default by default")
-
-    parser.add_argument("--rnaGeneBlckFile", dest="rnaGeneBlckFile", metavar="RNA_GENE_FILE", help="the RNA gene blacklist file")
-    parser.add_argument("--rnaGeneFamilyBlckFile", dest="rnaGeneFamilyBlckFile", metavar="RNA_GENE_FAMILY_FILE", help="the RNA gene family blacklist file")
-
-    # we do all filtering by default, so it's better for the user to specify --no flags to disable some filters
-    # but internally, the code is nicer if we can avoid the double negatives, so store true by default and drop the "no" in the flag name
-    parser.add_argument("--noBlacklist", action="store_false", default=True, dest="noBlacklist", help="include this argument if the blacklist filter should not be applied")
-    parser.add_argument("--noTargets", action="store_false", default=True, dest="noTargets", help="include this argument if the target filter should not be applied")
-    parser.add_argument("--noDbSnp", action="store_false", default=True, dest="noDbSnp", help="include this argument if the dbSNP info/filter should not be applied")
-    parser.add_argument("--noRetroGenes", action="store_false", default=True, dest="noRetroGenes", help="include this argument if the info/retrogenes filter should not be applied")
-    parser.add_argument("--noPseudoGenes", action="store_false", default=True, dest="noPseudoGenes", help="include this argument if the info/pseudogenes filter should not be applied")
-    parser.add_argument("--noCosmic", action="store_false", default=True, dest="noCosmic", help="include this argument if the cosmic annotation should not be applied")
-    parser.add_argument("--noBlat", action="store_false", default=True, dest="noBlat", help="include this argument if the blat filter should not be applied")
-    parser.add_argument("--noPositionalBias", action="store_false", default=True, dest="noPositionalBias", help="include this argument if the positional bias filter should not be applied")
-    parser.add_argument("--noRnaBlacklist", action="store_false", default=True, dest="noRnaBlacklist", help="include this argument if the RNA blacklist filter should not be applied")
-    parser.add_argument("--noSnpEff", action="store_false", default=True, dest="noSnpEff", help="include this argument if the snpEff annotation should not be applied (without the snpEff annotation, filtering of RNA blacklisted genes will also not be applied")
-    parser.add_argument("--dnaOnly", action="store_true", default=False, dest="dnaOnly", help="include this argument if you only have DNA or filtering should only be done on the DNA")
-    parser.add_argument("--rnaOnly", action="store_true", default=False, dest="rnaOnly", help="include this argument if the filtering should only be done on the RNA")
-    parser.add_argument("--gzip", action="store_true", default=False, dest="gzip", help="include this argument if the final VCF should be compressed with gzip")
 
 
     # some extra stuff
@@ -366,60 +329,35 @@ def __main__():
         else:
             i_rnaTumorFilename = None
 
-        # the BLAT fasta file is different from the other ones, it should contain the extra contigs and hla genes
-        if (args.blatFastaFilename != None):
-            blatFastaFile = indexFasta(args.workdir, args.blatFastaFilename, args.blatFastaFilename + ".fai", "blat")
-        else:
-            blatFastaFile = None
-
-
+        radiaOuts = []
+        chroms = get_bam_seq(i_dnaNormalFilename)
         if args.procs == 1:
-            chroms = get_bam_seq(i_dnaNormalFilename)
             for chrom in chroms:
-                # first run the RADIA command
-                cmd, rawOutput = radia(chrom, args,
+                cmd, radiaOutput = radia(chrom, args, tempDir,  
                             i_dnaNormalFilename, i_rnaNormalFilename, i_dnaTumorFilename, i_rnaTumorFilename,
                             i_dnaNormalFastaFilename, i_rnaNormalFastaFilename, i_dnaTumorFastaFilename, i_rnaTumorFastaFilename)
-                if execute(cmd):
+                if execute([cmd, radiaOutput]):
                     raise Exception("Radia Call failed")
-                # then filter it
-                cmd, out = radiaFilter(args=args, chrom=chrom, rawFile=rawOutput, outputDir=args.outputDir, scriptsDir=args.scriptsDir, blatFastaFilename=blatFastaFile)
-                if execute(cmd):
-                    raise Exception("RadiaFilter Call failed")
+                radiaOuts.append(radiaOutput)
         else:
-            chroms = get_bam_seq(i_dnaNormalFilename)
             cmds = []
-            rawOuts = []
             for chrom in chroms:
                 # create the RADIA commands
-                cmd, rawOutput = radia(chrom, args,
+                cmd, radiaOutput = radia(chrom, args, tempDir,
                             i_dnaNormalFilename, i_rnaNormalFilename, i_dnaTumorFilename, i_rnaTumorFilename,
                             i_dnaNormalFastaFilename, i_rnaNormalFastaFilename, i_dnaTumorFastaFilename, i_rnaTumorFastaFilename)
                 cmds.append(cmd)
-                rawOuts.append(rawOutput)
-
+                radiaOuts.append(radiaOutput)
             p = Pool(args.procs)
-            values = p.map(execute, cmds, 1)
+            # pool.map only accepts one input, so make that a list
+            combiCmds = zip(cmds, radiaOuts)
+            values = p.map(execute, combiCmds, 1)
 
-            cmds = []
-            filteredOuts = []
-            for rawOutput in rawOuts:
-                # create the filter commands
-                cmd, filteredOut = radiaFilter(args=args, chrom=chrom, rawFile=rawOutput, outputDir=args.outputDir, scriptsDir=args.scriptsDir, blatFastaFilename=blatFastaFile)
-                cmds.append(cmd)
-                filteredOuts.append(filteredOut)
-            values = p.map(execute, cmds, 1)
-
-            vcf_writer = None
-            for file in filteredOuts:
-                print file
-                vcf_reader = vcf.Reader(filename=file)
-                if vcf_writer is None:
-                    vcf_writer = vcf.Writer(open(args.outputVcfFile, "w"), vcf_reader)
-                for record in vcf_reader:
-                    vcf_writer.write_record(record)
-            vcf_writer.close()
-
+        # even though we have a list of radia output files, we don't really need it:
+        # the radiaMerge command only uses the output directory and patient name
+	cmd = radiaMerge(args, tempDir)
+        if execute([cmd]):
+            raise Exception("RadiaMerge Call failed")
     finally:
         if not args.no_clean and os.path.exists(tempDir):
             shutil.rmtree(tempDir)
