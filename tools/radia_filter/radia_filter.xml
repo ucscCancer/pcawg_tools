@@ -17,7 +17,7 @@
       </macro>
     </macros>
     <requirements>
-      <container type="docker">radia:1.1.3</container>
+      <container type="docker">radia:1.1.4</container>
     </requirements>
     <stdio>
         <exit_code range="1:" />
@@ -69,6 +69,9 @@ radia_filter.py
 #if $target.use == "yes":
 --targetFilename ${target.filterfile}
 #end if
+#if $dbsnp.use == "yes":
+--snpFilename ${dbsnp.filterfile}
+#end if
 #if $retrogenes.use == "yes":
 --retroGenesFilename ${retrogenes.filterfile}
 #end if
@@ -80,11 +83,12 @@ radia_filter.py
 #end if
 #if $snpeff.use == "yes":
 --snpEffFilename ${snpeff.zipfile}
+${snpeff.canonical}
 --snpEffDir /opt/snpEff
 #end if
 
 --outputDir ./
---scriptsDir /opt/radia-1.1.3/scripts/
+--scriptsDir /opt/radia-1.1.4/scripts/
 
     ]]></command>
     <inputs>
@@ -92,6 +96,7 @@ radia_filter.py
       <param name="patientId" label="Patient ID" type="text" value="MyPatient" help=""/>
       <param name="inputVCF" label="Radia VCF" type="data" format="vcf" help="Radia output vcf file"/>
       <param name="inputFasta" label="Universal fasta file used to create Bam files" type="data" format="fasta" help="Fasta file used to create all Bam files"/>
+
 
       <conditional name="dnaNormal">
         <param name="use" type="select" label="Use DNA Normal">
@@ -168,7 +173,7 @@ radia_filter.py
           <option value="no" selected="True">no</option>
         </param>
         <when value="yes">
-          <expand macro="input_filter"/>
+          <param name="filterfile" label="InputFile" type="data" format="vcf" help="dbSNP vcf file"/>
         </when>
       </conditional>
 
@@ -209,6 +214,7 @@ radia_filter.py
         </param>
         <when value="yes">
            <param name="zipfile" label="inputFile" type="data" format="snpeffdb" help="SnpEff zipped input file"/>
+           <param name="canonical" type="boolean" truevalue="--canonical" falsevalue="" label="use only canonical transcripts"/>
         </when>
       </conditional>
 

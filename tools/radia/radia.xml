@@ -10,7 +10,7 @@
       </macro>
     </macros>
     <requirements>
-      <container type="docker">radia:1.1.3</container>
+      <container type="docker">radia:1.1.4</container>
     </requirements>
     <stdio>
         <exit_code range="1:" />
@@ -79,7 +79,7 @@ radia.py
 #end if
 
 --outputDir ./
---scriptsDir /opt/radia-1.1.3/scripts/
+--scriptsDir /opt/radia-1.1.4/scripts/
 
     ]]></command>
     <inputs>
