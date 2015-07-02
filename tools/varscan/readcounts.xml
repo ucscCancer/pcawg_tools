@@ -1,12 +1,12 @@
-<tool id="varscan_readcounts" name="VarScan Readcounts" version="2.3.8">
+<tool id="varscan_readcounts" name="VarScan Readcounts" version="2.3.9">
   <description>
     count reads
   </description>
   <requirements>
-    <container type="docker">varscan:2.3.8</container>
+    <container type="docker">varscan:2.3.9</container>
   </requirements>
   <command>
-java -Xmx7g -jar /opt/VarScan.v2.3.8.jar
+java -Xmx7g -jar /opt/VarScan.jar
 readcounts
 $pileup
 --variants-file $variants_file
@@ -15,7 +15,7 @@ $pileup
 --output-file $output_file
   </command>
   <inputs>
-    <param name="normal" type="data" format="pileup" label="normal mpileup file" help="The SAMtools mpileup file for normal sample" />
+    <param name="pileup" type="data" format="pileup" label="mpileup file" help="The SAMtools mpileup file" />
     <param name="variants_file" type="data" format="vcf" label="Variant File" help="A file of SNPs or indels in VCF format" />
     <param name="min_coverage" type="integer" label="Min Coverage" help="Minimum read depth at a position to make a call" value="1"/>
     <param name="min_base_qual" type="integer" label="Min Base Qual" help="Minimum base quality at a position to count a read" value="20"/>

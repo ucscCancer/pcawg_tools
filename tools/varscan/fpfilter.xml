@@ -1,13 +1,13 @@
-<tool id="varscan_fpfilter" name="VarScan FPFilter" version="2.3.8">
+<tool id="varscan_fpfilter" name="VarScan FPFilter" version="2.3.9">
   <description>
     filter variants
   </description>
   <requirements>
-    <container type="docker">varscan:2.3.8</container>
+    <container type="docker">varscan:2.3.9</container>
   </requirements>
 
   <command>
-java -Xmx7g -jar /opt/VarScan.v2.3.8.jar
+java -Xmx7g -jar /opt/VarScan.jar
 fpfilter
 $variant_file
 $readcount_file
