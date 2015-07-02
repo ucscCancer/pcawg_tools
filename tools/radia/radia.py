@@ -78,46 +78,80 @@ def bamChrScan(idx):
             found = True
     return found
 
+
+def addNumsAndQuals(args, cmd, sample):
+    """Append mapping quality parameters to radia command"""
+    if sample == 'dnaNormal':
+        cmd+= " --dnaNormalMinTotalBases %d --dnaNormalMinAltBases %d --dnaNormalBaseQual %d --dnaNormalMapQual %d" % (
+            args.dnaNormalMinTotalBases,
+            args.dnaNormalMinAltBases,
+            args.dnaNormalMinBaseQual,
+            args.dnaNormalMinMappingQual)
+        return cmd
+
+    if sample == 'dnaTumor':
+        cmd+= " --dnaTumorMinTotalBases %d --dnaTumorMinAltBases %d --dnaTumorBaseQual %d --dnaTumorMapQual %d" % (
+            args.dnaTumorMinTotalBases,
+            args.dnaTumorMinAltBases,
+            args.dnaTumorMinBaseQual,
+            args.dnaTumorMinMappingQual)
+        return cmd
+
+    if sample == 'rnaNormal':
+        cmd+= " --rnaNormalMinTotalBases %d --rnaNormalMinAltBases %d --rnaNormalBaseQual %d --rnaNormalMapQual %d" % (
+            args.rnaNormalMinTotalBases,
+            args.rnaNormalMinAltBases,
+            args.rnaNormalMinBaseQual,
+            args.rnaNormalMinMappingQual)
+        return cmd
+
+    if sample == 'rnaTumor':
+        cmd+= " --rnaTumorMinTotalBases %d --rnaTumorMinAltBases %d --rnaTumorBaseQual %d --rnaTumorMapQual %d" % (
+            args.rnaTumorMinTotalBases,
+            args.rnaTumorMinAltBases,
+            args.rnaTumorMinBaseQual,
+            args.rnaTumorMinMappingQual)
+        return cmd
+
+
 def radia(chrom, args, outputDir, 
           dnaNormalFilename=None, rnaNormalFilename=None, dnaTumorFilename=None, rnaTumorFilename=None,
           dnaNormalFastaFilename=None, rnaNormalFastaFilename=None, dnaTumorFastaFilename=None, rnaTumorFastaFilename=None):
 
     # python radia.py id chrom [Options]
 
-    # python radia.py TCGA-02-0047 1
-    # -n TCGA-02-0047-10A-01D-1490-08.bam
-    # -t TCGA-02-0047-01A-01D-1490-08.bam
-    # -r TCGA-02-0047-01A*.bam
-    # --rnaTumorUseChr
-    # --rnaTumorFasta=GRCh37-lite_w_chr_prefix.fa
-    # -f Homo_sapiens_assembly19.fasta
-    # -o TCGA-02-0047-10A-01D-1490-08_TCGA-02-0047-01A-01D-1490-08_chr1.vcf.gz
     # -i GRCh37
     # -m Homo_sapiens_assembly19.fasta
     # -d CGHub
     # -q Illumina
     # --disease GBM
-    # --log=INFO
 
     # quadruplets
     if (rnaNormalFilename != None and rnaTumorFilename != None):
-        cmd = "python %s/radia.py %s %s -n %s --np %s -x %s --xp %s -t %s --tp %s -r %s --rp %s --dnaNormalFasta %s --rnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
+        cmd = "python %s/radia.py %s %s -n %s -x %s  -t %s -r %s  --dnaNormalFasta %s --rnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
                 args.scriptsDir,
                 args.patientId, chrom,
                 dnaNormalFilename, 
                 rnaNormalFilename,
                 dnaTumorFilename,
                 rnaTumorFilename,
-                dnaNormalFastaFilename, dnaTumorFastaFilename, rnaTumorFastaFilename)
+                dnaNormalFastaFilename, rnaNormalFastaFilename, dnaTumorFastaFilename, rnaTumorFastaFilename)
+        cmd = addNumsAndQuals(args, cmd, "dnaNormal")
+        cmd = addNumsAndQuals(args, cmd, "dnaTumor")
+        cmd = addNumsAndQuals(args, cmd, "rnaTumor")
+        cmd = addNumsAndQuals(args, cmd, "rnaNormal")
     # triplets
     elif (rnaTumorFilename != None):
-        cmd = "python %s/radia.py %s %s -n %s --np %s -t %s --tp %s -r %s --rp %s --dnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
+        cmd = "python %s/radia.py %s %s -n %s -t %s -r %s --dnaNormalFasta %s --dnaTumorFasta %s --rnaTumorFasta %s " %(
                 args.scriptsDir,
                 args.patientId, chrom,
                 dnaNormalFilename,  
                 dnaTumorFilename, 
                 rnaTumorFilename, 
                 dnaNormalFastaFilename, dnaTumorFastaFilename, rnaTumorFastaFilename)
+        cmd = addNumsAndQuals(args, cmd, "dnaNormal")
+        cmd = addNumsAndQuals(args, cmd, "dnaTumor")
+        cmd = addNumsAndQuals(args, cmd, "rnaTumor")
     # pairs
     else:
         cmd = "python %s/radia.py %s %s -n %s -t %s --dnaNormalFasta %s --dnaTumorFasta %s " % (
@@ -125,8 +159,9 @@ def radia(chrom, args, outputDir,
                 args.patientId, chrom,
                 dnaNormalFilename,
                 dnaTumorFilename,
-                dnaNormalFastaFilename, dnaTumorFastaFilename
-        )
+                dnaNormalFastaFilename, dnaTumorFastaFilename)
+        cmd = addNumsAndQuals(args, cmd, "dnaNormal")
+        cmd = addNumsAndQuals(args, cmd, "dnaTumor")
 
     # determine naming for chromosomes (with or without 'chr') and mitochondrion (M or something starting with M)
     if dnaNormalFilename is not None:
@@ -149,6 +184,27 @@ def radia(chrom, args, outputDir,
         if bamChrScan(idx):
             cmd += ' --rnaTumorUseChr '
         cmd += ' --rnaTumorMitochon=' + mitName(idx)
+
+    # add genotype parameters
+        cmd += ' --genotypeMinDepth %d --genotypeMinPct %.3f' % (
+            args.genotypeMinDepth,
+            args.genotypeMinPct)
+
+    # vcf header arguments
+        if args.refId:
+            cmd += ' --refId %s' % args.refId
+        if args.refUrl:
+            cmd += ' --refUrl %s' % args.refUrl
+        # this isn't implemented yet
+        if args.refFilename:
+            cmd += ' --refFilename %s' % args.refFilename
+        if args.dataSource:
+            cmd += ' --dataSource %s' % args.dataSource
+        if args.sequencingPlatform:
+            cmd += ' --sequencingPlatform %s' % args.sequencingPlatform
+        if args.disease:
+            cmd+= ' --disease %s' % args.disease
+
     outfile = os.path.join(outputDir, args.patientId + "_chr" + chrom + ".vcf")
     if args.gzip:
         cmd += ' --gzip '
@@ -209,22 +265,23 @@ def __main__():
     parser.add_argument("--scriptsDir", dest="scriptsDir", required=True, metavar="SCRIPTS_DIR", help="the directory that contains the RADIA filter scripts")
     parser.add_argument("--patientId", dest="patientId", required=True, metavar="PATIENT_ID", help="a unique patient Id that will be used to name the output file")
 
-    parser.add_argument("-b", "--batchSize", type=int, dest="batchSize", default=int(250000000), metavar="BATCH_SIZE", help="the size of the samtool selections that are loaded into memory at one time, %default by default")
-    parser.add_argument("-c", "--chromSizesFilename", dest="chromSizesFilename", metavar="CHROM_SIZES_FILE", help="the name of the file with the chromosome sizes")
     parser.add_argument("-f", "--fastaFilename", dest="fastaFilename", metavar="FASTA_FILE", help="the name of the fasta file that can be used on all .bams, see below for specifying individual fasta files for each .bam file")
     parser.add_argument("-p", "--useChrPrefix", action="store_true", default=False, dest="useChrPrefix", help="include this argument if the 'chr' prefix should be used in the samtools command for all .bams, see below for specifying the prefix for individual .bam files")
     parser.add_argument("-l", "--log", dest="logLevel", default="WARNING", metavar="LOG", help="the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL), %default by default")
-    parser.add_argument("-g", "--logFilename", dest="logFilename", metavar="LOG_FILE", help="the name of the log file, STDOUT by default")
     parser.add_argument("-i", "--refId", dest="refId", metavar="REF_ID", help="the reference Id - used in the reference VCF meta tag")
     parser.add_argument("-u", "--refUrl", dest="refUrl", metavar="REF_URL", help="the URL for the reference - used in the reference VCF meta tag")
     parser.add_argument("-m", "--refFilename", dest="refFilename", metavar="REF_FILE", help="the location of the reference - used in the reference VCF meta tag")
+##### not implemented in galaxy wrapper  ####
     parser.add_argument("-a", "--startCoordinate", type=int, default=int(1), dest="startCoordinate", metavar="START_COORDINATE", help="the start coordinate for testing small regions, %default by default")
     parser.add_argument("-z", "--stopCoordinate", type=int, default=int(0), dest="stopCoordinate", metavar="STOP_COORDINATE", help="the stop coordinate for testing small regions, %default by default")
+    parser.add_argument("-s", "--statsDir", dest="statsDir", metavar="STATS_DIR", help="a stats directory where some basic stats can be output")
+    parser.add_argument("-g", "--logFilename", dest="logFilename", metavar="LOG_FILE", help="the name of the log file, STDOUT by default")
+    parser.add_argument("-b", "--batchSize", type=int, dest="batchSize", default=int(250000000), metavar="BATCH_SIZE", help="the size of the samtool selections that are loaded into memory at one time, %default by default")
+    parser.add_argument("-c", "--chromSizesFilename", dest="chromSizesFilename", metavar="CHROM_SIZES_FILE", help="the name of the file with the chromosome sizes")
+############################################
     parser.add_argument("-d", "--dataSource", dest="dataSource", metavar="DATA_SOURCE", help="the source of the data - used in the sample VCF meta tag")
     parser.add_argument("-q", "--sequencingPlatform", dest="sequencingPlatform", metavar="SEQ_PLATFORM", help="the sequencing platform - used in the sample VCF meta tag")
-    parser.add_argument("-s", "--statsDir", dest="statsDir", metavar="STATS_DIR", help="a stats directory where some basic stats can be output")
     parser.add_argument("--disease", dest="disease", metavar="DISEASE", help="a disease abbreviation (i.e. BRCA) for the header")
-
     parser.add_argument("--genotypeMinDepth", type=int, default=int(2), dest="genotypeMinDepth", metavar="GT_MIN_DP", help="the minimum number of bases required for the genotype, %default by default")
     parser.add_argument("--genotypeMinPct", type=float, default=float(.10), dest="genotypeMinPct", metavar="GT_MIN_PCT", help="the minimum percentage of reads required for the genotype, %default by default")
     parser.add_argument("--gzip", action="store_true", default=False, dest="gzip", help="include this argument if the final VCF should be compressed with gzip")
@@ -232,55 +289,47 @@ def __main__():
     # params for normal DNA
     parser.add_argument("-n", "--dnaNormalFilename", dest="dnaNormalFilename", metavar="DNA_NORMAL_FILE", help="the name of the normal DNA .bam file")
     parser.add_argument("--dnaNormalBaiFilename", dest="dnaNormalBaiFilename", metavar="DNA_NORMAL_BAI_FILE", help="the name of the normal DNA .bai file")
-    parser.add_argument("--dnaNormalMinTotalBases", type=int, default=int(4), dest="dnaNormalMinTotalNumBases", metavar="DNA_NOR_MIN_TOTAL_BASES", help="the minimum number of overall normal DNA reads covering a position, %default by default")
-    parser.add_argument("--dnaNormalMinAltBases", type=int, default=int(2), dest="dnaNormalMinAltNumBases", metavar="DNA_NOR_MIN_ALT_BASES", help="the minimum number of alternative normal DNA reads supporting a variant at a position, %default by default")
-    parser.add_argument("--dnaNormalBaseQual", type=int, default=int(10), dest="dnaNormalMinBaseQuality", metavar="DNA_NOR_BASE_QUAL", help="the minimum normal DNA base quality, %default by default")
-    parser.add_argument("--dnaNormalMapQual", type=int, default=int(10), dest="dnaNormalMinMappingQuality", metavar="DNA_NOR_MAP_QUAL", help="the minimum normal DNA mapping quality, %default by default")
-    parser.add_argument("--dnaNormalUseChr", action="store_true", default=False, dest="dnaNormalUseChrPrefix", help="include this argument if the 'chr' prefix should be used in the samtools command for the normal DNA .bam file")
+    parser.add_argument("--dnaNormalMinTotalBases", type=int, default=int(4), dest="dnaNormalMinTotalBases", metavar="DNA_NOR_MIN_TOTAL_BASES", help="the minimum number of overall normal DNA reads covering a position, %default by default")
+    parser.add_argument("--dnaNormalMinAltBases", type=int, default=int(2), dest="dnaNormalMinAltBases", metavar="DNA_NOR_MIN_ALT_BASES", help="the minimum number of alternative normal DNA reads supporting a variant at a position, %default by default")
+    parser.add_argument("--dnaNormalBaseQual", type=int, default=int(10), dest="dnaNormalMinBaseQual", metavar="DNA_NOR_BASE_QUAL", help="the minimum normal DNA base quality, %default by default")
+    parser.add_argument("--dnaNormalMapQual", type=int, default=int(10), dest="dnaNormalMinMappingQual", metavar="DNA_NOR_MAP_QUAL", help="the minimum normal DNA mapping quality, %default by default")
     parser.add_argument("--dnaNormalFasta", dest="dnaNormalFastaFilename", metavar="DNA_NOR_FASTA_FILE", help="the name of the fasta file for the normal DNA .bam file")
-    parser.add_argument("--dnaNormalMitochon", default = "M", dest="dnaNormalMitochon", metavar="DNA_NOR_MITOCHON", help="the short name for the mitochondrial DNA (e.g 'M' or 'MT'), %default by default")
     parser.add_argument("--dnaNormalDescription", default = "Normal DNA Sample", dest="dnaNormalDesc", metavar="DNA_NOR_DESC", help="the description for the sample in the VCF header, %default by default")
 
     # params for normal RNA
     parser.add_argument("-x", "--rnaNormalFilename", dest="rnaNormalFilename", metavar="RNA_NORMAL_FILE", help="the name of the normal RNA-Seq .bam file")
     parser.add_argument("--rnaNormalBaiFilename", dest="rnaNormalBaiFilename", metavar="RNA_NORMAL_BAI_FILE", help="the name of the normal RNA .bai file")
-    parser.add_argument("--rnaNormalMinTotalBases", type=int, default=int(4), dest="rnaNormalMinTotalNumBases", metavar="RNA_NOR_MIN_TOTAL_BASES", help="the minimum number of overall normal RNA-Seq reads covering a position, %default by default")
-    parser.add_argument("--rnaNormalMinAltBases", type=int, default=int(2), dest="rnaNormalMinAltNumBases", metavar="RNA_NOR_MIN_ALT_BASES", help="the minimum number of alternative normal RNA-Seq reads supporting a variant at a position, %default by default")
-    parser.add_argument("--rnaNormalBaseQual", type=int, default=int(10), dest="rnaNormalMinBaseQuality", metavar="RNA_NOR_BASE_QUAL", help="the minimum normal RNA-Seq base quality, %default by default")
-    parser.add_argument("--rnaNormalMapQual", type=int, default=int(10), dest="rnaNormalMinMappingQuality", metavar="RNA_NOR_MAP_QUAL", help="the minimum normal RNA-Seq mapping quality, %default by default")
-    parser.add_argument("--rnaNormalUseChr", action="store_true", default=False, dest="rnaNormalUseChrPrefix", help="include this argument if the 'chr' prefix should be used in the samtools command for the normal RNA .bam file")
+    parser.add_argument("--rnaNormalMinTotalBases", type=int, default=int(4), dest="rnaNormalMinTotalBases", metavar="RNA_NOR_MIN_TOTAL_BASES", help="the minimum number of overall normal RNA-Seq reads covering a position, %default by default")
+    parser.add_argument("--rnaNormalMinAltBases", type=int, default=int(2), dest="rnaNormalMinAltBases", metavar="RNA_NOR_MIN_ALT_BASES", help="the minimum number of alternative normal RNA-Seq reads supporting a variant at a position, %default by default")
+    parser.add_argument("--rnaNormalBaseQual", type=int, default=int(10), dest="rnaNormalMinBaseQual", metavar="RNA_NOR_BASE_QUAL", help="the minimum normal RNA-Seq base quality, %default by default")
+    parser.add_argument("--rnaNormalMapQual", type=int, default=int(10), dest="rnaNormalMinMappingQual", metavar="RNA_NOR_MAP_QUAL", help="the minimum normal RNA-Seq mapping quality, %default by default")
     parser.add_argument("--rnaNormalFasta", dest="rnaNormalFastaFilename", metavar="RNA_NOR_FASTA_FILE", help="the name of the fasta file for the normal RNA .bam file")
-    parser.add_argument("--rnaNormalMitochon", default = "M", dest="rnaNormalMitochon", metavar="RNA_NOR_MITOCHON", help="the short name for the mitochondrial RNA (e.g 'M' or 'MT'), %default by default")
     parser.add_argument("--rnaNormalDescription", default = "Normal RNA Sample", dest="rnaNormalDesc", metavar="RNA_NOR_DESC", help="the description for the sample in the VCF header, %default by default")
 
     # params for tumor DNA
     parser.add_argument("-t", "--dnaTumorFilename", dest="dnaTumorFilename", metavar="DNA_TUMOR_FILE", help="the name of the tumor DNA .bam file")
     parser.add_argument("--dnaTumorBaiFilename", dest="dnaTumorBaiFilename", metavar="DNA_TUMOR_BAI_FILE", help="the name of the tumor DNA .bai file")
-    parser.add_argument("--dnaTumorMinTotalBases", type=int, default=int(4), dest="dnaTumorMinTotalNumBases", metavar="DNA_TUM_MIN_TOTAL_BASES", help="the minimum number of overall tumor DNA reads covering a position, %default by default")
-    parser.add_argument("--dnaTumorMinAltBases", type=int, default=int(2), dest="dnaTumorMinAltNumBases", metavar="DNA_TUM_MIN_ALT_BASES", help="the minimum number of alternative tumor DNA reads supporting a variant at a position, %default by default")
-    parser.add_argument("--dnaTumorBaseQual", type=int, default=int(10), dest="dnaTumorMinBaseQuality", metavar="DNA_TUM_BASE_QUAL", help="the minimum tumor DNA base quality, %default by default")
-    parser.add_argument("--dnaTumorMapQual", type=int, default=int(10), dest="dnaTumorMinMappingQuality", metavar="DNA_TUM_MAP_QUAL", help="the minimum tumor DNA mapping quality, %default by default")
-    parser.add_argument("--dnaTumorUseChr", action="store_true", default=False, dest="dnaTumorUseChrPrefix", help="include this argument if the 'chr' prefix should be used in the samtools command for the tumor DNA .bam file")
+    parser.add_argument("--dnaTumorMinTotalBases", type=int, default=int(4), dest="dnaTumorMinTotalBases", metavar="DNA_TUM_MIN_TOTAL_BASES", help="the minimum number of overall tumor DNA reads covering a position, %default by default")
+    parser.add_argument("--dnaTumorMinAltBases", type=int, default=int(2), dest="dnaTumorMinAltBases", metavar="DNA_TUM_MIN_ALT_BASES", help="the minimum number of alternative tumor DNA reads supporting a variant at a position, %default by default")
+    parser.add_argument("--dnaTumorBaseQual", type=int, default=int(10), dest="dnaTumorMinBaseQual", metavar="DNA_TUM_BASE_QUAL", help="the minimum tumor DNA base quality, %default by default")
+    parser.add_argument("--dnaTumorMapQual", type=int, default=int(10), dest="dnaTumorMinMappingQual", metavar="DNA_TUM_MAP_QUAL", help="the minimum tumor DNA mapping quality, %default by default")
     parser.add_argument("--dnaTumorFasta", dest="dnaTumorFastaFilename", metavar="DNA_TUM_FASTA_FILE", help="the name of the fasta file for the tumor DNA .bam file")
-    parser.add_argument("--dnaTumorMitochon", default = "M", dest="dnaTumorMitochon", metavar="DNA_TUM_MITOCHON", help="the short name for the mitochondrial DNA (e.g 'M' or 'MT'), %default by default")
     parser.add_argument("--dnaTumorDescription", default = "Tumor DNA Sample", dest="dnaTumorDesc", metavar="DNA_TUM_DESC", help="the description for the sample in the VCF header, %default by default")
 
     # params for tumor RNA
     parser.add_argument("-r", "--rnaTumorFilename", dest="rnaTumorFilename", metavar="RNA_TUMOR_FILE", help="the name of the tumor RNA-Seq .bam file")
     parser.add_argument("--rnaTumorBaiFilename", dest="rnaTumorBaiFilename", metavar="RNA_TUMOR_BAI_FILE", help="the name of the tumor RNA .bai file")
-    parser.add_argument("--rnaTumorMinTotalBases", type=int, default=int(4), dest="rnaTumorMinTotalNumBases", metavar="RNA_TUM_MIN_TOTAL_BASES", help="the minimum number of overall tumor RNA-Seq reads covering a position, %default by default")
-    parser.add_argument("--rnaTumorMinAltBases", type=int, default=int(2), dest="rnaTumorMinAltNumBases", metavar="RNA_TUM_MIN_ALT_BASES", help="the minimum number of alternative tumor RNA-Seq reads supporting a variant at a position, %default by default")
-    parser.add_argument("--rnaTumorBaseQual", type=int, default=int(10), dest="rnaTumorMinBaseQuality", metavar="RNA_TUM_BASE_QUAL", help="the minimum tumor RNA-Seq base quality, %default by default")
-    parser.add_argument("--rnaTumorMapQual", type=int, default=int(10), dest="rnaTumorMinMappingQuality", metavar="RNA_TUM_MAP_QUAL", help="the minimum tumor RNA-Seq mapping quality, %default by default")
-    parser.add_argument("--rnaTumorUseChr", action="store_true", default=False, dest="rnaTumorUseChrPrefix", help="include this argument if the 'chr' prefix should be used in the samtools command for the tumor RNA .bam file")
+    parser.add_argument("--rnaTumorMinTotalBases", type=int, default=int(4), dest="rnaTumorMinTotalBases", metavar="RNA_TUM_MIN_TOTAL_BASES", help="the minimum number of overall tumor RNA-Seq reads covering a position, %default by default")
+    parser.add_argument("--rnaTumorMinAltBases", type=int, default=int(2), dest="rnaTumorMinAltBases", metavar="RNA_TUM_MIN_ALT_BASES", help="the minimum number of alternative tumor RNA-Seq reads supporting a variant at a position, %default by default")
+    parser.add_argument("--rnaTumorBaseQual", type=int, default=int(10), dest="rnaTumorMinBaseQual", metavar="RNA_TUM_BASE_QUAL", help="the minimum tumor RNA-Seq base quality, %default by default")
+    parser.add_argument("--rnaTumorMapQual", type=int, default=int(10), dest="rnaTumorMinMappingQual", metavar="RNA_TUM_MAP_QUAL", help="the minimum tumor RNA-Seq mapping quality, %default by default")
     parser.add_argument("--rnaTumorFasta", dest="rnaTumorFastaFilename", metavar="RNA_TUM_FASTA_FILE", help="the name of the fasta file for the tumor RNA .bam file")
-    parser.add_argument("--rnaTumorMitochon", default = "M", dest="rnaTumorMitochon", metavar="RNA_TUM_MITOCHON", help="the short name for the mitochondrial RNA (e.g 'M' or 'MT'), %default by default")
     parser.add_argument("--rnaTumorDescription", default = "Tumor RNA Sample", dest="rnaTumorDesc", metavar="RNA_TUM_DESC", help="the description for the sample in the VCF header, %default by default")
 
 
     # some extra stuff
     parser.add_argument('--number_of_threads', dest='number_of_threads', type=int, default='1')
-    parser.add_argument('--number_of_procs', dest='procs', type=int, default=1)
+    parser.add_argument('--number_of_procs', dest='procs', type=int, default=2)
     parser.add_argument('--workdir', default="./")
     parser.add_argument('--no_clean', action="store_true", default=False)
 
@@ -334,16 +383,20 @@ def __main__():
         radiaOuts = []
         chroms = get_bam_seq(i_dnaNormalFilename)
         if args.procs == 1:
-            for chrom in chroms:
+            #for chrom in chroms:
+            for chrom in ["21","22"]:
                 cmd, radiaOutput = radia(chrom, args, tempDir,  
-                            i_dnaNormalFilename, i_rnaNormalFilename, i_dnaTumorFilename, i_rnaTumorFilename,
-                            i_dnaNormalFastaFilename, i_rnaNormalFastaFilename, i_dnaTumorFastaFilename, i_rnaTumorFastaFilename)
+                     dnaNormalFilename=i_dnaNormalFilename, rnaNormalFilename=i_rnaNormalFilename, 
+                     dnaTumorFilename=i_dnaTumorFilename, rnaTumorFilename=i_rnaTumorFilename,
+                     dnaNormalFastaFilename=i_dnaNormalFastaFilename, rnaNormalFastaFilename=i_rnaNormalFastaFilename, 
+                     dnaTumorFastaFilename=i_dnaTumorFastaFilename, rnaTumorFastaFilename=i_rnaTumorFastaFilename)
                 if execute([cmd, radiaOutput]):
                     raise Exception("Radia Call failed")
                 radiaOuts.append(radiaOutput)
         else:
             cmds = []
-            for chrom in chroms:
+            #for chrom in chroms:
+            for chrom in ["21","22"]:
                 # create the RADIA commands
                 cmd, radiaOutput = radia(chrom, args, tempDir,
                             i_dnaNormalFilename, i_rnaNormalFilename, i_dnaTumorFilename, i_rnaTumorFilename,
