@@ -45,7 +45,9 @@ fpfilter.pl
   <outputs>
     <data format="vcf" name="output" label="Filtered VCF" />
   </outputs>
-
+  <stdio>
+    <exit_code range="1:" level="fatal" />
+  </stdio>
   <help>
     --vcf-file              the input VCF file. Must have a GT field.
     --bam-file              the BAM file of the sample you are filtering on. Typically the tumor.
