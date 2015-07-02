@@ -79,16 +79,16 @@
 
             <!-- Miscellaneous parameters -->
         #if str($options_miscellaneous.options_miscellaneous_selector) == "yes":
-            #if $breakdancer.checking == "yes":
-                -input1 $breakdancer.input1
+            #if $options_miscellaneous.breakdancer.checking == "yes":
+                -input1 $options_miscellaneous.breakdancer.input1
             #end if
 
-            #if $IndelCorrection:
+            #if $options_miscellaneous.IndelCorrection:
                 -C
             #end if
 
-            #if $input_SV_Calls_for_assembly.checking == "yes":
-                -z $input_SV_Calls_for_assembly.input_SV_Calls
+            #if $options_miscellaneous.input_SV_Calls_for_assembly.checking == "yes":
+                -z $options_miscellaneous.input_SV_Calls_for_assembly.input_SV_Calls
             #end if
 
             #if str($options_miscellaneous.exclude_list) != "None":
