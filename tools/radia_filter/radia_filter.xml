@@ -36,6 +36,9 @@ radia_filter.py
 #if $dnaNormal.use == "yes":
 --dnaNormalFilename ${dnaNormal.inputbam}
 --dnaNormalBaiFilename ${dnaNormal.inputbam.metadata.bam_index}
+#if $dnaNormal.fasta.use == "yes"
+--dnaNormalFastaFilename ${dnaTumor.fasta.inputfasta}
+#end if
 #end if
 
 ## params for tumor DNA
@@ -59,6 +62,7 @@ radia_filter.py
 --rnaTumorBaiFilename ${rnaTumor.inputbam.metadata.bam_index}
 #if $rnaTumor.blat.useBlat == "yes":
 --blatFastaFilename ${rnaTumor.blat.filterfile}
+${rnaTumor.blat.positional}
 #end if
 #end if
 
@@ -85,6 +89,10 @@ radia_filter.py
 --snpEffFilename ${snpeff.zipfile}
 ${snpeff.canonical}
 --snpEffDir /opt/snpEff
+#if $snpeff.rnaBlacklist.useRB == "yes":
+--rnaGeneBlckFile ${snpeff.rnaBlacklist.rnaBlacklistFile}
+--rnaGeneFamilyBlckFile ${snpeff.rnaBlacklist.rnaBlacklistFamily}
+#end if
 #end if
 
 --outputDir ./
@@ -142,6 +150,7 @@ ${snpeff.canonical}
               </param>
               <when value="yes">
                   <param name="filterfile" label="InputFile" type="data" format="fasta" help="Genome fasta file for blat"/>
+                  <param name="positional" type="boolean" truevalue="--noPositionalBias" falsevalue="" label="Use positional bias?"/>
               </when>
           </conditional>
         </when>
@@ -215,18 +224,21 @@ ${snpeff.canonical}
         <when value="yes">
            <param name="zipfile" label="inputFile" type="data" format="snpeffdb" help="SnpEff zipped input file"/>
            <param name="canonical" type="boolean" truevalue="--canonical" falsevalue="" label="use only canonical transcripts"/>
+           <conditional name="rnaBlacklist">
+             <param name="useRB" type="select" label="Use blacklist of RNA IDs">
+               <option value="yes">yes</option>
+               <option value="no" selected="True">no</option>
+             </param>
+             <when value="yes">
+               <param name="rnaBlacklistFile" label="RNA gene inputFile" type="data" help="List of RNA IDs"/>
+               <param name="rnaBlacklistFamily" label="RNA family inputFile" type="data" help="List of RNA family IDs"/>
+             </when>
+           <param name="zipfile" label="inputFile" type="data" format="snpeffdb" help="SnpEff zipped input file"/>
+           <param name="canonical" type="boolean" truevalue="--canonical" falsevalue="" label="use only canonical transcripts"/>
+           </conditional>
         </when>
       </conditional>
 
-      <conditional name="target">
-        <param name="use" type="select" label="Use target filter">
-          <option value="yes">yes</option>
-          <option value="no" selected="True">no</option>
-        </param>
-        <when value="yes">
-          <expand macro="input_filter"/>
-        </when>
-      </conditional>
     </inputs>
     <outputs>
       <data name="output_vcf" format="vcf" from_work_dir="out.vcf"/>

@@ -26,6 +26,20 @@ def move(avant, apres):
     if os.path.exists(avant):
         execute("mv %s %s" %(avant, apres))
 
+def correctLineCount(number, vcfFile):
+    """Checks number of non header lines in input VCF."""
+    f = get_read_fileHandler(vcfFile)
+    count=0
+    for line in f:
+        if line.startswith('#'):
+            continue
+        count += 1
+    f.close()
+    if count != number:
+        sys.stdout.write("ERROR expected %d non header lines in %s, got %d\n" % (vcfFile, count, number))
+        return False
+    return True
+
 def indexBam(workdir, prefix, inputBamFile, inputBamFileIndex=None):
     inputBamLink = os.path.join(os.path.abspath(workdir), prefix + ".bam" )
     os.symlink(inputBamFile, inputBamLink)
@@ -104,18 +118,19 @@ def rewriteVcfGenerator(vcfline, files):
             if files.rnaNormalFastaFilename == None:
                 sys.stderr.write("VCF header contains RNA normal fasta, please input corresponding fasta file")
                 sys.exit(1)
-            fields[i] = ('').join([key, "=<", self.rnaNormalFastaFilename, ">"])
+            fields[i] = ('').join([key, "=<", files.rnaNormalFastaFilename, ">"])
         elif key == 'rnaTumorFastaFilename':
-            if self.rnaTumorFastaFilename == None:
+            if files.rnaTumorFastaFilename == None:
                 sys.stderr.write("VCF header contains RNA tumor fasta, please input corresponding fasta file")
                 sys.exit(1)
-            fields[i] = ('').join([key, "=<", self.rnaTumorFastaFilename, ">"])
+            fields[i] = ('').join([key, "=<", files.rnaTumorFastaFilename, ">"])
     newline = (',').join(fields)
     return newline
     
 def splitVcf(infile, outdir, files=None, expected=None):
-    """Splits up VCF file in chromosome files, returns dict of chromosome names (without chr) and corresponding vcf files (with chr)"""
+    """Splits up VCF file in chromosome files, a dict of chromosome names with non header linecounts and a dict of chromosome names (without chr) and corresponding vcf files (with chr)"""
     chrNames=dict()
+    chrLines=dict()
     header=""
     f = get_read_fileHandler(infile)
     headFlag = True
@@ -137,8 +152,10 @@ def splitVcf(infile, outdir, files=None, expected=None):
                 outfile = os.path.join(outdir, 'chr' + chrom + ".vcf.gz" )
                 o = get_write_fileHandler(outfile)      # append not necessary
                 o.write(header)
+                chrLines[chrom] = 0
                 chrNames[chrom] = outfile
             o.write(line)
+            chrLines[chrom] += 1
     o.close
     f.close()
     if expected != None:
@@ -151,7 +168,7 @@ def splitVcf(infile, outdir, files=None, expected=None):
             outfile = os.path.join(outdir, "chr" + chrom + ".vcf" )
             o = get_write_fileHandler(outfile)
             o.close
-    return chrNames
+    return chrNames, chrLines
 
 def splitBed(bedfile, outdir, chromDict):
     """Splits bed file in chromosome files, issued warnings on missing files and creates empties"""
@@ -184,8 +201,14 @@ def splitBed(bedfile, outdir, chromDict):
         o = get_write_fileHandler(outfile)
         o.close
 
-
-
+def identicalName(inputList):
+    """returns duplicate name if two inputs have the same name and are not None"""
+    dup=set(x for x in inputList if inputList.count(x) >= 2)
+    dup.discard(None)   # this doesn't complain if None is not in the set
+    if dup:
+        print "ERROR: found duplicate input %s" % dup.pop()
+        return True
+    return False
 
 def makeSnpEffConfig(workdir, genome, datadir):
     """Creates a short config file for snpEff. Assumes a human genome."""
@@ -201,7 +224,7 @@ def makeSnpEffConfig(workdir, genome, datadir):
     f.close()
     return configFile
 
-def radiaFilter(filterDirs, snpEffGenome, snpEffConfig, args, chrom, inputVcf, outputDir ):
+def radiaFilter(filterDirs, snpEffGenome, snpEffConfig, args, chrom, inputVcf, outputDir, logFile ):
 
     # python filterRadia.pyc id chrom inputFile outputDir scriptsDir [Options]
 
@@ -222,13 +245,12 @@ def radiaFilter(filterDirs, snpEffGenome, snpEffConfig, args, chrom, inputVcf, o
     # --canonical
     # --log=INFO
     # --gzip
-    justSayNo='--noPositionalBias --noRnaBlacklist '
 # MUST FIX DNAonly RNAonly
-    cmd = "python %s/filterRadia.py %s %s %s %s %s %s --gzip" % (
+    cmd = "python %s/filterRadia.py %s %s %s %s %s --gzip --log=WARNING -g %s" % (
         args.scriptsDir,
         args.patientId, chrom, inputVcf,
         outputDir, args.scriptsDir, 
-        justSayNo)
+        logFile)
 
     if args.blatFastaFilename != None:
         cmd += " --blatFastaFilename %s" % args.blatFastaFilename
@@ -269,20 +291,23 @@ def radiaFilter(filterDirs, snpEffGenome, snpEffConfig, args, chrom, inputVcf, o
         cmd += " --snpEffDir %s --snpEffGenome %s --snpEffConfig %s" % (args.snpEffDir, snpEffGenome, snpEffConfig)
         if args.canonical:
             cmd += ' --canonical '
+        if args.rnaGeneBlckFile:
+            cmd += ' --rnaGeneBlckFile %s --rnaGeneFamilyBlckFile %s' % (args.rnaGeneBlckFile, args.rnaGeneFamilyBlckFile)
+        else:
+            cmd += '--noRnaBlacklist'
     else:
-        cmd += ' --noSnpEff'
-#    if args.noPositionalBias:
-#        cmd += ' --noPositionalBias '
-#    if args.noRnaBlacklist:
-#        cmd += ' --noRnaBlacklist '
+        cmd += ' --noSnpEff --noRnaBlacklist'
+
+    if args.noPositionalBias:
+        cmd += ' --noPositionalBias'
 #    if args.dnaOnly:
 #        cmd += ' --dnaOnly '
 #    if args.rnaOnly:
 #        cmd += ' --rnaOnly '
 #    if args.gzip:
 #        cmd += ' --gzip '
-#    outfile = os.path.join(outputDir, args.patientId + "_chr" + chrom + ".vcf.gz")
-    return cmd
+    outfile = os.path.join(outputDir, args.patientId + "_chr" + chrom + ".vcf.gz")
+    return cmd, outfile
 
 def radiaMerge(args, inputDir):
     """Merges vcf files if they follow the pattern patientID_chr<N>.vcf(.gz)"""
@@ -317,7 +342,7 @@ class localFiles(object):
     def universalFasta(self, args):
         if (args.fastaFilename != None):
             universalFastaFile = indexFasta(args.workdir, args.fastaFilename, prefix="universal")
-            self.dnaNormalFilename, self.dnaTumorFilename, self.rnaNormalFilename, self.rnaTumorFilename, self.dnaNormalFastaFilename, self.dnaTumorFastaFilename, self.rnaNormalFastaFilename, self.rnaTumorFastaFilename = (universalFastaFile for i in xrange(8))
+            self.dnaNormalFastaFilename, self.dnaTumorFastaFilename, self.rnaNormalFastaFilename, self.rnaTumorFastaFilename = (universalFastaFile for i in xrange(4))
 
 
     def doFasta(self, args):
@@ -393,10 +418,11 @@ def __main__():
     parser.add_argument("--snpEffDir", dest="snpEffDir", metavar="SNP_EFF_DIR", help="the path to the snpEff directory")
     parser.add_argument("--snpEffFilename", dest="snpEffFilename", metavar="SNP_EFF_FILE", help="the snpEff input database zip file")
     parser.add_argument("--canonical", action="store_true", default=False, dest="canonical", help="include this argument if only the canonical transcripts from snpEff should be used, %default by default")
+    parser.add_argument("--rnaGeneBlckFile", dest="rnaGeneBlckFile", metavar="RNA_GENE_FILE", help="the RNA gene blacklist file")
+    parser.add_argument("--rnaGeneFamilyBlckFile", dest="rnaGeneFamilyBlckFile", metavar="RNA_GENE_FAMILY_FILE", help="the RNA gene family blacklist file")
     parser.add_argument("--blatFastaFilename", dest="blatFastaFilename", metavar="FASTA_FILE", help="the fasta file that can be used during the BLAT filtering")
-#
-#    parser.add_argument("--rnaGeneBlckFile", dest="rnaGeneBlckFile", metavar="RNA_GENE_FILE", help="the RNA gene blacklist file")
-#    parser.add_argument("--rnaGeneFamilyBlckFile", dest="rnaGeneFamilyBlckFile", metavar="RNA_GENE_FAMILY_FILE", help="the RNA gene family blacklist file")
+    parser.add_argument("--noPositionalBias", action="store_false", default=True, dest="noPositionalBias", help="include this argument if the positional bias filter should not be applied")
+
 #    parser.add_argument("--dnaOnly", action="store_true", default=False, dest="dnaOnly", help="include this argument if you only have DNA or filtering should only be done on the DNA")
 #    parser.add_argument("--rnaOnly", action="store_true", default=False, dest="rnaOnly", help="include this argument if the filtering should only be done on the RNA")
 #    parser.add_argument("--gzip", action="store_true", default=False, dest="gzip", help="include this argument if the final VCF should be compressed with gzip")
@@ -404,12 +430,23 @@ def __main__():
 
     # some extra stuff
     parser.add_argument('--number_of_threads', dest='number_of_threads', type=int, default='1')
-    parser.add_argument('--number_of_procs', dest='procs', type=int, default=1)
+    parser.add_argument('--number_of_procs', dest='procs', type=int, default=2)
     parser.add_argument('--workdir', default="./")
     parser.add_argument('--no_clean', action="store_true", default=False)
 
     args = parser.parse_args()
     tempDir = tempfile.mkdtemp(dir="./", prefix="radia_work_")
+
+    # sanity checks
+    if identicalName([args.dnaNormalFilename, args.dnaTumorFilename, args.rnaNormalFilename, args.rnaTumorFilename]):
+            raise Exception("ERROR: Found duplicate input bam file")
+    if identicalName([args.blacklistFilename, args.targetFilename, args.retroGenesFilename, 
+        args.pseudoGenesFilename, args.cosmicFilename]):
+            raise Exception("ERROR: Found duplicate input bed file")
+    if (args.rnaGeneFamilyBlckFile and not args.rnaGeneBlckFile) or (args.rnaGeneBlckFile and not args.rnaGeneFamilyBlckFile):
+            raise Exception("ERROR: Must input two RNA blacklist files")
+    if identicalName([args.rnaGeneFamilyBlckFile, args.rnaGeneBlckFile]):
+            raise Exception("ERROR: Found duplicate input RNA blacklist file")
 
     files = localFiles()	# prepares and holds fasta and bam files
     filterDirs = dict()		# holds filters and file locations
@@ -418,8 +455,7 @@ def __main__():
         files.doFasta(args)
         files.doBam(args)
 	# split vcf in chromosomes
-	chromDict=splitVcf(args.inputVCF, args.workdir, files=files)
-
+	chromDict, chromLines=splitVcf(args.inputVCF, args.workdir, files=files)
 
         # All files come in as complete genome files, so first split them
 	# split blacklist
@@ -474,17 +510,36 @@ def __main__():
         rfOuts = []
         if args.procs == 1:
             for chrom in chromDict:
-                cmd = radiaFilter(filterDirs, snpEffGenome, snpEffConfig, args, chrom, chromDict[chrom], tempDir)
+                logFile = os.path.join(args.workdir, "log." + chrom)
+                cmd,outfile = radiaFilter(filterDirs, snpEffGenome, snpEffConfig, args, chrom, chromDict[chrom], tempDir, logFile)
 		# the output is generated by the filter, not on stdout
                 if execute(cmd):
                     raise Exception("RadiaFilter Call failed")
+                if not correctLineCount(chromLines[chrom], outfile):
+                    raise Exception("RadiaFilter sanity check failed")
+                with open(logFile, 'r') as f:
+                    print >>sys.stderr, f.read()
         else:
             cmds = []
+            rawOuts = dict()
             for chrom in chromDict:
-                cmd = radiaFilter(filterDirs, snpEffGenome, snpEffConfig, args, chrom, chromDict[chrom], tempDir)
+                logFile = os.path.join(args.workdir, "log." + chrom)
+                cmd, outfile = radiaFilter(filterDirs, snpEffGenome, snpEffConfig, args, chrom, chromDict[chrom], tempDir, logFile)
                 cmds.append(cmd)
+                rawOuts[chrom] = outfile
             p = Pool(args.procs)
             values = p.map(execute, cmds, 1)
+            # check if all output files are the same size as inputs
+            # and print logging info to stderr
+            for chrom in chromDict:
+                logFile = os.path.join(args.workdir, "log." + chrom)
+                with open(logFile, 'r') as f:
+                    print >>sys.stderr, f.read()
+                if not correctLineCount(chromLines[chrom], rawOuts[chrom]):
+                    raise Exception("RadiaFilter sanity check failed")
+
+
+
 
         # the radiaMerge command only uses the output directory and patient name
         cmd = radiaMerge(args, tempDir)
