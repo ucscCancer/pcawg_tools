@@ -335,8 +335,7 @@ def __main__():
 
 
     # some extra stuff
-    parser.add_argument('--number_of_threads', dest='number_of_threads', type=int, default='1')
-    parser.add_argument('--number_of_procs', dest='procs', type=int, default=2)
+    parser.add_argument('--number_of_procs', dest='procs', type=int, default=1)
     parser.add_argument('--workdir', default="./")
     parser.add_argument('--no_clean', action="store_true", default=False)
 

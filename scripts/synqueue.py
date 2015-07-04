@@ -53,11 +53,12 @@ import requests.packages.urllib3
 requests.packages.urllib3.disable_warnings()
 
 
-def listAssignments(syn, table_id, primary_col, assignee_col, state_col, list_all=False, debug=False, display=False):
+def listAssignments(syn, table_id, primary_col, assignee_col, state_col, list_all=False, debug=False, display=False, username=None):
     table = syn.get(table_id)
     if table.entityType != "org.sagebionetworks.repo.model.table.TableEntity":
         return
-    username = syn.getUserProfile()['userName']
+    if username is None:
+        username = syn.getUserProfile()['userName']
     results = syn.tableQuery('select * from %s' % (table.id))
     total = 0
     rbase = {"id": primary_col, "assignee" : assignee_col, "state" : state_col }
@@ -65,7 +66,7 @@ def listAssignments(syn, table_id, primary_col, assignee_col, state_col, list_al
     df = results.asDataFrame()
     for row_name in df.index:
         row = df.loc[row_name]
-        if row[assignee_col] == username or list_all:
+        if str(row[assignee_col]) == str(username) or list_all:
             rec = {}
             for k,v in rbase.items():
                 rec[k] = row[v]

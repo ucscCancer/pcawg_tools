@@ -14,8 +14,6 @@ GALAXY_TAG=bgruening/galaxy-stable:dev
 SERVICE=$1
 TASK=$2
 
-SUDO="--sudo" # set to "--sudo" if docker must be called with sudo
-
 hostname > ${TASK}.host
 echo "LOADING" > ${TASK}.state
 for a in images/*.tar; do
@@ -26,7 +24,7 @@ export PYTHONPATH=$NEBULA
 
 echo "RUNNING" > ${TASK}.state
 
-$NEBULA/bin/nebula run --hold \
+$NEBULA/bin/nebula run \
 $SERVICE \
 $TASK 2> ${TASK}.err > ${TASK}.out
 

@@ -6,8 +6,9 @@
 	<command interpreter="python">
 genetorrent.py $uuid $outfile $outfile.dataset.dataset.id
 #if str($cred_file) != 'None':
-$cred_file
+--cred-file $cred_file
 #end if
+--server "${gnos_endpoint}"
 	</command>
 	<inputs>
 		<param name="uuid" type="text" size="50" label="Analysis ID"/>
@@ -17,9 +18,10 @@ $cred_file
 				<column name="value" index="1"/>
 			</options>
 		</param>
+		<param name="gnos_endpoint" type="text" size="50"  label="GNOS Server" help="example: cghub.ucsc.edu" value="cghub.ucsc.edu"/>
 	</inputs>
 	<outputs>
-		<data name="outfile" format="bam" label="${uuid} BAM"/>
+		<data name="outfile" format="bam" label="${uuid}.bam"/>
 	</outputs>
 	<help>
 Download BAM files from CGHub
