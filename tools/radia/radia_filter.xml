@@ -97,6 +97,7 @@ ${snpeff.canonical}
 
 --outputDir ./
 --scriptsDir /opt/radia-1.1.4/scripts/
+--number_of_procs \${GALAXY_SLOTS:-1}
 
     ]]></command>
     <inputs>
