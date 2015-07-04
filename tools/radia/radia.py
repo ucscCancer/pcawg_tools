@@ -4,7 +4,6 @@ import sys, argparse, os, shutil, subprocess, tempfile, time
 from multiprocessing import Pool
 
 def execute(cList):
-#def execute(cmd, output=None):
     import  shlex
     """ function to execute a cmd and report if an error occurs. Takes in a list with one or two arguments, the second one optionally being the output file"""
     cmd = cList[0]
@@ -71,12 +70,11 @@ def mitName(idx):
 
 def bamChrScan(idx):
     """Checks if the bam chromosome IDs start with chr"""
-    found = False
     for line in idx.split("\n"):
         tmp = line.split("\t")
         if len(tmp) == 4 and tmp[0].startswith("chr"):
-            found = True
-    return found
+            return True
+    return False
 
 
 def addNumsAndQuals(args, cmd, sample):
@@ -240,6 +238,15 @@ def which(cmd):
     if len(res) == 0: return None
     return res
 
+def identicalName(inputList):
+    """returns duplicate name if two inputs have the same name and are not None"""
+    dup=set(x for x in inputList if inputList.count(x) >= 2)
+    dup.discard(None)	# this doesn't complain if None is not in the set
+    if dup:
+        print "ERROR: found duplicate input %s" % dup.pop()
+        return True
+    return False
+
 def get_bam_seq(inputBamFile):
     samtools = which("samtools")
     cmd = [samtools, "idxstats", inputBamFile]
@@ -359,21 +366,24 @@ def __main__():
         else:
             i_rnaTumorFastaFilename = universalFastaFile
 
+        # sanity check: input bam files should all be different
+        if identicalName([args.dnaNormalFilename, args.dnaTumorFilename, args.rnaNormalFilename, args.rnaTumorFilename]):
+            raise Exception("ERROR: Found duplicate input bam file")
 
         if (args.dnaNormalFilename != None):
             i_dnaNormalFilename = indexBam(workdir=args.workdir, inputBamFile=args.dnaNormalFilename, inputBamFileIndex=args.dnaNormalBaiFilename, prefix="dnaNormal")
         else:
             i_dnaNormalFilename = None
 
-        if (args.rnaNormalFilename != None):
-            i_rnaNormalFilename = indexBam(workdir=args.workdir, inputBamFile=args.rnaNormalFilename, inputBamFileIndex=args.rnaNormalBaiFilename, prefix="rnaNormal")
-        else:
-            i_rnaNormalFilename = None
-
         if (args.dnaTumorFilename != None):
             i_dnaTumorFilename = indexBam(workdir=args.workdir, inputBamFile=args.dnaTumorFilename, inputBamFileIndex=args.dnaTumorBaiFilename, prefix="dnaTumor")
         else:
             i_dnaTumorFilename = None
+
+        if (args.rnaNormalFilename != None):
+            i_rnaNormalFilename = indexBam(workdir=args.workdir, inputBamFile=args.rnaNormalFilename, inputBamFileIndex=args.rnaNormalBaiFilename, prefix="rnaNormal")
+        else:
+            i_rnaNormalFilename = None
 
         if (args.rnaTumorFilename != None):
             i_rnaTumorFilename = indexBam(workdir=args.workdir, inputBamFile=args.rnaTumorFilename, inputBamFileIndex=args.rnaTumorBaiFilename, prefix="rnaTumor")
@@ -383,8 +393,7 @@ def __main__():
         radiaOuts = []
         chroms = get_bam_seq(i_dnaNormalFilename)
         if args.procs == 1:
-            #for chrom in chroms:
-            for chrom in ["21","22"]:
+            for chrom in chroms:
                 cmd, radiaOutput = radia(chrom, args, tempDir,  
                      dnaNormalFilename=i_dnaNormalFilename, rnaNormalFilename=i_rnaNormalFilename, 
                      dnaTumorFilename=i_dnaTumorFilename, rnaTumorFilename=i_rnaTumorFilename,
@@ -395,8 +404,7 @@ def __main__():
                 radiaOuts.append(radiaOutput)
         else:
             cmds = []
-            #for chrom in chroms:
-            for chrom in ["21","22"]:
+            for chrom in chroms:
                 # create the RADIA commands
                 cmd, radiaOutput = radia(chrom, args, tempDir,
                             i_dnaNormalFilename, i_rnaNormalFilename, i_dnaTumorFilename, i_rnaTumorFilename,
