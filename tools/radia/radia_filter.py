@@ -245,7 +245,6 @@ def radiaFilter(filterDirs, snpEffGenome, snpEffConfig, args, chrom, inputVcf, o
     # --canonical
     # --log=INFO
     # --gzip
-# MUST FIX DNAonly RNAonly
     cmd = "python %s/filterRadia.py %s %s %s %s %s --gzip --log=WARNING -g %s" % (
         args.scriptsDir,
         args.patientId, chrom, inputVcf,
@@ -294,14 +293,14 @@ def radiaFilter(filterDirs, snpEffGenome, snpEffConfig, args, chrom, inputVcf, o
         if args.rnaGeneBlckFile:
             cmd += ' --rnaGeneBlckFile %s --rnaGeneFamilyBlckFile %s' % (args.rnaGeneBlckFile, args.rnaGeneFamilyBlckFile)
         else:
-            cmd += '--noRnaBlacklist'
+            cmd += ' --noRnaBlacklist'
     else:
         cmd += ' --noSnpEff --noRnaBlacklist'
 
     if args.noPositionalBias:
         cmd += ' --noPositionalBias'
-#    if args.dnaOnly:
-#        cmd += ' --dnaOnly '
+    if args.dnaOnly:
+        cmd += ' --dnaOnly'
 #    if args.rnaOnly:
 #        cmd += ' --rnaOnly '
 #    if args.gzip:
@@ -359,7 +358,7 @@ class localFiles(object):
 
 
     def doBam(self, args):
-        # index bam files
+        # index bam files and return True if there's only DNA files
         if (args.dnaNormalFilename != None):
             self.dnaNormalFilename = indexBam(workdir=args.workdir, inputBamFile=args.dnaNormalFilename, inputBamFileIndex=args.dnaNormalBaiFilename, prefix="dnaNormal")
 
@@ -371,7 +370,9 @@ class localFiles(object):
 
         if (args.rnaTumorFilename != None):
             self.rnaTumorFilename = indexBam(workdir=args.workdir, inputBamFile=args.rnaTumorFilename, inputBamFileIndex=args.rnaTumorBaiFilename, prefix="rnaTumor")
-
+        if (args.rnaTumorFilename == None and args.rnaNormalFilename == None):
+            return True
+        return False
 
 def __main__():
     time.sleep(1) #small hack, sometimes it seems like docker file systems are avalible instantly
@@ -423,7 +424,7 @@ def __main__():
     parser.add_argument("--blatFastaFilename", dest="blatFastaFilename", metavar="FASTA_FILE", help="the fasta file that can be used during the BLAT filtering")
     parser.add_argument("--noPositionalBias", action="store_false", default=True, dest="noPositionalBias", help="include this argument if the positional bias filter should not be applied")
 
-#    parser.add_argument("--dnaOnly", action="store_true", default=False, dest="dnaOnly", help="include this argument if you only have DNA or filtering should only be done on the DNA")
+    parser.add_argument("--dnaOnly", action="store_true", default=False, dest="dnaOnly", help="include this argument if you only have DNA or filtering should only be done on the DNA")
 #    parser.add_argument("--rnaOnly", action="store_true", default=False, dest="rnaOnly", help="include this argument if the filtering should only be done on the RNA")
 #    parser.add_argument("--gzip", action="store_true", default=False, dest="gzip", help="include this argument if the final VCF should be compressed with gzip")
 
@@ -452,7 +453,7 @@ def __main__():
     try:
         files.universalFasta(args)
         files.doFasta(args)
-        files.doBam(args)
+        args.dnaOnly = files.doBam(args)
 	# split vcf in chromosomes
 	chromDict, chromLines=splitVcf(args.inputVCF, args.workdir, files=files)
 
