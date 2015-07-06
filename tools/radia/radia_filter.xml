@@ -17,7 +17,7 @@
       </macro>
     </macros>
     <requirements>
-      <container type="docker">radia:1.1.4</container>
+      <container type="docker">radia:1.1.5</container>
     </requirements>
     <stdio>
         <exit_code range="1:" />
@@ -96,7 +96,7 @@ ${snpeff.canonical}
 #end if
 
 --outputDir ./
---scriptsDir /opt/radia-1.1.4/scripts/
+--scriptsDir /opt/radia-1.1.5/scripts/
 --number_of_procs \${GALAXY_SLOTS:-1}
 
     ]]></command>
