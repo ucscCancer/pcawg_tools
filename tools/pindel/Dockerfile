@@ -8,15 +8,11 @@ RUN     pip install PyVCF
 WORKDIR /opt
 
 RUN		mkdir /opt/bin
-RUN     wget http://sourceforge.net/projects/samtools/files/samtools/0.1.19/samtools-0.1.19.tar.bz2
-RUN     tar xvjf samtools-0.1.19.tar.bz2
-RUN     cd /opt/samtools-0.1.19 && make
-RUN     cp /opt/samtools-0.1.19/*.a /usr/local/lib/
-RUN     mkdir /usr/local/include/bam
-RUN     cp /opt/samtools-0.1.19/*.h /usr/local/include/bam/
-RUN		cp /opt/samtools-0.1.19/samtools /usr/local/bin/
+RUN     wget https://github.com/samtools/samtools/releases/download/1.2/samtools-1.2.tar.bz2
+RUN     tar xvjf samtools-1.2.tar.bz2
+RUN     cd /opt/samtools-1.2 && make && make install
 
 RUN     git clone https://github.com/genome/pindel.git
-RUN     cd pindel && git checkout v0.2.5a7
-RUN     cd pindel && ./INSTALL /opt/samtools-0.1.19
+RUN     cd pindel && git checkout v0.2.5b1
+RUN     cd pindel && ./INSTALL /opt/samtools-1.2/htslib-1.2.1
 RUN     cp /opt/pindel/pindel* /usr/local/bin/

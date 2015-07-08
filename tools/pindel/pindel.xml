@@ -2,7 +2,7 @@
     <description></description>
 
     <requirements>
-        <container type="docker">pindel:0.2.5a7</container>
+        <container type="docker">pindel:0.2.5b1</container>
     </requirements>
 
     <command interpreter="python">
