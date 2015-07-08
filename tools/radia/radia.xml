@@ -2,6 +2,15 @@
     <macros>
       <macro name="input_params">
         <param name="inputbam" label="InputBam" type="data" format="bam" help="Input BAM"/>
+        <conditional name="fasta">
+        <param name="use" type="select" label="Use different fasta">
+          <option value="yes">yes</option>
+          <option value="no" selected="True">no</option>
+        </param>
+        <when value="yes">
+          <param name="inputfasta" label="Fasta file used to create Bam file (if different from top)" type="data" format="fasta" help="Fasta file used to create this bam file"/>
+        </when>
+      </conditional>
         <param name="MinTotalBases" label="MinTotalBases" type="integer" value="4" help="the minimum number of overall reads covering a position"/>
         <param name="MinAltBases" label="MinAltBases" type="integer" value="2" help="the minimum number of alternative reads supporting a variant at a position"/>
         <param name="MinBaseQuality" label="MinBaseQuality" type="integer" value="10" help="the minimum base quality"/>
@@ -10,7 +19,7 @@
       </macro>
     </macros>
     <requirements>
-      <container type="docker">radia:1.1.4</container>
+      <container type="docker">radia:1.1.5</container>
     </requirements>
     <stdio>
         <exit_code range="1:" />
@@ -37,6 +46,9 @@ radia.py
 #if $dnaNormal.use == "yes":
 --dnaNormalFilename ${dnaNormal.inputbam}
 --dnaNormalBaiFilename ${dnaNormal.inputbam.metadata.bam_index}
+#if $dnaNormal.fasta.use == "yes"
+--dnaNormalFasta ${dnaNormal.fasta.inputfasta}
+#end if
 --dnaNormalMinTotalBases ${dnaNormal.MinTotalBases}
 --dnaNormalMinAltBases ${dnaNormal.MinAltBases}
 --dnaNormalBaseQual ${dnaNormal.MinBaseQuality}
@@ -48,6 +60,9 @@ radia.py
 #if $rnaNormal.use == "yes":
 --rnaNormalFilename ${rnaNormal.inputbam}
 --rnaNormalBaiFilename ${rnaNormal.inputbam.metadata.bam_index}
+#if $rnaNormal.fasta.use == "yes"
+--rnaNormalFasta ${rnaNormal.fasta.inputfasta}
+#end if
 --rnaNormalMinTotalBases ${rnaNormal.MinTotalBases}
 --rnaNormalMinAltBases ${rnaNormal.MinAltBases}
 --rnaNormalBaseQual ${rnaNormal.MinBaseQuality}
@@ -60,6 +75,9 @@ radia.py
 #if $dnaTumor.use == "yes":
 --dnaTumorFilename ${dnaTumor.inputbam}
 --dnaTumorBaiFilename ${dnaTumor.inputbam.metadata.bam_index}
+#if $dnaTumor.fasta.use == "yes"
+--dnaTumorFasta ${dnaTumor.fasta.inputfasta}
+#end if
 --dnaTumorMinTotalBases ${dnaTumor.MinTotalBases}
 --dnaTumorMinAltBases ${dnaTumor.MinAltBases}
 --dnaTumorBaseQual ${dnaTumor.MinBaseQuality}
@@ -71,6 +89,9 @@ radia.py
 #if $rnaTumor.use == "yes":
 --rnaTumorFilename ${rnaTumor.inputbam}
 --rnaTumorBaiFilename ${rnaTumor.inputbam.metadata.bam_index}
+#if $rnaTumor.fasta.use == "yes"
+--rnaTumorFasta ${rnaTumor.fasta.inputfasta}
+#end if
 --rnaTumorMinTotalBases ${rnaTumor.MinTotalBases}
 --rnaTumorMinAltBases ${rnaTumor.MinAltBases}
 --rnaTumorBaseQual ${rnaTumor.MinBaseQuality}
@@ -79,11 +100,11 @@ radia.py
 #end if
 
 --outputDir ./
---scriptsDir /opt/radia-1.1.4/scripts/
+--scriptsDir /opt/radia-1.1.5/scripts/
 --number_of_procs \${GALAXY_SLOTS:-1}
     ]]></command>
     <inputs>
-      <param name="patientId" label="Patient ID (no spaces)" type="text" value="thePatient" help="Patient's unique ID number"/>
+      <param name="patientId" label="Patient ID (no spaces)" type="text" value="Patient" help="Patient's unique ID number"/>
       <param name="fastaFile" label="Reference Genome" type="data" format="fasta" help="Fasta file used for read alignments"/>
       <param name="refId" label="Reference Genome ID" type="text" value="HG19" help="Genome used for read alignments"/>
       <param name="refUrl" label="Reference Genome URL" type="text" value="" help="URL for genome fasta file(s)"/>
