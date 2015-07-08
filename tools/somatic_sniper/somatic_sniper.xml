@@ -8,8 +8,8 @@
         $normal
         mutations.vcf
         -f $reference
-        -n $tumor_name
-        -t $normal_name
+        -t $tumor_name
+        -n $normal_name
         -F vcf
         #if $mapq
            -q $mapq
