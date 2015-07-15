@@ -127,6 +127,9 @@ def run_gen(args):
     for data in tasks:
         with open("%s.tasks/%s" % (args.out_base, data.task_id), "w") as handle:
             handle.write(json.dumps(data.to_dict()))
+            state_file = "%s.tasks/%s.state" % (args.out_base, data.task_id)
+            if os.path.exists( state_file ):
+                os.unlink( state_file )
     
     print "Tasks Created: %s" % (len(tasks))
 
@@ -204,8 +207,10 @@ def run_uploadprep(args):
     for ent in synqueue.listAssignments(syn, list_all=True, **config):
         wl_map[ent['id']] = ent['meta']
     
+    #scan through all of the docs
     for id, entry in doc.filter():
         donor = None    
+        #look for docs with donor tags
         if 'tags' in entry:
             for s in entry['tags']:
                 tmp = s.split(":")
@@ -214,16 +219,19 @@ def run_uploadprep(args):
         if donor is not None: 
             if donor not in job_map:
                 job_map[donor] = {}
+            #scan out the job metrics for this job (we're interested in runtime_seconds)
             if 'job' in entry and 'job_metrics' in entry['job']:
                 print entry['name']
                 for met in entry['job']['job_metrics']:
                     if met['name'] == 'runtime_seconds':
                         job_map[donor][entry['name']] = {"tool_id" : entry['job']['tool_id'], "runtime_seconds" : met['raw_value']}
+            #look for the vcf output files
             if entry.get('visible', False) and entry.get('extension', None) in ["vcf", "vcf_bgzip"]:
                 pipeline = None
                 method = None
                 call_type = None
                 variant_type = None
+                #fill out the info depending on which caller created the file
                 if entry['name'].split('.')[0] in ['MUSE_1']:
                     pipeline = "muse"
                     method = entry['name'].replace(".", "-")
@@ -263,40 +271,44 @@ def run_uploadprep(args):
                     dst_file = os.path.join(args.workdir, file_name)
 
                     shutil.copy(src_file, dst_file)
+                    #if the files wasn't compressed already, go ahead and do that
                     if entry['extension'] == 'vcf':
                         subprocess.check_call( "bgzip -c %s > %s.gz" % (dst_file, dst_file), shell=True )
                         dst_file = dst_file + ".gz"
-
+                    
+                    #generated a tabix file
                     subprocess.check_call("tabix -p vcf %s" % (dst_file), shell=True)
                     shutil.move("%s.tbi" % (dst_file), "%s.idx" % (dst_file))
+                    #md5 sum all the things
                     subprocess.check_call("md5sum %s | awk '{print$1}' > %s.md5" % (dst_file, dst_file), shell=True)
                     subprocess.check_call("md5sum %s.idx | awk '{print$1}' > %s.idx.md5" % (dst_file, dst_file), shell=True)
 
+                    #add file to output map
                     if donor not in file_map[pipeline]:
                         file_map[pipeline][donor] = []
-
                     input_file = os.path.basename(dst_file)
                     file_map[pipeline][donor].append(input_file)
 
+    #go through every pipeline
     for pipeline, donors in file_map.items():
+        #for that pipeline go through every donor
         for donor, files in donors.items():
+            #we're only outputing data for donors on the work list
             if donor in wl_map:
-                """
-                with open( os.path.join(args.workdir, "%s.%s.pipeline.json" %(pipeline, donor)), "w" ) as handle:
-                    handle.write(json.dumps( {"pipeline_src" : args.pipeline_src, "pipeline_version" : args.pipeline_version} ))
-                """
+                #output the timing json
                 timing_json = os.path.join(args.workdir, "%s.%s.timing.json" %(pipeline, donor))
                 with open( timing_json, "w" ) as handle:
                     handle.write(json.dumps( job_map[donor] ) )
-                    
-            
+                
+                #output the uploader script
                 with open( os.path.join(args.workdir, "%s.%s.sh" %(pipeline, donor)), "w" ) as handle:
                     input_file = os.path.basename(dst_file)
                     urls = [
                         "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Normal_WGS_alignment_GNOS_repos'], wl_map[donor]['Normal_WGS_alignment_GNOS_analysis_ID']),
                         "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Tumour_WGS_alignment_GNOS_repos'], wl_map[donor]['Tumour_WGS_alignment_GNOS_analysis_IDs'])
                     ]
-                    cmd_str = "perl /opt/vcf-uploader/gnos_upload_vcf.pl"
+                    cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.11/lib"
+                    cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.5/gnos_upload_vcf.pl"
                     cmd_str += " --metadata-urls %s" % (",".join(urls))
                     cmd_str += " --vcfs %s " % (",".join(files))
                     cmd_str += " --vcf-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in files) )))
@@ -305,7 +317,7 @@ def run_uploadprep(args):
                     cmd_str += " --outdir %s.%s.dir" % (pipeline, donor)
                     cmd_str += " --key %s " % (args.keyfile)
                     cmd_str += " --upload-url %s" % (args.upload_url)
-                    cmd_str += " --study-refname-override tcga_pancancer_vcf_test"
+                    cmd_str += " --study-refname-override %s" % (args.study)
                     cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
                     cmd_str += " --timing-metrics-json %s" % (timing_json)
                     handle.write("#!/bin/bash\n%s\n" % (cmd_str) )
@@ -352,11 +364,12 @@ if __name__ == "__main__":
     
     parser_upload = subparsers.add_parser('upload-prep')
     parser_upload.add_argument("--workdir", default="work")
-    parser_upload.add_argument("--keyfile", default="cghub.pem")
+    parser_upload.add_argument("--keyfile", default="/keys/cghub.pem")
     parser_upload.add_argument("--upload_url", default="https://gtrepo-osdc-tcga.annailabs.com")
     parser_upload.add_argument("--out-base", default="pcawg_data")
     parser_upload.add_argument("--pipeline-src", default="https://github.com/ucscCancer/pcawg_tools")
     parser_upload.add_argument("--pipeline-version", default="1.0.0")
+    parser_upload.add_argument("--study", default="tcga_pancancer_vcf_test")
     parser_upload.set_defaults(func=run_uploadprep)
 
     parser_list = subparsers.add_parser('list')
