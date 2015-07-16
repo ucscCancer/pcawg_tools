@@ -3,6 +3,7 @@
 import re
 import os
 import json
+import uuid
 import argparse
 import synqueue
 import shutil
@@ -207,6 +208,13 @@ def run_uploadprep(args):
     job_map = {}
     for ent in synqueue.listAssignments(syn, list_all=True, **config):
         wl_map[ent['id']] = ent['meta']
+    
+    broad_vcf_uuids = synqueue.getValues(syn, "Broad_VCF_UUID", orSet=lambda x: str(uuid.uuid4()), **config)
+    muse_vcf_uuids  = synqueue.getValues(syn, "Muse_VCF_UUID", orSet=lambda x: str(uuid.uuid4()), **config)
+    broad_tar_uuids = synqueue.getValues(syn, "Broad_TAR_UUID", orSet=lambda x: str(uuid.uuid4()), **config)
+    
+    print broad_vcf_uuids
+    return
     
     #scan through all of the docs
     for id, entry in doc.filter():
