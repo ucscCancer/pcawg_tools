@@ -100,6 +100,28 @@ def registerAssignments(syn, count, table_id, primary_col, assignee_col, state_c
             df.loc[row,assignee_col] = username
         syn.store(synapseclient.Table(table, df, etag=results.etag))
 
+def getValues(syn, value_col, table_id, primary_col, orSet=None):
+    table = syn.get(table_id)
+    if table.entityType != "org.sagebionetworks.repo.model.table.TableEntity":
+        return
+    results = syn.tableQuery('select * from %s where "%s" is NULL limit %s' % (table.id, assignee_col, count))
+    df = results.asDataFrame()
+    changed = False
+    out = {}
+    for row in df.index:
+        key = row[primary_col]
+        value = row[value_col]
+        if orSet is not None:
+            if isinstance(value, float) and is isnan(value):
+                value = orSet(key)
+                df.loc[row,value_col] = value
+            if df.loc[row,primary_col] in ids:
+                df.loc[row,state_col] = state
+                changed = True
+        out[key] = value
+    if changed:
+        syn.store(synapseclient.Table(table, df, etag=results.etag))
+    return out
 
 
 def setStates(syn, state, ids, table_id, primary_col, assignee_col, state_col, debug=False, display=False):

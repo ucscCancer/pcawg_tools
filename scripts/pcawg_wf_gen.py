@@ -196,7 +196,8 @@ def run_uploadprep(args):
     doc = from_url(args.out_base)
     file_map = {
         'broad' : {},
-        'muse' : {}
+        'muse' : {},
+        'broad_tar' : {}
     }
 
     syn = synapseclient.Synapse()
@@ -275,20 +276,19 @@ def run_uploadprep(args):
                     if entry['extension'] == 'vcf':
                         subprocess.check_call( "bgzip -c %s > %s.gz" % (dst_file, dst_file), shell=True )
                         dst_file = dst_file + ".gz"
-                    
-                    #generated a tabix file
-                    subprocess.check_call("tabix -p vcf %s" % (dst_file), shell=True)
-                    shutil.move("%s.tbi" % (dst_file), "%s.idx" % (dst_file))
-                    #md5 sum all the things
-                    subprocess.check_call("md5sum %s | awk '{print$1}' > %s.md5" % (dst_file, dst_file), shell=True)
-                    subprocess.check_call("md5sum %s.idx | awk '{print$1}' > %s.idx.md5" % (dst_file, dst_file), shell=True)
 
                     #add file to output map
                     if donor not in file_map[pipeline]:
                         file_map[pipeline][donor] = []
                     input_file = os.path.basename(dst_file)
                     file_map[pipeline][donor].append(input_file)
-
+            else:
+                if entry['name'] == "broad.tar.gz":
+                    target = Target(uuid=entry['uuid'])
+                    src_file = doc.get_filename(target)
+                    file_map['broad_tar'][donor] = [ src_file ]
+                    
+                    
     #go through every pipeline
     for pipeline, donors in file_map.items():
         #for that pipeline go through every donor
@@ -307,20 +307,67 @@ def run_uploadprep(args):
                         "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Normal_WGS_alignment_GNOS_repos'], wl_map[donor]['Normal_WGS_alignment_GNOS_analysis_ID']),
                         "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Tumour_WGS_alignment_GNOS_repos'], wl_map[donor]['Tumour_WGS_alignment_GNOS_analysis_IDs'])
                     ]
-                    cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.11/lib"
-                    cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.5/gnos_upload_vcf.pl"
-                    cmd_str += " --metadata-urls %s" % (",".join(urls))
-                    cmd_str += " --vcfs %s " % (",".join(files))
-                    cmd_str += " --vcf-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in files) )))
-                    cmd_str += " --vcf-idxs %s" % ((",".join( ("%s.idx" % i for i in files) )))
-                    cmd_str += " --vcf-idx-md5sum-files %s" % ((",".join( ("%s.idx.md5" % i for i in files) )))
-                    cmd_str += " --outdir %s.%s.dir" % (pipeline, donor)
-                    cmd_str += " --key %s " % (args.keyfile)
-                    cmd_str += " --upload-url %s" % (args.upload_url)
-                    cmd_str += " --study-refname-override %s" % (args.study)
-                    cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
-                    cmd_str += " --timing-metrics-json %s" % (timing_json)
-                    handle.write("#!/bin/bash\n%s\n" % (cmd_str) )
+                    
+                    if pipeline in ['broad', 'muse']:
+                        prep_cmd_str = ""
+                        for vcf in files:
+                            prep_cmd_str += "tabix -p vcf %s\n" % (vcf)
+                            prep_cmd_str += "mv %s.tbi %s.idx\n" % (vcf,vcf)
+                            prep_cmd_str += "md5sum %s | awk '{print$1}' > %s.md5\n" % (vcf, vcf)
+                            prep_cmd_str += "md5sum %s.idx | awk '{print$1}' > %s.idx.md5\n\n" % (vcf, vcf)
+
+                        upload_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.11/lib"
+                        upload_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.5/gnos_upload_vcf.pl"
+                        upload_cmd_str += " --metadata-urls %s" % (",".join(urls))
+                        upload_cmd_str += " --vcfs %s " % (",".join(files))
+                        upload_cmd_str += " --vcf-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in files) )))
+                        upload_cmd_str += " --vcf-idxs %s" % ((",".join( ("%s.idx" % i for i in files) )))
+                        upload_cmd_str += " --vcf-idx-md5sum-files %s" % ((",".join( ("%s.idx.md5" % i for i in files) )))
+                        upload_cmd_str += " --outdir %s.%s.dir" % (pipeline, donor)
+                        upload_cmd_str += " --key %s " % (args.keyfile)
+                        upload_cmd_str += " --upload-url %s" % (args.upload_url)
+                        upload_cmd_str += " --study-refname-override %s" % (args.study)
+                        upload_cmd_str += " --workflow-url '%s'" % args.pipeline_src
+                        upload_cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
+                        upload_cmd_str += " --workflow-name '%s'" % args.pipeline_name
+                        upload_cmd_str += " --workflow-version '%s'" % args.pipeline_version
+                        upload_cmd_str += " --vm-instance-type '%s'" % args.vm_instance_type
+                        upload_cmd_str += " --vm-instance-cores %s" % args.vm_instance_cores
+                        upload_cmd_str += " --vm-instance-mem-gb %s" % args.vm_instance_mem_gb
+                        upload_cmd_str += " --vm-location-code %s" % args.vm_location_code
+                        upload_cmd_str += " --timing-metrics-json %s" % (timing_json)
+                        upload_cmd_str += " --workflow-file-subset %s" % (pipeline)
+                        upload_cmd_str += " --test"
+                        
+                        handle.write("#!/bin/bash\n%s\n%s\n" % (prep_cmd_str, upload_cmd_str) )
+                    if pipeline in ['broad_tar']:
+                        prep_cmd_str = ""
+                        new_files = []
+                        for tar in files:
+                            basename = donor + ".broad.intermediate"
+                            prep_cmd_str = "%s/remap_broad_tar.py %s %s %s" % (os.path.dirname(os.path.abspath(__file__)), tar, "./", basename )
+                            new_files.append( basename + ".tar" )
+
+                        upload_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.11/lib"
+                        upload_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.5/gnos_upload_vcf.pl"
+                        upload_cmd_str += " --metadata-urls %s" % (",".join(urls))
+                        upload_cmd_str += " --tarballs %s " % (",".join(new_files))
+                        upload_cmd_str += " --tarball-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in new_files) )))
+                        upload_cmd_str += " --outdir %s.%s.dir" % (pipeline, donor)
+                        upload_cmd_str += " --key %s " % (args.keyfile)
+                        upload_cmd_str += " --upload-url %s" % (args.upload_url)
+                        upload_cmd_str += " --study-refname-override %s" % (args.study)
+                        upload_cmd_str += " --workflow-url '%s'" % args.pipeline_src
+                        upload_cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
+                        upload_cmd_str += " --workflow-name '%s'" % args.pipeline_name
+                        upload_cmd_str += " --workflow-version '%s'" % args.pipeline_version
+                        upload_cmd_str += " --vm-instance-type '%s'" % args.vm_instance_type
+                        upload_cmd_str += " --vm-instance-cores %s" % args.vm_instance_cores
+                        upload_cmd_str += " --vm-instance-mem-gb %s" % args.vm_instance_mem_gb
+                        upload_cmd_str += " --workflow-file-subset %s" % (pipeline)
+                        upload_cmd_str += " --timing-metrics-json %s" % (timing_json)
+                        upload_cmd_str += " --test"
+                        handle.write("#!/bin/bash\n%s\n%s\n" % (prep_cmd_str, upload_cmd_str) )
 
 
 def run_list(args):
@@ -369,7 +416,12 @@ if __name__ == "__main__":
     parser_upload.add_argument("--out-base", default="pcawg_data")
     parser_upload.add_argument("--pipeline-src", default="https://github.com/ucscCancer/pcawg_tools")
     parser_upload.add_argument("--pipeline-version", default="1.0.0")
+    parser_upload.add_argument("--pipeline-name", default="BROAD_MUSE_PIPELINE")
     parser_upload.add_argument("--study", default="tcga_pancancer_vcf_test")
+    parser_upload.add_argument("--vm-instance-type", default="d2.8xlarge")
+    parser_upload.add_argument("--vm-instance-cores", default="32")
+    parser_upload.add_argument("--vm-instance-mem-gb", default="256")
+    parser_upload.add_argument("--vm-location-code", default="27")
     parser_upload.set_defaults(func=run_uploadprep)
 
     parser_list = subparsers.add_parser('list')
