@@ -1,5 +1,0 @@
-irods_host: bazaar.local
-irods_port: 1247
-irods_user: rods
-irods_pass: rods
-irods_zone: tempZone
