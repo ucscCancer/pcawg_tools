@@ -142,6 +142,7 @@ def run_gen(args):
             sudo=True,
             tool_data=os.path.abspath("tool_data"),
             tool_dir=os.path.abspath("tools"),
+            work_dir=args.work_dir,
             smp=[
                 ["MuSE", 8],
                 ["pindel", 8],
