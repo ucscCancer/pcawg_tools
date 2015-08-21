@@ -3,11 +3,13 @@
 import re
 import os
 import json
+import uuid
 import argparse
 import synqueue
 import shutil
 import synapseclient
 import subprocess
+import string
 from math import isnan
 from nebula.service import GalaxyService
 from nebula.galaxy import GalaxyWorkflow
@@ -17,6 +19,7 @@ from nebula.tasks import TaskGroup, GalaxyWorkflowTask
 import tempfile
 import datetime
 from urlparse import urlparse
+from urllib2 import urlopen
 
 REFDATA_PROJECT="syn3241088"
 
@@ -48,32 +51,6 @@ def run_gen(args):
 
     docstore = from_url(args.out_base)
 
-    if args.ref_download:
-        #download reference files from Synapse and populate the document store
-        for a in syn.chunkedQuery('select * from entity where parentId=="%s"' % (REFDATA_PROJECT)):
-            ent = syn.get(a['entity.id'])
-
-            id = ent.annotations['uuid'][0]
-            t = Target(uuid=id)
-            docstore.create(t)
-            path = docstore.get_filename(t)
-            name = ent.name
-            if 'dataPrep' in ent.annotations:
-                if ent.annotations['dataPrep'][0] == 'gunzip':
-                    subprocess.check_call("gunzip -c %s > %s" % (ent.path, path), shell=True)
-                    name = name.replace(".gz", "")
-                else:
-                    print "Unknown DataPrep"
-            else:
-                shutil.copy(ent.path, path)
-            docstore.update_from_file(t)
-            meta = {}
-            meta['name'] = name
-            meta['uuid'] = id
-            if 'dataPrep' in meta:
-                del meta['dataPrep']
-            docstore.put(id, meta)
-
     data_mapping = {
         "reference_genome" : "genome.fa",
         "dbsnp" : "dbsnp_132_b37.leftAligned.vcf",
@@ -82,6 +59,34 @@ def run_gen(args):
         "phase_one_indels" : "1000G_phase1.indels.hg19.sites.fixed.vcf",
         "centromere" : "centromere_hg19.bed"
     }
+
+    if args.ref_download:
+        #download reference files from Synapse and populate the document store
+        for a in syn.chunkedQuery('select * from entity where parentId=="%s"' % (REFDATA_PROJECT)):
+            print "found",  a['entity.name']
+            if a['entity.name'] in data_mapping.values() or a['entity.name'].replace(".gz", "") in data_mapping.values():
+                print "loading"
+                ent = syn.get(a['entity.id'])
+                id = ent.annotations['uuid'][0]
+                t = Target(uuid=id)
+                docstore.create(t)
+                path = docstore.get_filename(t)
+                name = ent.name
+                if 'dataPrep' in ent.annotations:
+                    if ent.annotations['dataPrep'][0] == 'gunzip':
+                        subprocess.check_call("gunzip -c %s > %s" % (ent.path, path), shell=True)
+                        name = name.replace(".gz", "")
+                    else:
+                        print "Unknown DataPrep"
+                else:
+                    shutil.copy(ent.path, path)
+                docstore.update_from_file(t)
+                meta = {}
+                meta['name'] = name
+                meta['uuid'] = id
+                if 'dataPrep' in meta:
+                    del meta['dataPrep']
+                docstore.put(id, meta)
 
     dm = {}
     for k,v in data_mapping.items():
@@ -127,7 +132,10 @@ def run_gen(args):
     for data in tasks:
         with open("%s.tasks/%s" % (args.out_base, data.task_id), "w") as handle:
             handle.write(json.dumps(data.to_dict()))
-    
+            state_file = "%s.tasks/%s.state" % (args.out_base, data.task_id)
+            if os.path.exists( state_file ):
+                os.unlink( state_file )
+
     print "Tasks Created: %s" % (len(tasks))
 
     if args.create_service:
@@ -137,6 +145,7 @@ def run_gen(args):
             sudo=True,
             tool_data=os.path.abspath("tool_data"),
             tool_dir=os.path.abspath("tools"),
+            work_dir=args.work_dir,
             smp=[
                 ["MuSE", 8],
                 ["pindel", 8],
@@ -175,10 +184,49 @@ def run_audit(args):
                 if donor not in donor_map:
                     donor_map[donor] = {}
                 donor_map[donor][ent['name']] = id
-    
+
     for ent in synqueue.listAssignments(syn, list_all=True, **config):
         if ent['meta']['Submitter_donor_ID'] in donor_map:
             print ent['meta']['Submitter_donor_ID'], len(donor_map[ent['meta']['Submitter_donor_ID']])
+
+def run_gnos_audit(args):
+    args = parser.parse_args()
+    syn = synapseclient.Synapse()
+    syn.login()
+
+    """
+    r_map = synqueue.getValues(syn, "Normal_WGS_alignment_GNOS_repos", **config)
+    repos = {}
+    for i in r_map.values():
+        repos[i] = True
+    print repos.keys()
+    """
+    server_list = ["https://gtrepo-osdc-tcga.annailabs.com"]
+
+    uuid_map = {}
+    uuid_map['broad'] = dict( (a[1], a[0]) for a in synqueue.getValues(syn, "Broad_VCF_UUID",  **config).items() )
+    uuid_map['muse']  = dict( (a[1], a[0]) for a in synqueue.getValues(syn, "Muse_VCF_UUID",  **config).items() )
+    uuid_map['broad_tar'] = dict( (a[1], a[0]) for a in synqueue.getValues(syn, "Broad_TAR_UUID", **config).items() )
+
+    analysis_re = re.compile(r'<analysis_id>(.*)</analysis_id>')
+
+    found = {}
+    for server in server_list:
+        handle = urlopen(server + "/cghub/metadata/analysisId?study=tcga_pancancer_vcf")
+        for line in handle:
+            res = analysis_re.search(line)
+            if res:
+                gid = res.group(1)
+                for p in uuid_map:
+                    if gid in uuid_map[p]:
+                        pid = uuid_map[p][gid]
+                        if pid not in found:
+                            found[pid] = {}
+                        found[pid][p] = [server, gid]
+    print "\n\n"
+    for p in found:
+        print p, "\t".join( "%s (%s : %s)" % (a[0], a[1][0], a[1][1]) for a in sorted(found[p].items(), key=lambda x:x[0]) )
+
 
 def run_register(args):
 
@@ -187,13 +235,14 @@ def run_register(args):
     synqueue.registerAssignments(syn, args.count, display=True, force=args.force, **config)
 
 def run_uploadprep(args):
-    
+
     if not os.path.exists(args.workdir):
         os.mkdir(args.workdir)
     doc = from_url(args.out_base)
     file_map = {
         'broad' : {},
-        'muse' : {}
+        'muse' : {},
+        'broad_tar' : {}
     }
 
     syn = synapseclient.Synapse()
@@ -203,27 +252,40 @@ def run_uploadprep(args):
     job_map = {}
     for ent in synqueue.listAssignments(syn, list_all=True, **config):
         wl_map[ent['id']] = ent['meta']
-    
+
+    uuid_map = {}
+    uuid_map['broad'] = synqueue.getValues(syn, "Broad_VCF_UUID", orSet=lambda x: str(uuid.uuid4()), **config)
+    uuid_map['muse']  = synqueue.getValues(syn, "Muse_VCF_UUID", orSet=lambda x: str(uuid.uuid4()), **config)
+    uuid_map['broad_tar'] = synqueue.getValues(syn, "Broad_TAR_UUID", orSet=lambda x: str(uuid.uuid4()), **config)
+
+    #scan through all of the docs
     for id, entry in doc.filter():
-        donor = None    
-        if 'tags' in entry:
+        donor = None
+        #look for docs with donor tags
+        if 'tags' in entry and 'state' in entry and entry['state'] == 'ok':
             for s in entry['tags']:
                 tmp = s.split(":")
                 if tmp[0] == 'donor':
                     donor = tmp[1]
-        if donor is not None: 
+        if donor is not None and donor in wl_map:
             if donor not in job_map:
                 job_map[donor] = {}
+            #scan out the job metrics for this job
             if 'job' in entry and 'job_metrics' in entry['job']:
-                print entry['name']
+                job_id = entry['job']['id']
+                tool_id = entry['job']['tool_id']
+                job_info = { tool_id : {} }
                 for met in entry['job']['job_metrics']:
-                    if met['name'] == 'runtime_seconds':
-                        job_map[donor][entry['name']] = {"tool_id" : entry['job']['tool_id'], "runtime_seconds" : met['raw_value']}
+                    job_info[tool_id][met['name']] = met['raw_value']
+                job_map[donor][job_id] = job_info
+            donor_tumor = wl_map[donor]['Tumour_WGS_alignment_GNOS_analysis_IDs']
+            #look for the vcf output files
             if entry.get('visible', False) and entry.get('extension', None) in ["vcf", "vcf_bgzip"]:
                 pipeline = None
                 method = None
                 call_type = None
                 variant_type = None
+                #fill out the info depending on which caller created the file
                 if entry['name'].split('.')[0] in ['MUSE_1']:
                     pipeline = "muse"
                     method = entry['name'].replace(".", "-")
@@ -250,7 +312,7 @@ def run_uploadprep(args):
                     raise Exception("Unknown pipeline %s" % (entry['name']))
 
                 datestr = datetime.datetime.now().strftime("%Y%m%d")
-                name = "%s.%s.%s.%s.%s" % (donor, method, datestr, variant_type, call_type )
+                name = "%s.%s.%s.%s.%s" % (donor_tumor, method, datestr, variant_type, call_type )
 
                 name = re.sub(r'.vcf$', '', name)
                 if entry['extension'] == 'vcf':
@@ -263,65 +325,163 @@ def run_uploadprep(args):
                     dst_file = os.path.join(args.workdir, file_name)
 
                     shutil.copy(src_file, dst_file)
+                    #if the files wasn't compressed already, go ahead and do that
                     if entry['extension'] == 'vcf':
                         subprocess.check_call( "bgzip -c %s > %s.gz" % (dst_file, dst_file), shell=True )
                         dst_file = dst_file + ".gz"
 
-                    subprocess.check_call("tabix -p vcf %s" % (dst_file), shell=True)
-                    shutil.move("%s.tbi" % (dst_file), "%s.idx" % (dst_file))
-                    subprocess.check_call("md5sum %s | awk '{print$1}' > %s.md5" % (dst_file, dst_file), shell=True)
-                    subprocess.check_call("md5sum %s.idx | awk '{print$1}' > %s.idx.md5" % (dst_file, dst_file), shell=True)
-
+                    #add file to output map
                     if donor not in file_map[pipeline]:
                         file_map[pipeline][donor] = []
-
                     input_file = os.path.basename(dst_file)
                     file_map[pipeline][donor].append(input_file)
+            else:
+                if entry['name'] == "broad.tar.gz":
+                    target = Target(uuid=entry['uuid'])
+                    src_file = doc.get_filename(target)
+                    file_map['broad_tar'][donor] = [ src_file ]
 
+
+    timing_map = {}
+    for donor in job_map:
+        timing_map[donor] = {}
+        for job_id in job_map[donor]:
+            for tool_id in job_map[donor][job_id]:
+                if tool_id not in timing_map[donor]:
+                    timing_map[donor][tool_id] = []
+                timing_map[donor][tool_id].append( job_map[donor][job_id][tool_id] )
+
+    result_counts = {}
     for pipeline, donors in file_map.items():
+        for donor in donors:
+            result_counts[donor] = result_counts.get(donor, 0) + 1
+
+    #go through every pipeline
+    for pipeline, donors in file_map.items():
+        #for that pipeline go through every donor
         for donor, files in donors.items():
-            if donor in wl_map:
-                """
-                with open( os.path.join(args.workdir, "%s.%s.pipeline.json" %(pipeline, donor)), "w" ) as handle:
-                    handle.write(json.dumps( {"pipeline_src" : args.pipeline_src, "pipeline_version" : args.pipeline_version} ))
-                """
-                timing_json = os.path.join(args.workdir, "%s.%s.timing.json" %(pipeline, donor))
+            #we're only outputing data for donors on the work list
+            if donor in wl_map and result_counts[donor] == 3:
+                #output the timing json
+                timing_json = os.path.abspath(os.path.join(args.workdir, "%s.%s.timing.json" %(pipeline, donor)))
                 with open( timing_json, "w" ) as handle:
-                    handle.write(json.dumps( job_map[donor] ) )
-                    
-            
+                    handle.write(json.dumps( timing_map[donor] ) )
+
+                #output the uploader script
                 with open( os.path.join(args.workdir, "%s.%s.sh" %(pipeline, donor)), "w" ) as handle:
                     input_file = os.path.basename(dst_file)
                     urls = [
                         "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Normal_WGS_alignment_GNOS_repos'], wl_map[donor]['Normal_WGS_alignment_GNOS_analysis_ID']),
                         "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Tumour_WGS_alignment_GNOS_repos'], wl_map[donor]['Tumour_WGS_alignment_GNOS_analysis_IDs'])
                     ]
-                    cmd_str = "perl /opt/vcf-uploader/gnos_upload_vcf.pl"
-                    cmd_str += " --metadata-urls %s" % (",".join(urls))
-                    cmd_str += " --vcfs %s " % (",".join(files))
-                    cmd_str += " --vcf-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in files) )))
-                    cmd_str += " --vcf-idxs %s" % ((",".join( ("%s.idx" % i for i in files) )))
-                    cmd_str += " --vcf-idx-md5sum-files %s" % ((",".join( ("%s.idx.md5" % i for i in files) )))
-                    cmd_str += " --outdir %s.%s.dir" % (pipeline, donor)
-                    cmd_str += " --key %s " % (args.keyfile)
-                    cmd_str += " --upload-url %s" % (args.upload_url)
-                    cmd_str += " --study-refname-override tcga_pancancer_vcf_test"
-                    cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
-                    cmd_str += " --timing-metrics-json %s" % (timing_json)
-                    handle.write("#!/bin/bash\n%s\n" % (cmd_str) )
+                    donor_tumor = wl_map[donor]['Tumour_WGS_alignment_GNOS_analysis_IDs']
+
+                    if pipeline in ['broad', 'muse']:
+                        prep_cmd_str = ""
+                        for vcf in files:
+                            prep_cmd_str += "tabix -p vcf %s\n" % (vcf)
+                            prep_cmd_str += "mv %s.tbi %s.idx\n" % (vcf,vcf)
+                            prep_cmd_str += "md5sum %s | awk '{print$1}' > %s.md5\n" % (vcf, vcf)
+                            prep_cmd_str += "md5sum %s.idx | awk '{print$1}' > %s.idx.md5\n\n" % (vcf, vcf)
+
+                        related_uuids = []
+                        for p in uuid_map:
+                            if p != pipeline:
+                                related_uuids.append(uuid_map[p][donor])
+
+                        submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.11/lib"
+                        submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.5/gnos_upload_vcf.pl"
+                        submit_cmd_str += " --metadata-urls %s" % (",".join(urls))
+                        submit_cmd_str += " --vcfs %s " % (",".join(files))
+                        submit_cmd_str += " --vcf-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in files) )))
+                        submit_cmd_str += " --vcf-idxs %s" % ((",".join( ("%s.idx" % i for i in files) )))
+                        submit_cmd_str += " --vcf-idx-md5sum-files %s" % ((",".join( ("%s.idx.md5" % i for i in files) )))
+                        submit_cmd_str += " --outdir %s.%s.dir" % (pipeline, donor_tumor)
+                        submit_cmd_str += " --key %s " % (args.keyfile)
+                        submit_cmd_str += " --upload-url %s" % (args.upload_url)
+                        submit_cmd_str += " --study-refname-override %s" % (args.study)
+                        submit_cmd_str += " --workflow-url '%s'" % args.pipeline_src
+                        submit_cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
+                        submit_cmd_str += " --workflow-name '%s'" % args.pipeline_name
+                        submit_cmd_str += " --workflow-version '%s'" % args.pipeline_version
+                        submit_cmd_str += " --vm-instance-type '%s'" % args.vm_instance_type
+                        submit_cmd_str += " --vm-instance-cores %s" % args.vm_instance_cores
+                        submit_cmd_str += " --vm-instance-mem-gb %s" % args.vm_instance_mem_gb
+                        submit_cmd_str += " --vm-location-code %s" % args.vm_location_code
+                        submit_cmd_str += " --timing-metrics-json %s" % (timing_json)
+                        submit_cmd_str += " --workflow-file-subset %s" % (pipeline)
+                        submit_cmd_str += " --related-file-subset-uuids %s" % (",".join(related_uuids))
+                        submit_cmd_str += " --uuid %s" % (uuid_map[pipeline][donor])
+                        #submit_cmd_str += " --skip-upload"
+
+                    if pipeline in ['broad_tar']:
+                        prep_cmd_str = ""
+                        new_files = []
+                        for tar in files:
+                            basename = donor_tumor + ".broad.intermediate"
+                            prep_cmd_str = "%s/remap_broad_tar.py %s %s %s --rename %s %s" % (
+                                os.path.dirname(os.path.abspath(__file__)),
+                                tar,
+                                "./",
+                                basename,
+                                donor, donor_tumor
+                            )
+                            new_files.append( basename + ".tar" )
+
+                        related_uuids = []
+                        for p in uuid_map:
+                            if p != pipeline:
+                                related_uuids.append(uuid_map[p][donor])
+
+                        submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.11/lib"
+                        submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.5/gnos_upload_vcf.pl"
+                        submit_cmd_str += " --metadata-urls %s" % (",".join(urls))
+                        submit_cmd_str += " --tarballs %s " % (",".join(new_files))
+                        submit_cmd_str += " --tarball-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in new_files) )))
+                        submit_cmd_str += " --outdir %s.%s.dir" % (pipeline, donor_tumor)
+                        submit_cmd_str += " --key %s " % (args.keyfile)
+                        submit_cmd_str += " --upload-url %s" % (args.upload_url)
+                        submit_cmd_str += " --study-refname-override %s" % (args.study)
+                        submit_cmd_str += " --workflow-url '%s'" % args.pipeline_src
+                        submit_cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
+                        submit_cmd_str += " --workflow-name '%s'" % args.pipeline_name
+                        submit_cmd_str += " --workflow-version '%s'" % args.pipeline_version
+                        submit_cmd_str += " --vm-instance-type '%s'" % args.vm_instance_type
+                        submit_cmd_str += " --vm-instance-cores %s" % args.vm_instance_cores
+                        submit_cmd_str += " --vm-instance-mem-gb %s" % args.vm_instance_mem_gb
+                        submit_cmd_str += " --workflow-file-subset %s" % (pipeline)
+                        submit_cmd_str += " --timing-metrics-json %s" % (timing_json)
+                        submit_cmd_str += " --related-file-subset-uuids %s" % (",".join(related_uuids))
+                        submit_cmd_str += " --uuid %s" % (uuid_map[pipeline][donor])
+                        #submit_cmd_str += " --skip-upload"
+
+                    handle.write(string.Template("""#!/bin/bash
+set -ex
+${PREP}
+${SUBMIT}
+echo $$? > $$0.submitted
+#pushd ${SUBMIT_DIR}
+#gtupload -v -c ${KEY} -u ./manifest.xml
+#ECODE=$$?
+#popd
+#echo $$ECODE > $$0.uploaded
+""").substitute(PREP=prep_cmd_str, SUBMIT=submit_cmd_str,
+                            SUBMIT_DIR=os.path.join(os.path.abspath(args.workdir), "vcf", pipeline + "." + donor_tumor + ".dir", uuid_map[pipeline][donor] ),
+                            KEY=args.keyfile
+                    ) )
 
 
 def run_list(args):
     syn = synapseclient.Synapse()
     syn.login()
     synqueue.listAssignments(syn, display=True, **config)
-    
+
 def run_set(args):
     syn = synapseclient.Synapse()
     syn.login()
-    
+
     synqueue.setStates(syn, args.state, args.ids, **config)
-    
+
 
 
 if __name__ == "__main__":
@@ -337,31 +497,40 @@ if __name__ == "__main__":
     parser_gen.add_argument("--work-dir", default=None)
     parser_gen.add_argument("--tool-data", default=os.path.abspath("tool_data"))
     parser_gen.add_argument("--tool-dir", default=os.path.abspath("tools"))
-    
+
     parser_gen.set_defaults(func=run_gen)
 
     parser_submit = subparsers.add_parser('audit')
     parser_submit.add_argument("--out-base", default="pcawg_data")
     parser_submit.set_defaults(func=run_audit)
 
+    parser_submit = subparsers.add_parser('gnos-audit')
+    parser_submit.set_defaults(func=run_gnos_audit)
+
     parser_register = subparsers.add_parser('register',
                                        help='Returns set of new assignments')
     parser_register.add_argument("-c", "--count", help="Number of assignments to get", type=int, default=1)
     parser_register.add_argument("-f", "--force", help="Force Register specific ID", default=None)
     parser_register.set_defaults(func=run_register)
-    
+
     parser_upload = subparsers.add_parser('upload-prep')
     parser_upload.add_argument("--workdir", default="work")
-    parser_upload.add_argument("--keyfile", default="cghub.pem")
+    parser_upload.add_argument("--keyfile", default="/keys/cghub.pem")
     parser_upload.add_argument("--upload_url", default="https://gtrepo-osdc-tcga.annailabs.com")
     parser_upload.add_argument("--out-base", default="pcawg_data")
     parser_upload.add_argument("--pipeline-src", default="https://github.com/ucscCancer/pcawg_tools")
     parser_upload.add_argument("--pipeline-version", default="1.0.0")
+    parser_upload.add_argument("--pipeline-name", default="BROAD_MUSE_PIPELINE")
+    parser_upload.add_argument("--study", default="tcga_pancancer_vcf_test")
+    parser_upload.add_argument("--vm-instance-type", default="d2.8xlarge")
+    parser_upload.add_argument("--vm-instance-cores", default="32")
+    parser_upload.add_argument("--vm-instance-mem-gb", default="256")
+    parser_upload.add_argument("--vm-location-code", default="27")
     parser_upload.set_defaults(func=run_uploadprep)
 
     parser_list = subparsers.add_parser('list')
     parser_list.set_defaults(func=run_list)
-    
+
     parser_set = subparsers.add_parser('set')
     parser_set.add_argument("state")
     parser_set.add_argument("ids", nargs="+")
@@ -369,4 +538,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     args.func(args)
-
