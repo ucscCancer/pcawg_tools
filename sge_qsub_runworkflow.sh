@@ -8,9 +8,6 @@
 #Where Nebula is installed
 NEBULA=`pwd`/nebula/
 
-#The docker tag for the Galaxy docker image
-GALAXY_TAG=bgruening/galaxy-stable:dev
-
 SERVICE=$1
 TASK=$2
 

@@ -89,7 +89,7 @@ And files to download:
 You will need to decrypt:
 openssl aes-128-cbc -d -salt -in docker9 -out docker9.tar.gz
 openssl aes-128-cbc -d -salt -in refdata9 -out refdata9.tar.gz
-And Gordon will send you decryption passphrase.
+And the Broad will send you decryption passphrase.
 You then build the docker image:
 tar zxf refdata9.tar.gz; tar zxf docker9.tar.gz; cd docker && docker build -t broad_variant_pipeline .
 Save the image to image directory
