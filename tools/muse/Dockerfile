@@ -5,8 +5,6 @@ RUN     pip install pysam
 
 RUN     mkdir /opt/bin
 RUN     wget -O /opt/bin/MuSEv0.9.9.5 http://bioinformatics.mdanderson.org/Software/MuSE/MuSEv0.9.9.5
-#RUN     wget -O /opt/bin/MuSEv1.0rc http://odin.mdacc.tmc.edu/~yfan1/MuSE/MuSEv1.0rc
-#RUN     wget -O /opt/bin/MuSEv1.0rc http://odin.mdacc.tmc.edu/~yfan1/MuSE/MuSEv1.0rc_submission_b391201
 RUN     wget -O /opt/bin/MuSEv1.0rc http://bioinformatics.mdanderson.org/Software/MuSE/MuSEv1.0rc_submission_b391201
 RUN     chmod +x /opt/bin/MuSE*
 ADD     ./muse.py /opt/bin/
