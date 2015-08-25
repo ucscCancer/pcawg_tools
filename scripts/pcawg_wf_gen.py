@@ -142,7 +142,7 @@ def run_gen(args):
         service = GalaxyService(
             docstore=docstore,
             galaxy="bgruening/galaxy-stable",
-            sudo=True,
+            sudo=args.sudo,
             tool_data=os.path.abspath("tool_data"),
             tool_dir=os.path.abspath("tools"),
             work_dir=args.work_dir,
@@ -508,6 +508,7 @@ if __name__ == "__main__":
     parser_gen.add_argument("--create-service", action="store_true", default=False)
     parser_gen.add_argument("--scratch", default=None)
     parser_gen.add_argument("--work-dir", default=None)
+    parser_gen.add_argument("--sudo", action="store_true", default=False)
     parser_gen.add_argument("--tool-data", default=os.path.abspath("tool_data"))
     parser_gen.add_argument("--tool-dir", default=os.path.abspath("tools"))
 
