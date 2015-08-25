@@ -482,7 +482,20 @@ def run_set(args):
 
     synqueue.setStates(syn, args.state, args.ids, **config)
 
-
+def run_errors(args):
+    
+    doc = from_url(args.out_base)
+    
+    for id, entry in doc.filter():
+        if entry.get('state', '') == 'error':
+            print "Dataset", id, entry.get('update_time', ''), entry.get("tags", "")
+            if 'provenance' in entry:
+                print "tool:", entry['provenance']['tool_id']
+                print "-=-=-=-=-=-=-"
+            print entry['job']['stdout']
+            print "-------------"
+            print entry['job']['stderr']
+            print "-=-=-=-=-=-=-"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -530,6 +543,10 @@ if __name__ == "__main__":
 
     parser_list = subparsers.add_parser('list')
     parser_list.set_defaults(func=run_list)
+
+    parser_errors = subparsers.add_parser('errors')
+    parser_errors.add_argument("--out-base", default="pcawg_data")
+    parser_errors.set_defaults(func=run_errors)
 
     parser_set = subparsers.add_parser('set')
     parser_set.add_argument("state")
