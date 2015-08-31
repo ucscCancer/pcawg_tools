@@ -22,26 +22,31 @@ if __name__ == "__main__":
 	parser.add_argument("output_id")
 	parser.add_argument("--cred-file", default="https://cghub.ucsc.edu/software/downloads/cghub_public.key")
 	parser.add_argument("--server", default="cghub.ucsc.edu")
+	parser.add_argument("--retry", type=int, default=3)
 	args = parser.parse_args()
-	
+
 	gtdownload = which("gtdownload")
 	if gtdownload is None:
 		sys.stderr.write("gtdownload not found\n")
 		sys.exit(1)
-	
+
 	cred_dir = os.path.join(os.path.dirname(os.path.dirname(gtdownload)), "share", "GeneTorrent")
 	serr = open("std.error", "w")
-	
-	#proc = subprocess.Popen( [gtdownload, "-c", cred_file, "-C", cred_dir, "-d", uuid, "-vv"], stderr=serr )
-	proc = subprocess.Popen( [gtdownload, "-c", args.cred_file, "-d", "https://%s/cghub/data/analysis/download/%s" % (args.server, args.uuid), "-vv"], stderr=serr )
-	proc.communicate()
+
+	for i in range(args.retry):
+		#proc = subprocess.Popen( [gtdownload, "-c", cred_file, "-C", cred_dir, "-d", uuid, "-vv"], stderr=serr )
+		proc = subprocess.Popen( [gtdownload, "-c", args.cred_file, "-d", "https://%s/cghub/data/analysis/download/%s" % (args.server, args.uuid), "-vv"], stderr=serr )
+		proc.communicate()
+		#if the output directory is there and gtdownload finishied correctly
+		if os.path.exists(args.uuid) and proc.returncode == 0:
+			break
 	serr.close()
 
 	copied = False
 	for f in glob(os.path.join(args.uuid, "*.bam")):
 		copied = True
 		shutil.move(f, args.output)
-	
+
 	if not copied:
 		handle = open("std.error")
 		sys.stderr.write("Not found in: %s" % (",".join( glob(os.path.join(args.uuid, "*" ))) ))
@@ -54,7 +59,7 @@ if __name__ == "__main__":
 				 ext = "bam",
 				 name = args.uuid + " CGHub BAM",
 				 uuid = args.uuid,
-				dataset_id = args.output_id 
+				dataset_id = args.output_id
 			)
 	json_file.write( json.dumps( info ) )
 	json_file.close()
