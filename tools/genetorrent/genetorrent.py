@@ -34,8 +34,15 @@ if __name__ == "__main__":
 	serr = open("std.error", "w")
 
 	for i in range(args.retry):
+		serr.write("Download Attempt %d\n" % (i))
+		timeout = "10"
+		if i != 0:
+			#gtdownload doesn't factor in the file check time when it sets up timeout check
+			#of it is possible to get a network timeout before ever opening a connection
+			#the 30 minute timeout on retries is an attempt to get around that
+			timeout = "30"
 		#proc = subprocess.Popen( [gtdownload, "-c", cred_file, "-C", cred_dir, "-d", uuid, "-vv"], stderr=serr )
-		proc = subprocess.Popen( [gtdownload, "-c", args.cred_file, "-d", "https://%s/cghub/data/analysis/download/%s" % (args.server, args.uuid), "-vv"], stderr=serr )
+		proc = subprocess.Popen( [gtdownload, "-c", args.cred_file, "-k", timeout, "-d", "https://%s/cghub/data/analysis/download/%s" % (args.server, args.uuid), "-vv"], stderr=serr )
 		proc.communicate()
 		#if the output directory is there and gtdownload finishied correctly
 		if os.path.exists(args.uuid) and proc.returncode == 0:
