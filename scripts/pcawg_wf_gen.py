@@ -27,7 +27,8 @@ config = {
   #"table_id" : "syn3498886",
   #"state_col" : "Processing State",
   #"primary_col" : "Donor_ID",
-  "table_id" : "syn4556289",
+  #"table_id" : "syn4556289",
+  "table_id" : "syn4933491",
   "primary_col" : "Submitter_donor_ID",
   "assignee_col" : "Assignee",
   "state_col" : "State"
