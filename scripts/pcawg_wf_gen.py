@@ -299,6 +299,14 @@ def run_uploadprep(args):
         if donor is not None and donor in wl_map:
             if donor not in job_map:
                 job_map[donor] = {}
+                
+            upload_host = urlparse(wl_map[donor]['Normal_WGS_alignment_GNOS_repos']).netloc
+            for k,v in upload_remap.items():
+                upload_host = re.sub(k,v,upload_host)
+            if args.server_filter is not None and upload_host != args.server_filter:
+                print "skipping", upload_host,  args.server_filter
+                continue
+            
             #scan out the job metrics for this job
             if 'job' in entry and 'job_metrics' in entry['job']:
                 job_id = entry['job']['id']
@@ -352,7 +360,7 @@ def run_uploadprep(args):
                 target = Target(uuid=entry['uuid'])
                 if doc.size(target) > 0:
                     src_file = doc.get_filename(target)
-                    dst_dir = os.path.join(args.workdir, donor, pipeline)
+                    dst_dir = os.path.join(args.workdir, upload_host, donor, pipeline)
                     if not os.path.exists(dst_dir):
                         os.makedirs(dst_dir)
                     dst_file = os.path.join(dst_dir, file_name)
@@ -374,7 +382,7 @@ def run_uploadprep(args):
                     target = Target(uuid=entry['uuid'])
                     src_file = doc.get_filename(target)
                     file_map[pipeline][donor] = [ src_file ]
-                    dst_dir = os.path.join(args.workdir, donor, pipeline)
+                    dst_dir = os.path.join(args.workdir, upload_host, donor, pipeline)
                     if not os.path.exists(dst_dir):
                         os.makedirs(dst_dir)
 
@@ -401,20 +409,20 @@ def run_uploadprep(args):
         for donor, files in donors.items():
             #we're only outputing data for donors on the work list
             if donor in wl_map and result_counts[donor] == 3:
-                upload_url = urlparse(wl_map[donor]['Normal_WGS_alignment_GNOS_repos']).netloc
+                upload_host = urlparse(wl_map[donor]['Normal_WGS_alignment_GNOS_repos']).netloc
                 for k,v in upload_remap.items():
-                    upload_url = re.sub(k,v,upload_url)
-                if args.server_filter is not None and upload_url != args.server_filter:
-                    print "skipping", upload_url,  args.server_filter
+                    upload_host = re.sub(k,v,upload_host)
+                if args.server_filter is not None and upload_host != args.server_filter:
+                    print "skipping", upload_host,  args.server_filter
                     continue
 
                 #output the timing json
-                timing_json = os.path.abspath(os.path.join(args.workdir, donor, pipeline, "timing.json" ))
+                timing_json = os.path.abspath(os.path.join(args.workdir, upload_host, donor, pipeline, "timing.json" ))
                 with open( timing_json, "w" ) as handle:
                     handle.write(json.dumps( timing_map[donor] ) )
 
                 #output meta-data file
-                with open( os.path.join(args.workdir, donor, pipeline, "meta.json"), "w" ) as handle:
+                with open( os.path.join(args.workdir, upload_host, donor, pipeline, "meta.json"), "w" ) as handle:
                     urls = [
                         "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Normal_WGS_alignment_GNOS_repos'], wl_map[donor]['Normal_WGS_alignment_GNOS_analysis_ID']),
                         "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Tumour_WGS_alignment_GNOS_repos'], wl_map[donor]['Tumour_WGS_alignment_GNOS_analysis_IDs'])
@@ -425,7 +433,7 @@ def run_uploadprep(args):
                             related_uuids.append(uuid_map[p][donor])
                     meta = {
                         "donor" : donor,
-                        "upload_url" : upload_url,
+                        "upload_host" : upload_host,
                         "uuid" : uuid_map[pipeline][donor],
                         "pipeline" : pipeline,
                         "related_uuids" : related_uuids,
@@ -435,10 +443,10 @@ def run_uploadprep(args):
                     handle.write(json.dumps(meta))
 
                 #output the prep script
-                with open( os.path.join(args.workdir, donor, pipeline, "prep.sh"), "w" ) as handle:
+                with open( os.path.join(args.workdir, upload_host, donor, pipeline, "prep.sh"), "w" ) as handle:
                     input_file = os.path.basename(dst_file)
                     donor_tumor = wl_map[donor]['Tumour_WGS_aliquot_IDs']
-                    upload_key = upload_key_map[upload_url]
+                    upload_key = upload_key_map[upload_host]
 
                     if pipeline in ['broad', 'muse']:
                         prep_cmd_str = ""
@@ -468,86 +476,88 @@ set -ex
 echo $? > `basename $0`.ready
 """ % (prep_cmd_str))
 
-
                 #output the upload script
-                with open( os.path.join(args.workdir, donor, pipeline, "upload.sh"), "w" ) as handle:
-                    if args.sftp:
-                        with open( os.path.join(args.workdir, donor, pipeline, "batch.sftp"), "w" ) as bhandle:
-                            bhandle.write("cd incoming/bulk_upload\n")
-                            bhandle.write("-mkdir %s\n" % (donor))
-                            bhandle.write("-mkdir %s/%s\n"% (donor, pipeline))
-                            bhandle.write("cd %s/%s\n"% (donor, pipeline))
-                            bhandle.write("put *")
-
-                        handle.write("""#!/bin/bash
+                with open( os.path.join(args.workdir, upload_host, donor, pipeline, "upload.sh"), "w" ) as handle:
+                    handle.write("""#!/bin/bash
 cd `dirname $0`
 set -ex
-sftp -oIdentityFile=%s -b batch.sftp %s
+""")
+                    if pipeline in ['broad', 'muse']:
+                        submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
+                        submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
+                        submit_cmd_str += " --metadata-urls %s" % (",".join(urls))
+                        submit_cmd_str += " --vcfs %s " % (",".join(files))
+                        submit_cmd_str += " --vcf-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in files) )))
+                        submit_cmd_str += " --vcf-idxs %s" % ((",".join( ("%s.idx" % i for i in files) )))
+                        submit_cmd_str += " --vcf-idx-md5sum-files %s" % ((",".join( ("%s.idx.md5" % i for i in files) )))
+                        submit_cmd_str += " --outdir %s.%s.dir" % (pipeline, donor_tumor)
+                        submit_cmd_str += " --key %s " % (upload_key)
+                        submit_cmd_str += " --k-timeout-min 10"
+                        submit_cmd_str += " --upload-url https://%s" % (upload_host)
+                        submit_cmd_str += " --study-refname-override %s" % (args.study)
+                        submit_cmd_str += " --workflow-url '%s'" % args.pipeline_src
+                        submit_cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
+                        submit_cmd_str += " --workflow-name '%s'" % args.pipeline_name
+                        submit_cmd_str += " --workflow-version '%s'" % args.pipeline_version
+                        submit_cmd_str += " --vm-instance-type '%s'" % args.vm_instance_type
+                        submit_cmd_str += " --vm-instance-cores %s" % args.vm_instance_cores
+                        submit_cmd_str += " --vm-instance-mem-gb %s" % args.vm_instance_mem_gb
+                        submit_cmd_str += " --vm-location-code %s" % args.vm_location_code
+                        submit_cmd_str += " --timing-metrics-json %s" % (timing_json)
+                        submit_cmd_str += " --workflow-file-subset %s" % (pipeline)
+                        submit_cmd_str += " --related-file-subset-uuids %s" % (",".join(related_uuids))
+                        submit_cmd_str += " --uuid %s" % (uuid_map[pipeline][donor])
+                        if args.rsync:
+                            submit_cmd_str += " --skip-upload --skip-validate"
+
+                    if pipeline in ['broad_tar']:
+                        submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
+                        submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
+                        submit_cmd_str += " --metadata-urls %s" % (",".join(urls))
+                        submit_cmd_str += " --tarballs %s " % (",".join(new_files))
+                        submit_cmd_str += " --tarball-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in new_files) )))
+                        submit_cmd_str += " --outdir %s.%s.dir" % (pipeline, donor_tumor)
+                        submit_cmd_str += " --key %s " % (upload_key)
+                        submit_cmd_str += " --k-timeout-min 10"
+                        submit_cmd_str += " --upload-url https://%s" % (upload_host)
+                        submit_cmd_str += " --study-refname-override %s" % (args.study)
+                        submit_cmd_str += " --workflow-url '%s'" % args.pipeline_src
+                        submit_cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
+                        submit_cmd_str += " --workflow-name '%s'" % args.pipeline_name
+                        submit_cmd_str += " --workflow-version '%s'" % args.pipeline_version
+                        submit_cmd_str += " --vm-instance-type '%s'" % args.vm_instance_type
+                        submit_cmd_str += " --vm-instance-cores %s" % args.vm_instance_cores
+                        submit_cmd_str += " --vm-instance-mem-gb %s" % args.vm_instance_mem_gb
+                        submit_cmd_str += " --workflow-file-subset %s" % (pipeline)
+                        submit_cmd_str += " --timing-metrics-json %s" % (timing_json)
+                        submit_cmd_str += " --related-file-subset-uuids %s" % (",".join(related_uuids))
+                        submit_cmd_str += " --uuid %s" % (uuid_map[pipeline][donor])
+                        if args.rsync:
+                            submit_cmd_str += " --skip-upload --skip-validate"
+
+                    if args.rsync:
+                        handle.write("""
+{prep_cmd} --out ./
+mv vcf/*/*.xml ./
+rm -rf vcf xml2
+ssh -i {key} -o StrictHostKeyChecking=no {remote_host} mkdir -p {remote_dir}/{upload_host}/{donor}/
+RSYNC_RSH="ssh -i {key} -o StrictHostKeyChecking=no" rsync -av {local_dir} {rsync}/{upload_host}/{donor}/
 echo $? > `basename $0`.submitted
-""" % (os.path.abspath(args.sftp_key), args.sftp))
+""".format(
+    prep_cmd=submit_cmd_str, 
+    key=os.path.abspath(args.rsync_key),
+    rsync=args.rsync,
+    donor=donor,
+    upload_host=upload_host,
+    remote_host=args.rsync.split(":")[0],
+    remote_dir=args.rsync.split(":")[1],
+    local_dir= os.path.join(os.path.abspath(args.workdir), upload_host, donor, pipeline)
+    ))
                     else:
-                        if pipeline in ['broad', 'muse']:
-
-                            submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
-                            submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
-                            submit_cmd_str += " --metadata-urls %s" % (",".join(urls))
-                            submit_cmd_str += " --vcfs %s " % (",".join(files))
-                            submit_cmd_str += " --vcf-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in files) )))
-                            submit_cmd_str += " --vcf-idxs %s" % ((",".join( ("%s.idx" % i for i in files) )))
-                            submit_cmd_str += " --vcf-idx-md5sum-files %s" % ((",".join( ("%s.idx.md5" % i for i in files) )))
-                            submit_cmd_str += " --outdir %s.%s.dir" % (pipeline, donor_tumor)
-                            submit_cmd_str += " --key %s " % (upload_key)
-                            submit_cmd_str += " --k-timeout-min 10"
-                            submit_cmd_str += " --upload-url https://%s" % (upload_url)
-                            submit_cmd_str += " --study-refname-override %s" % (args.study)
-                            submit_cmd_str += " --workflow-url '%s'" % args.pipeline_src
-                            submit_cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
-                            submit_cmd_str += " --workflow-name '%s'" % args.pipeline_name
-                            submit_cmd_str += " --workflow-version '%s'" % args.pipeline_version
-                            submit_cmd_str += " --vm-instance-type '%s'" % args.vm_instance_type
-                            submit_cmd_str += " --vm-instance-cores %s" % args.vm_instance_cores
-                            submit_cmd_str += " --vm-instance-mem-gb %s" % args.vm_instance_mem_gb
-                            submit_cmd_str += " --vm-location-code %s" % args.vm_location_code
-                            submit_cmd_str += " --timing-metrics-json %s" % (timing_json)
-                            submit_cmd_str += " --workflow-file-subset %s" % (pipeline)
-                            submit_cmd_str += " --related-file-subset-uuids %s" % (",".join(related_uuids))
-                            submit_cmd_str += " --uuid %s" % (uuid_map[pipeline][donor])
-                            #submit_cmd_str += " --skip-upload"
-
-                        if pipeline in ['broad_tar']:
-
-                            submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
-                            submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
-                            submit_cmd_str += " --metadata-urls %s" % (",".join(urls))
-                            submit_cmd_str += " --tarballs %s " % (",".join(new_files))
-                            submit_cmd_str += " --tarball-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in new_files) )))
-                            submit_cmd_str += " --outdir %s.%s.dir" % (pipeline, donor_tumor)
-                            submit_cmd_str += " --key %s " % (upload_key)
-                            submit_cmd_str += " --k-timeout-min 10"
-                            submit_cmd_str += " --upload-url https://%s" % (upload_url)
-                            submit_cmd_str += " --study-refname-override %s" % (args.study)
-                            submit_cmd_str += " --workflow-url '%s'" % args.pipeline_src
-                            submit_cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
-                            submit_cmd_str += " --workflow-name '%s'" % args.pipeline_name
-                            submit_cmd_str += " --workflow-version '%s'" % args.pipeline_version
-                            submit_cmd_str += " --vm-instance-type '%s'" % args.vm_instance_type
-                            submit_cmd_str += " --vm-instance-cores %s" % args.vm_instance_cores
-                            submit_cmd_str += " --vm-instance-mem-gb %s" % args.vm_instance_mem_gb
-                            submit_cmd_str += " --workflow-file-subset %s" % (pipeline)
-                            submit_cmd_str += " --timing-metrics-json %s" % (timing_json)
-                            submit_cmd_str += " --related-file-subset-uuids %s" % (",".join(related_uuids))
-                            submit_cmd_str += " --uuid %s" % (uuid_map[pipeline][donor])
-                            #submit_cmd_str += " --skip-upload"
-
-                        handle.write(string.Template("""#!/bin/bash
-    set -ex
-    ${SUBMIT}
-    echo $$? > $$0.submitted
-    """).substitute(PREP=prep_cmd_str, SUBMIT=submit_cmd_str,
-                                SUBMIT_DIR=os.path.join(os.path.abspath(args.workdir), "vcf", pipeline + "." + donor_tumor + ".dir", uuid_map[pipeline][donor] ),
-                                KEY=upload_key
-                        ) )
-
+                        handle.write("""
+%s
+echo $? > `basename $0`.submitted
+""" % (submit_cmd_str))
 
 def run_list(args):
     syn = synapseclient.Synapse()
@@ -584,6 +594,15 @@ def run_errors(args):
                     print entry['job']['stderr']
                     print "-=-=-=-=-=-=-"
 
+def run_clean(args):
+    doc = from_url(args.out_base)
+    error_count = 0
+    for id, entry in doc.filter(state='error'):
+        if entry.get('state', '') == 'error':
+            doc.delete(Target(uuid=id))
+            error_count += 1
+    print "Error count", error_count
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
@@ -615,7 +634,7 @@ if __name__ == "__main__":
     parser_register.set_defaults(func=run_register)
 
     parser_upload = subparsers.add_parser('upload-prep')
-    parser_upload.add_argument("--workdir", default="work")
+    parser_upload.add_argument("--workdir", default="upload")
     #parser_upload.add_argument("--keyfile", default="/keys/cghub.key")
     parser_upload.add_argument("--out-base", default="pcawg_data")
     parser_upload.add_argument("--pipeline-src", default="https://github.com/ucscCancer/pcawg_tools")
@@ -627,8 +646,8 @@ if __name__ == "__main__":
     parser_upload.add_argument("--vm-instance-cores", default="32")
     parser_upload.add_argument("--vm-instance-mem-gb", default="256")
     parser_upload.add_argument("--vm-location-code", default="27")
-    parser_upload.add_argument("--sftp", default=None)
-    parser_upload.add_argument("--sftp-key", default=None)
+    parser_upload.add_argument("--rsync", default=None)
+    parser_upload.add_argument("--rsync-key", default=None)
 
     parser_upload.add_argument("ids", nargs="*")
     parser_upload.set_defaults(func=run_uploadprep)
@@ -641,6 +660,10 @@ if __name__ == "__main__":
     parser_errors.add_argument("--full", action="store_true", default=False)
     parser_errors.add_argument("--out-base", default="pcawg_data")
     parser_errors.set_defaults(func=run_errors)
+
+    parser_clean = subparsers.add_parser('clean')
+    parser_clean.add_argument("--out-base", default="pcawg_data")
+    parser_clean.set_defaults(func=run_clean)
 
     parser_set = subparsers.add_parser('set')
     parser_set.add_argument("state")
