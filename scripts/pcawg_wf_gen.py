@@ -360,7 +360,7 @@ def run_uploadprep(args):
                 target = Target(uuid=entry['uuid'])
                 if doc.size(target) > 0:
                     src_file = doc.get_filename(target)
-                    dst_dir = os.path.join(args.workdir, upload_host, donor, pipeline)
+                    dst_dir = os.path.join(args.workdir, upload_host, donor, uuid_map[pipeline][donor])
                     if not os.path.exists(dst_dir):
                         os.makedirs(dst_dir)
                     dst_file = os.path.join(dst_dir, file_name)
@@ -382,7 +382,7 @@ def run_uploadprep(args):
                     target = Target(uuid=entry['uuid'])
                     src_file = doc.get_filename(target)
                     file_map[pipeline][donor] = [ src_file ]
-                    dst_dir = os.path.join(args.workdir, upload_host, donor, pipeline)
+                    dst_dir = os.path.join(args.workdir, upload_host, donor, uuid_map[pipeline][donor])
                     if not os.path.exists(dst_dir):
                         os.makedirs(dst_dir)
 
@@ -417,12 +417,12 @@ def run_uploadprep(args):
                     continue
 
                 #output the timing json
-                timing_json = os.path.abspath(os.path.join(args.workdir, upload_host, donor, pipeline, "timing.json" ))
+                timing_json = os.path.abspath(os.path.join(args.workdir, upload_host, donor, uuid_map[pipeline][donor], "timing.json" ))
                 with open( timing_json, "w" ) as handle:
                     handle.write(json.dumps( timing_map[donor] ) )
 
                 #output meta-data file
-                with open( os.path.join(args.workdir, upload_host, donor, pipeline, "meta.json"), "w" ) as handle:
+                with open( os.path.join(args.workdir, upload_host, donor, uuid_map[pipeline][donor], "meta.json"), "w" ) as handle:
                     urls = [
                         "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Normal_WGS_alignment_GNOS_repos'], wl_map[donor]['Normal_WGS_alignment_GNOS_analysis_ID']),
                         "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Tumour_WGS_alignment_GNOS_repos'], wl_map[donor]['Tumour_WGS_alignment_GNOS_analysis_IDs'])
@@ -443,7 +443,7 @@ def run_uploadprep(args):
                     handle.write(json.dumps(meta))
 
                 #output the prep script
-                with open( os.path.join(args.workdir, upload_host, donor, pipeline, "prep.sh"), "w" ) as handle:
+                with open( os.path.join(args.workdir, upload_host, donor, uuid_map[pipeline][donor], "prep.sh"), "w" ) as handle:
                     input_file = os.path.basename(dst_file)
                     donor_tumor = wl_map[donor]['Tumour_WGS_aliquot_IDs']
                     upload_key = upload_key_map[upload_host]
@@ -477,7 +477,7 @@ echo $? > `basename $0`.ready
 """ % (prep_cmd_str))
 
                 #output the upload script
-                with open( os.path.join(args.workdir, upload_host, donor, pipeline, "upload.sh"), "w" ) as handle:
+                with open( os.path.join(args.workdir, upload_host, donor, uuid_map[pipeline][donor], "upload.sh"), "w" ) as handle:
                     handle.write("""#!/bin/bash
 cd `dirname $0`
 set -ex
@@ -548,10 +548,11 @@ echo $? > `basename $0`.submitted
     key=os.path.abspath(args.rsync_key),
     rsync=args.rsync,
     donor=donor,
+    pipeline=pipeline,
     upload_host=upload_host,
     remote_host=args.rsync.split(":")[0],
     remote_dir=args.rsync.split(":")[1],
-    local_dir= os.path.join(os.path.abspath(args.workdir), upload_host, donor, pipeline)
+    local_dir= os.path.join(os.path.abspath(args.workdir), upload_host, donor, uuid_map[pipeline][donor])
     ))
                     else:
                         handle.write("""
