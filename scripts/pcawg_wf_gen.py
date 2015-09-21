@@ -34,6 +34,8 @@ config = {
   "state_col" : "State"
 }
 
+BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 key_map = {
     "cghub.ucsc.edu" : "/tool_data/files/cghub.key",
     "gtrepo-ebi.annailabs.com" : "/tool_data/files/icgc.key",
@@ -252,13 +254,13 @@ upload_study_map = {
 }
 
 upload_key_map = {
-    "gtrepo-osdc-tcga.annailabs.com" : "/keys/bionimbus.key",
-    "gtrepo-ebi.annailabs.com" : "/keys/icgc.key",
-    "gtrepo-bsc.annailabs.com" : "/keys/icgc.key",
-    "gtrepo-osdc-icgc.annailabs.com" : "/keys/icgc.key",
-    "gtrepo-riken.annailabs.com" : "/keys/icgc.key",
-    "gtrepo-dkfz.annailabs.com" : "/keys/icgc.key",
-    "gtrepo-etri.annailabs.com" : "/keys/icgc.key"
+    "gtrepo-osdc-tcga.annailabs.com" : os.path.join(BASEDIR, "tool_data/files/bionimbus.key"),
+    "gtrepo-ebi.annailabs.com" : os.path.join(BASEDIR, "tool_data/files/icgc.key"),
+    "gtrepo-bsc.annailabs.com" : os.path.join(BASEDIR, "tool_data/files/icgc.key"),
+    "gtrepo-osdc-icgc.annailabs.com" : os.path.join(BASEDIR, "tool_data/files/icgc.key"),
+    "gtrepo-riken.annailabs.com" : os.path.join(BASEDIR, "tool_data/files/icgc.key"),
+    "gtrepo-dkfz.annailabs.com" : os.path.join(BASEDIR, "tool_data/files/icgc.key"),
+    "gtrepo-etri.annailabs.com" : os.path.join(BASEDIR, "tool_data/files/icgc.key")
 }
 
 def run_uploadprep(args):
@@ -424,8 +426,8 @@ def run_uploadprep(args):
                 #output meta-data file
                 with open( os.path.join(args.workdir, upload_host, donor, uuid_map[pipeline][donor], "meta.json"), "w" ) as handle:
                     urls = [
-                        "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Normal_WGS_alignment_GNOS_repos'], wl_map[donor]['Normal_WGS_alignment_GNOS_analysis_ID']),
-                        "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Tumour_WGS_alignment_GNOS_repos'], wl_map[donor]['Tumour_WGS_alignment_GNOS_analysis_IDs'])
+                        "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Normal_WGS_alignment_GNOS_repos'].split("|")[0], wl_map[donor]['Normal_WGS_alignment_GNOS_analysis_ID']),
+                        "%scghub/metadata/analysisFull/%s" % (wl_map[donor]['Tumour_WGS_alignment_GNOS_repos'].split("|")[0], wl_map[donor]['Tumour_WGS_alignment_GNOS_analysis_IDs'])
                     ]
                     related_uuids = []
                     for p in uuid_map:
