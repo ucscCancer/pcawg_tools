@@ -40,7 +40,7 @@ if __name__ == "__main__":
 			#gtdownload doesn't factor in the file check time when it sets up timeout check
 			#of it is possible to get a network timeout before ever opening a connection
 			#the 30 minute timeout on retries is an attempt to get around that
-			timeout = "30"
+			timeout = "60"
 		#proc = subprocess.Popen( [gtdownload, "-c", cred_file, "-C", cred_dir, "-d", uuid, "-vv"], stderr=serr )
 		proc = subprocess.Popen( [gtdownload, "-c", args.cred_file, "-k", timeout, "-d", "https://%s/cghub/data/analysis/download/%s" % (args.server, args.uuid), "-vv"], stderr=serr )
 		proc.communicate()
