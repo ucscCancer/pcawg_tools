@@ -496,7 +496,7 @@ set -ex
                         submit_cmd_str += " --key %s " % (upload_key)
                         submit_cmd_str += " --k-timeout-min 10"
                         submit_cmd_str += " --upload-url https://%s" % (upload_host)
-                        submit_cmd_str += " --study-refname-override %s" % (args.study)
+                        submit_cmd_str += " --study-refname-override %s" % (upload_study_map[upload_host])
                         submit_cmd_str += " --workflow-url '%s'" % args.pipeline_src
                         submit_cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
                         submit_cmd_str += " --workflow-name '%s'" % args.pipeline_name
@@ -522,7 +522,7 @@ set -ex
                         submit_cmd_str += " --key %s " % (upload_key)
                         submit_cmd_str += " --k-timeout-min 10"
                         submit_cmd_str += " --upload-url https://%s" % (upload_host)
-                        submit_cmd_str += " --study-refname-override %s" % (args.study)
+                        submit_cmd_str += " --study-refname-override %s" % (upload_study_map[upload_host])
                         submit_cmd_str += " --workflow-url '%s'" % args.pipeline_src
                         submit_cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
                         submit_cmd_str += " --workflow-name '%s'" % args.pipeline_name
