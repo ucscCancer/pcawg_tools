@@ -7,6 +7,7 @@ import os
 import shutil
 from glob import glob
 import json
+import random
 
 def which(cmd):
 	cmd = ["which",cmd]
@@ -32,6 +33,8 @@ if __name__ == "__main__":
 
 	cred_dir = os.path.join(os.path.dirname(os.path.dirname(gtdownload)), "share", "GeneTorrent")
 	serr = open("std.error", "w")
+	
+	server = random.choice(args.server.split(","))
 
 	for i in range(args.retry):
 		serr.write("Download Attempt %d\n" % (i))
@@ -42,7 +45,7 @@ if __name__ == "__main__":
 			#the 30 minute timeout on retries is an attempt to get around that
 			timeout = "60"
 		#proc = subprocess.Popen( [gtdownload, "-c", cred_file, "-C", cred_dir, "-d", uuid, "-vv"], stderr=serr )
-		proc = subprocess.Popen( [gtdownload, "-c", args.cred_file, "-k", timeout, "-d", "https://%s/cghub/data/analysis/download/%s" % (args.server, args.uuid), "-vv"], stderr=serr )
+		proc = subprocess.Popen( [gtdownload, "-c", args.cred_file, "-k", timeout, "-d", "https://%s/cghub/data/analysis/download/%s" % (server, args.uuid), "-vv"], stderr=serr )
 		proc.communicate()
 		#if the output directory is there and gtdownload finishied correctly
 		if os.path.exists(args.uuid) and proc.returncode == 0:
