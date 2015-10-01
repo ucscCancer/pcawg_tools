@@ -105,36 +105,37 @@ def run_gen(args):
     for ent in synqueue.listAssignments(syn, **config):
         #print "'%s'" % (ent['state']), ent['state'] == 'nan', type(ent['state']), type('nan')
         if not isinstance(ent['state'], basestring) and isnan(ent['state']):
-            normal_gnos_endpoints = ",".join(list(
-                urlparse(a).netloc for a in ent['meta']['Normal_WGS_alignment_GNOS_repos'].split('|')
-            ))
-            tumour_gnos_endpoints = ",".join(list(
-                urlparse(a).netloc for a in ent['meta']['Tumour_WGS_alignment_GNOS_repos'].split('|')
-            ))
+            if "," not in ent['meta']['Tumour_WGS_alignment_GNOS_analysis_IDs']:
+                normal_gnos_endpoints = ",".join(list(
+                    urlparse(a).netloc for a in ent['meta']['Normal_WGS_alignment_GNOS_repos'].split('|')
+                ))
+                tumour_gnos_endpoints = ",".join(list(
+                    urlparse(a).netloc for a in ent['meta']['Tumour_WGS_alignment_GNOS_repos'].split('|')
+                ))
 
-            gnos_endpoint = urlparse(ent['meta']['Normal_WGS_alignment_GNOS_repos']).netloc
-            task = GalaxyWorkflowTask("workflow_%s" % (ent['id']),
-                workflow,
-                inputs=dm,
-                parameters={
-                    'normal_bam_download' : {
-                        "uuid" : ent['meta']['Normal_WGS_alignment_GNOS_analysis_ID'],
-                        "gnos_endpoint" : normal_gnos_endpoints,
-                        "cred_file" : key_map[normal_gnos_endpoints.split(",")[0]]
+                gnos_endpoint = urlparse(ent['meta']['Normal_WGS_alignment_GNOS_repos']).netloc
+                task = GalaxyWorkflowTask("workflow_%s" % (ent['id']),
+                    workflow,
+                    inputs=dm,
+                    parameters={
+                        'normal_bam_download' : {
+                            "uuid" : ent['meta']['Normal_WGS_alignment_GNOS_analysis_ID'],
+                            "gnos_endpoint" : normal_gnos_endpoints,
+                            "cred_file" : key_map[normal_gnos_endpoints.split(",")[0]]
+                        },
+                        'tumor_bam_download' : {
+                            "uuid" : ent['meta']['Tumour_WGS_alignment_GNOS_analysis_IDs'],
+                            "gnos_endpoint" : tumour_gnos_endpoints,
+                            "cred_file" : key_map[tumour_gnos_endpoints.split(",")[0]]
+                        },
+                        'broad_variant_pipeline' : {
+                            "broad_ref_dir" : "/tool_data/files/refdata",
+                            "sample_id" : ent['meta']['Submitter_donor_ID']
+                        }
                     },
-                    'tumor_bam_download' : {
-                        "uuid" : ent['meta']['Tumour_WGS_alignment_GNOS_analysis_IDs'],
-                        "gnos_endpoint" : tumour_gnos_endpoints,
-                        "cred_file" : key_map[tumour_gnos_endpoints.split(",")[0]]
-                    },
-                    'broad_variant_pipeline' : {
-                        "broad_ref_dir" : "/tool_data/files/refdata",
-                        "sample_id" : ent['meta']['Submitter_donor_ID']
-                    }
-                },
-                tags=[ "donor:%s" % (ent['meta']['Submitter_donor_ID']) ]
-            )
-            tasks.append(task)
+                    tags=[ "donor:%s" % (ent['meta']['Submitter_donor_ID']) ]
+                )
+                tasks.append(task)
 
     if not os.path.exists("%s.tasks" % (args.out_base)):
         os.mkdir("%s.tasks" % (args.out_base))
