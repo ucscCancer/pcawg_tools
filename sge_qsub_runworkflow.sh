@@ -28,4 +28,5 @@ $NEBULA/bin/nebula run \
 $SERVICE \
 $TASK 2> ${TASK}.err > ${TASK}.out
 
+rm -rf /scratch/nebula_work /scratch/nebula_cache /scratch/nebula_scratch
 echo "DONE" > ${TASK}.state

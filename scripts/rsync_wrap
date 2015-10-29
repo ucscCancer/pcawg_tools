@@ -1,0 +1,11 @@
+#!/bin/bash
+#$ -cwd
+#$ -S /bin/bash
+#$ -pe smp 32
+
+RC=1 
+while [[ RC -ne 0 ]]
+do
+   rsync $*
+   RC=$?
+done

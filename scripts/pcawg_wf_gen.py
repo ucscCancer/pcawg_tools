@@ -195,11 +195,22 @@ def run_audit(args):
                         donor = t[1]
                 if donor not in donor_map:
                     donor_map[donor] = {}
-                donor_map[donor][ent['name']] = id
+                
+                if 'update_time' in ent:
+                    dt = datetime.datetime.strptime(ent['update_time'], "%Y-%m-%dT%H:%M:%S.%f")
+                else:
+                    dt = None
+                donor_map[donor][ent['name']] = { 'id' : id, 'update_time' : dt }
+                
+                
 
     for ent in synqueue.listAssignments(syn, list_all=True, **config):
         if ent['meta']['Submitter_donor_ID'] in donor_map:
-            print ent['meta']['Submitter_donor_ID'], len(donor_map[ent['meta']['Submitter_donor_ID']])
+            print "%s\t%s\t%s" % (
+                ent['meta']['Submitter_donor_ID'], 
+                len(donor_map[ent['meta']['Submitter_donor_ID']]), 
+                max(v['update_time'] for k,v in donor_map[ent['meta']['Submitter_donor_ID']].items() if v['update_time'] is not None )
+            )
 
 def run_gnos_audit(args):
     args = parser.parse_args()
@@ -213,7 +224,7 @@ def run_gnos_audit(args):
         repos[i] = True
     print repos.keys()
     """
-    server_list = ["https://gtrepo-osdc-tcga.annailabs.com"]
+    server_list = ["https://gtrepo-osdc-tcga.annailabs.com", "https://gtrepo-osdc-icgc.annailabs.com"]
 
     uuid_map = {}
     uuid_map['broad'] = dict( (a[1], a[0]) for a in synqueue.getValues(syn, "Broad_VCF_UUID",  **config).items() )
@@ -224,17 +235,18 @@ def run_gnos_audit(args):
 
     found = {}
     for server in server_list:
-        handle = urlopen(server + "/cghub/metadata/analysisId?study=%s" % (args.study))
-        for line in handle:
-            res = analysis_re.search(line)
-            if res:
-                gid = res.group(1)
-                for p in ['broad', 'muse','broad_tar']:
-                    if gid in uuid_map[p]:
-                        pid = uuid_map[p][gid]
-                        if pid not in found:
-                            found[pid] = {}
-                        found[pid][p] = [server, gid]
+        for study in ['tcga_pancancer_vcf', 'icgc_pancancer_vcf']:
+            handle = urlopen(server + "/cghub/metadata/analysisId?study=%s" % (study))
+            for line in handle:
+                res = analysis_re.search(line)
+                if res:
+                    gid = res.group(1)
+                    for p in ['broad', 'muse','broad_tar']:
+                        if gid in uuid_map[p]:
+                            pid = uuid_map[p][gid]
+                            if pid not in found:
+                                found[pid] = {}
+                            found[pid][p] = [server, gid]
 
     print "\n\n"
     for p in found:
@@ -552,7 +564,7 @@ set -ex
 mv vcf/*/*.xml ./
 rm -rf vcf xml2
 ssh -i {key} -o StrictHostKeyChecking=no {remote_host} mkdir -p {remote_dir}/{upload_host}/{donor}/
-RSYNC_RSH="ssh -i {key} -o StrictHostKeyChecking=no" rsync -av {local_dir} {rsync}/{upload_host}/{donor}/
+RSYNC_RSH="ssh -i {key} -o StrictHostKeyChecking=no" {script_dir}/rsync_wrap -av {local_dir} {rsync}/{upload_host}/{donor}/
 echo $? > `basename $0`.submitted
 """.format(
     prep_cmd=submit_cmd_str, 
@@ -563,6 +575,7 @@ echo $? > `basename $0`.submitted
     upload_host=upload_host,
     remote_host=args.rsync.split(":")[0],
     remote_dir=args.rsync.split(":")[1],
+    script_dir=os.path.dirname(os.path.abspath(__file__)),
     local_dir= os.path.join(os.path.abspath(args.workdir), upload_host, donor, uuid_map[pipeline][donor])
     ))
                     else:
@@ -606,6 +619,34 @@ def run_errors(args):
                     print entry['job']['stderr']
                     print "-=-=-=-=-=-=-"
 
+def run_timing(args):
+    doc = from_url(args.out_base)
+
+    job_map = {}
+    for id, entry in doc.filter(state='ok'):
+        donor = None
+        #look for docs with donor tags
+        if 'tags' in entry and 'state' in entry and entry['state'] == 'ok':
+            for s in entry['tags']:
+                tmp = s.split(":")
+                if tmp[0] == 'donor':
+                    donor = tmp[1]
+        if donor is not None:   
+            if 'job' in entry and 'job_metrics' in entry['job']:
+                job_id = entry['job']['id']
+                tool_id = entry['job']['tool_id']
+                job_info = { }
+                for met in entry['job']['job_metrics']:
+                    job_info[met['name']] = met['raw_value']
+                if tool_id not in job_map:
+                    job_map[tool_id] = {}
+                job_map[tool_id][donor] = job_info
+    
+    for tool in job_map:
+        for donor in job_map[tool]:
+            if 'runtime_seconds' in job_map[tool][donor]:
+                print "%s\t%s\t%s" % (tool, donor, job_map[tool][donor]['runtime_seconds'])
+            
 def run_clean(args):
     doc = from_url(args.out_base)
     error_count = 0
@@ -684,6 +725,10 @@ if __name__ == "__main__":
     parser_set.add_argument("state")
     parser_set.add_argument("ids", nargs="+")
     parser_set.set_defaults(func=run_set)
+
+    parser_timing = subparsers.add_parser('timing')
+    parser_timing.add_argument("--out-base", default="pcawg_data")
+    parser_timing.set_defaults(func=run_timing)
 
     args = parser.parse_args()
     args.func(args)
