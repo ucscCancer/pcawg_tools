@@ -508,7 +508,7 @@ set -ex
                     file_rename_cmd = ''
                     file_rename_map = {}
                     update_analysis_xml = ''
-                    broad_docker_version_string = ".SB-10."
+                    broad_docker_version_string = "-10"
                     # Handle the Broad output files
                     if pipeline in ['broad']:
                         # First, we need to add "SB-10" to all file names, right before that date-part (after dRanger., mutect., snowman.)
@@ -521,7 +521,6 @@ set -ex
                             
                         for k in file_rename_map:
                             file_rename_cmd += 'mv '+k+' '+file_rename_map[k]+'\n'
-                            update_analysis_xml += 'sed -i.bak s/'+k+'/'+file_rename_map[k]+'/g  analysis.xml\n'
                         
                         submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
                         submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
@@ -554,22 +553,21 @@ set -ex
                     if pipeline in ['muse']:
                         # First, we need to add the MuSE v1.0rc_submission_b391201 SHA1 hash sum to the file names.
                         # ATTENTION: If you change the MuSE version, you will need to put the correct hashsum in here. 
-                        muse_1_0rc_submission_b391201_sha1sum='bc8f3a82692c60861a0df484245df4dd5bdf2d79'
+                        muse_1_0rc_identifier='b391201'
                         file_rename_cmd = ''
                         file_rename_map = {}
                         for f in files:
                             parts = re.split('(MUSE_1-0rc)',f)
-                            new_file_name = parts[0]+parts[1]+'-'+muse_1_0rc_submission_b391201_sha1sum+parts[2]
+                            new_file_name = parts[0]+parts[1]+'-'+muse_1_0rc_identifier+parts[2]
                             file_rename_map[f]=new_file_name
                             
                         for k in file_rename_map:
                             file_rename_cmd += 'mv '+k+' '+file_rename_map[k]+'\n'
-                            update_analysis_xml += 'sed -i.bak s/'+k+'/'+file_rename_map[k]+'/g  analysis.xml\n'
                             
                         submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
                         submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
                         submit_cmd_str += " --metadata-urls %s" % (",".join(urls))
-                        submit_cmd_str += " --vcfs %s " % (",".join(files))
+                        submit_cmd_str += " --vcfs %s " % (",".join(file_rename_map.values()))
                         submit_cmd_str += " --vcf-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in  file_rename_map.values()) )))
                         submit_cmd_str += " --vcf-idxs %s" % ((",".join( ("%s.idx" % i for i in  file_rename_map.values()) )))
                         submit_cmd_str += " --vcf-idx-md5sum-files %s" % ((",".join( ("%s.idx.md5" % i for i in  file_rename_map.values()) )))
@@ -605,12 +603,11 @@ set -ex
                             
                         for k in file_rename_map:
                             file_rename_cmd += 'mv '+k+' '+file_rename_map[k]+'\n'
-                            update_analysis_xml += 'sed -i.bak s/'+k+'/'+file_rename_map[k]+'/g  analysis.xml\n'
                             
                         submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
                         submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
                         submit_cmd_str += " --metadata-urls %s" % (",".join(urls))
-                        submit_cmd_str += " --tarballs %s " % (",".join(new_files))
+                        submit_cmd_str += " --tarballs %s " % (",".join(file_rename_map.values()))
                         submit_cmd_str += " --tarball-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in file_rename_map.values()) )))
                         submit_cmd_str += " --outdir %s.%s.dir" % (pipeline, donor_tumor)
                         submit_cmd_str += " --key %s " % (upload_key)
