@@ -576,10 +576,10 @@ set -ex
                             # generate the renaming commands, so we'll do it here.
                             parts = re.split('(MUSE_1-0rc)',k)
                             end_without_suffix = re.split('(\.vcf)',parts[2])
-                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf' + '\t\t' + parts[0] + parts[1] + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf\n'                            
-                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.md5' + '\t\t' + parts[0] + parts[1] + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.md5\n'
-                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx' + '\t\t' + parts[0] + parts[1] + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.idx\n'
-                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx.md5' + '\t\t' + parts[0] + parts[1] + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.idx.md5\n'
+                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf' + '\t\t' + parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf\n'                            
+                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.md5' + '\t\t' + parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.md5\n'
+                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx' + '\t\t' + parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.idx\n'
+                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx.md5' + '\t\t' + parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.idx.md5\n'
                             
                         submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
                         submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
