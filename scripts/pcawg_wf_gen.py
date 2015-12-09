@@ -520,7 +520,15 @@ set -ex
                             file_rename_map[f]=new_file_name
                             
                         for k in file_rename_map:
-                            file_rename_cmd += 'mv '+k+' '+file_rename_map[k]+'\n'
+                            file_rename_cmd += 'mv '+k+'\t\t'+file_rename_map[k]+'\n'
+                            # We also have to rename the broad files vcf.gz.idx, vcf.gz.md5, vcf.gz.idx.md5
+                            # But since these files aren't in the list `files`, we can't rely on that list to properly
+                            # generate the renaming commands, so we'll do it here.
+                            parts = re.split('(broad-dRanger_snowman|broad-dRanger|broad-snowman|broad-mutect)',k)
+                            end_without_suffix = re.split('(\.vcf)',parts[2])
+                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.md5' + '\t\t' + parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + '.vcf.gz.md5\n'
+                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx' + '\t\t' + parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + '.vcf.gz.idx\n'
+                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx.md5' + '\t\t' + parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + '.vcf.gz.idx.md5\n'
                         
                         submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
                         submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
@@ -558,11 +566,20 @@ set -ex
                         file_rename_map = {}
                         for f in files:
                             parts = re.split('(MUSE_1-0rc)',f)
-                            new_file_name = parts[0]+parts[1]+'-'+muse_1_0rc_identifier+parts[2]
-                            file_rename_map[f]=new_file_name
+                            new_file_name = parts[0] + parts[1] + '-' + muse_1_0rc_identifier + parts[2]
+                            file_rename_map[f] = new_file_name
                             
                         for k in file_rename_map:
-                            file_rename_cmd += 'mv '+k+' '+file_rename_map[k]+'\n'
+                            file_rename_cmd += 'mv ' + k + '\t\t' + file_rename_map[k] + '\n'
+                            # We also have to rename the MUSE vcf, vcf.gz.idx, vcf.gz.md5, vcf.gz.idx.md5
+                            # But since these files aren't in the list `files`, we can't rely on that list to properly
+                            # generate the renaming commands, so we'll do it here.
+                            parts = re.split('(MUSE_1-0rc)',k)
+                            end_without_suffix = re.split('(\.vcf)',parts[2])
+                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf' + '\t\t' + parts[0] + parts[1] + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf\n'                            
+                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.md5' + '\t\t' + parts[0] + parts[1] + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.md5\n'
+                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx' + '\t\t' + parts[0] + parts[1] + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.idx\n'
+                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx.md5' + '\t\t' + parts[0] + parts[1] + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.idx.md5\n'
                             
                         submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
                         submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
@@ -598,11 +615,17 @@ set -ex
                         file_rename_map = {}
                         for f in new_files:
                             parts = re.split('(broad)',f)
-                            new_file_name = parts[0]+parts[1]+broad_docker_version_string+parts[2]
-                            file_rename_map[f]=new_file_name
+                            new_file_name = parts[0] + parts[1] + broad_docker_version_string + parts[2]
+                            file_rename_map[f] = new_file_name
                             
                         for k in file_rename_map:
-                            file_rename_cmd += 'mv '+k+' '+file_rename_map[k]+'\n'
+                            file_rename_cmd += 'mv ' + k + '\t\t' + file_rename_map[k] + '\n'
+                            # We also have to rename the broad intermediate tar md5 file.
+                            # But since these files aren't in the list `new_files`, we can't rely on that list to properly
+                            # generate the renaming commands, so we'll do it here.
+                            parts = re.split('(broad)',k)
+                            end_without_suffix =re.split('(\.tar)', parts[2])
+                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.tar' + '\t\t' + parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + '.tar.md5\n'
                             
                         submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
                         submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
