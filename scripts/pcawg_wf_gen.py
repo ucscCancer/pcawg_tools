@@ -526,9 +526,26 @@ set -ex
                             # generate the renaming commands, so we'll do it here.
                             parts = re.split('(broad-dRanger_snowman|broad-dRanger|broad-snowman|broad-mutect)',k)
                             end_without_suffix = re.split('(\.vcf)',parts[2])
-                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.md5' + '\t\t' + parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + '.vcf.gz.md5\n'
-                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx' + '\t\t' + parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + '.vcf.gz.idx\n'
-                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx.md5' + '\t\t' + parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + '.vcf.gz.idx.md5\n'
+                            
+                            def make_rename_line(suffix):
+                                old_file = parts[0] + parts[1] + end_without_suffix[0] + suffix #'.vcf.gz.md5'
+                                new_file = parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + suffix #'.vcf.gz.md5'
+                                return '[[ -f ' + old_file + ' ]] && mv ' + old_file + '\t\t' + new_file + '\n'
+                            
+                            #old_file = parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.md5'
+                            #new_file = parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + '.vcf.gz.md5'
+                            #file_rename_cmd += '[[ -f ' + old_file + ' ]] && mv ' + old_file + '\t\t' + new_file + '\n'
+                            file_rename_cmd += make_rename_line('.vcf.gz.md5')
+                            
+                            #old_file = parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx'
+                            #new_file = parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + '.vcf.gz.idx'
+                            #file_rename_cmd += '[[ -f ' + old_file + ' ]] && mv ' + old_file + '\t\t' + new_file + '\n'
+                            file_rename_cmd += make_rename_line('.vcf.gz.idx')
+                            
+                            #old_file = parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx.md5'
+                            #new_file = parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + '.vcf.gz.idx.md5'
+                            #file_rename_cmd += '[[ -f ' + old_file + ' ]] && mv ' + old_file + '\t\t' + new_file + '\n'
+                            file_rename_cmd += make_rename_line('.vcf.gz.idx.md5')
                         
                         submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
                         submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
@@ -576,10 +593,22 @@ set -ex
                             # generate the renaming commands, so we'll do it here.
                             parts = re.split('(MUSE_1-0rc)',k)
                             end_without_suffix = re.split('(\.vcf)',parts[2])
-                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf' + '\t\t' + parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf\n'                            
-                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.md5' + '\t\t' + parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.md5\n'
-                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx' + '\t\t' + parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.idx\n'
-                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx.md5' + '\t\t' + parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.idx.md5\n'
+                            def make_rename_line(suffix):
+                                old_file = parts[0] + parts[1] + end_without_suffix[0] + suffix #'.vcf.gz.md5'
+                                new_file = parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + suffix #'.vcf.gz.md5'
+                                # Note: the [[ -f `old_file` ]] && mv ... is necessary because this will be called by seqware and if there are retries,
+                                # they will fail because the file has already been renamed once before. I didn't use cp because some broad output files
+                                # could be rather large.
+                                return '[[ -f ' + old_file + ' ]] && mv ' + old_file + '\t\t' + new_file + '\n'
+#                             file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf' + '\t\t' + parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf\n'                            
+#                             file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.md5' + '\t\t' + parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.md5\n'
+#                             file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx' + '\t\t' + parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.idx\n'
+#                             file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.vcf.gz.idx.md5' + '\t\t' + parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + '.vcf.gz.idx.md5\n'
+
+                            file_rename_cmd += make_rename_line('.vcf')
+                            file_rename_cmd += make_rename_line('.vcf.gz.md5')
+                            file_rename_cmd += make_rename_line('.vcf.gz.idx')
+                            file_rename_cmd += make_rename_line('.vcf.gz.idx.md5')
                             
                         submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
                         submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
@@ -625,7 +654,14 @@ set -ex
                             # generate the renaming commands, so we'll do it here.
                             parts = re.split('(broad)',k)
                             end_without_suffix =re.split('(\.tar)', parts[2])
-                            file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.tar' + '\t\t' + parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + '.tar.md5\n'
+                            def make_rename_line(suffix):
+                                old_file = parts[0] + parts[1] + end_without_suffix[0] + suffix #'.vcf.gz.md5'
+                                new_file = parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + suffix #'.vcf.gz.md5'
+                                return '[[ -f ' + old_file + ' ]] && mv ' + old_file + '\t\t' + new_file + '\n'
+
+                            #file_rename_cmd += 'mv ' + parts[0] + parts[1] + end_without_suffix[0] + '.tar.md5' + '\t\t' + parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + '.tar.md5\n'
+                            file_rename_cmd += make_rename_line('.tar.md5')
+                            
                             
                         submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
                         submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
