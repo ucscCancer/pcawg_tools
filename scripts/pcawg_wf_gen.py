@@ -520,7 +520,7 @@ set -ex
                             file_rename_map[f]=new_file_name
                             
                         for k in file_rename_map:
-                            file_rename_cmd += 'mv '+k+'\t\t'+file_rename_map[k]+'\n'
+                            file_rename_cmd += '[[ -f '+ k+' ]] && mv '+k+'\t\t'+file_rename_map[k]+'\n'
                             # We also have to rename the broad files vcf.gz.idx, vcf.gz.md5, vcf.gz.idx.md5
                             # But since these files aren't in the list `files`, we can't rely on that list to properly
                             # generate the renaming commands, so we'll do it here.
@@ -576,7 +576,7 @@ set -ex
                             file_rename_map[f] = new_file_name
                             
                         for k in file_rename_map:
-                            file_rename_cmd += 'mv ' + k + '\t\t' + file_rename_map[k] + '\n'
+                            file_rename_cmd += '[[ -f '+ k+' ]] && mv ' + k + '\t\t' + file_rename_map[k] + '\n'
                             # We also have to rename the MUSE vcf, vcf.gz.idx, vcf.gz.md5, vcf.gz.idx.md5
                             # But since these files aren't in the list `files`, we can't rely on that list to properly
                             # generate the renaming commands, so we'll do it here.
@@ -633,7 +633,7 @@ set -ex
                             file_rename_map[f] = new_file_name
                             
                         for k in file_rename_map:
-                            file_rename_cmd += 'mv ' + k + '\t\t' + file_rename_map[k] + '\n'
+                            file_rename_cmd += '[[ -f '+ k+' ]] && mv ' + k + '\t\t' + file_rename_map[k] + '\n'
                             # We also have to rename the broad intermediate tar md5 file.
                             # But since these files aren't in the list `new_files`, we can't rely on that list to properly
                             # generate the renaming commands, so we'll do it here.
