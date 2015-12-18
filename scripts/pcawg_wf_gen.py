@@ -508,7 +508,7 @@ set -ex
                     file_rename_cmd = ''
                     file_rename_map = {}
                     update_analysis_xml = ''
-                    broad_docker_version_string = "-10"
+                    broad_docker_version_string = "-11"
                     # Handle the Broad output files
                     if pipeline in ['broad']:
                         # First, we need to add "SB-10" to all file names, right before that date-part (after dRanger., mutect., snowman.)
