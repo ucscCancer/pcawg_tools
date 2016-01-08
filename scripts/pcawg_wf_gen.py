@@ -511,14 +511,103 @@ echo $? > `basename $0`.ready
 cd `dirname $0`
 set -ex
 """)
-                    if pipeline in ['broad', 'muse']:
+                    file_rename_cmd = ''
+                    file_rename_map = {}
+                    update_analysis_xml = ''
+                    broad_docker_version_string = "-11"
+                    # Handle the Broad output files
+                    if pipeline in ['broad']:
+                        # First, we need to add "SB-10" to all file names, right before that date-part (after dRanger., mutect., snowman.)
+                        file_rename_cmd = ''
+                        file_rename_map = {}
+                        for f in files:
+                            parts = re.split('(broad-dRanger_snowman|broad-dRanger|broad-snowman|broad-mutect)',f)
+                            new_file_name = parts[0]+parts[1]+broad_docker_version_string+parts[2]
+                            file_rename_map[f]=new_file_name
+                            
+                        for k in file_rename_map:
+                            file_rename_cmd += '[[ -f '+ k+' ]] && mv '+k+'\t\t'+file_rename_map[k]+'\n'
+                            # We also have to rename the broad files vcf.gz.idx, vcf.gz.md5, vcf.gz.idx.md5
+                            # But since these files aren't in the list `files`, we can't rely on that list to properly
+                            # generate the renaming commands, so we'll do it here.
+                            parts = re.split('(broad-dRanger_snowman|broad-dRanger|broad-snowman|broad-mutect)',k)
+                            end_without_suffix = re.split('(\.vcf)',parts[2])
+                            
+                            def make_rename_line(suffix):
+                                old_file = parts[0] + parts[1] + end_without_suffix[0] + suffix #'.vcf.gz.md5'
+                                new_file = parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + suffix #'.vcf.gz.md5'
+                                return '[[ -f ' + old_file + ' ]] && mv ' + old_file + '\t\t' + new_file + '\n'
+                            
+                            file_rename_cmd += make_rename_line('.vcf.gz.md5')
+                            file_rename_cmd += make_rename_line('.vcf.gz.idx')
+                            file_rename_cmd += make_rename_line('.vcf.gz.idx.md5')
+                        
                         submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
                         submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
                         submit_cmd_str += " --metadata-urls %s" % (",".join(urls))
-                        submit_cmd_str += " --vcfs %s " % (",".join(files))
-                        submit_cmd_str += " --vcf-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in files) )))
-                        submit_cmd_str += " --vcf-idxs %s" % ((",".join( ("%s.idx" % i for i in files) )))
-                        submit_cmd_str += " --vcf-idx-md5sum-files %s" % ((",".join( ("%s.idx.md5" % i for i in files) )))
+                        submit_cmd_str += " --vcfs %s " % (",".join(file_rename_map.values()))
+                        submit_cmd_str += " --vcf-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in file_rename_map.values()) )))
+                        submit_cmd_str += " --vcf-idxs %s" % ((",".join( ("%s.idx" % i for i in file_rename_map.values()) )))
+                        submit_cmd_str += " --vcf-idx-md5sum-files %s" % ((",".join( ("%s.idx.md5" % i for i in file_rename_map.values()) )))
+                        submit_cmd_str += " --outdir %s.%s.dir" % (pipeline, donor_tumor)
+                        submit_cmd_str += " --key %s " % (upload_key)
+                        submit_cmd_str += " --k-timeout-min 10"
+                        submit_cmd_str += " --upload-url https://%s" % (upload_host)
+                        submit_cmd_str += " --study-refname-override %s" % (upload_study_map[upload_host])
+                        submit_cmd_str += " --workflow-url '%s'" % args.pipeline_src
+                        submit_cmd_str += " --workflow-src-url '%s'" % args.pipeline_src
+                        submit_cmd_str += " --workflow-name '%s'" % args.pipeline_name
+                        submit_cmd_str += " --workflow-version '%s'" % args.pipeline_version
+                        submit_cmd_str += " --vm-instance-type '%s'" % args.vm_instance_type
+                        submit_cmd_str += " --vm-instance-cores %s" % args.vm_instance_cores
+                        submit_cmd_str += " --vm-instance-mem-gb %s" % args.vm_instance_mem_gb
+                        submit_cmd_str += " --vm-location-code %s" % args.vm_location_code
+                        submit_cmd_str += " --timing-metrics-json %s" % (timing_json)
+                        submit_cmd_str += " --workflow-file-subset %s" % (pipeline)
+                        submit_cmd_str += " --related-file-subset-uuids %s" % (",".join(related_uuids))
+                        submit_cmd_str += " --uuid %s" % (uuid_map[pipeline][donor])
+                        if args.rsync:
+                            submit_cmd_str += " --skip-upload --skip-validate"
+                    
+                    # Handle the MuSE output files
+                    if pipeline in ['muse']:
+                        # First, we need to add the MuSE v1.0rc_submission_b391201 SHA1 hash sum to the file names.
+                        # ATTENTION: If you change the MuSE version, you will need to put the correct hashsum in here. 
+                        muse_1_0rc_identifier='b391201'
+                        file_rename_cmd = ''
+                        file_rename_map = {}
+                        for f in files:
+                            parts = re.split('(MUSE_1-0rc)',f)
+                            new_file_name = parts[0] + parts[1] + '-' + muse_1_0rc_identifier + parts[2]
+                            file_rename_map[f] = new_file_name
+                            
+                        for k in file_rename_map:
+                            file_rename_cmd += '[[ -f '+ k+' ]] && mv ' + k + '\t\t' + file_rename_map[k] + '\n'
+                            # We also have to rename the MUSE vcf, vcf.gz.idx, vcf.gz.md5, vcf.gz.idx.md5
+                            # But since these files aren't in the list `files`, we can't rely on that list to properly
+                            # generate the renaming commands, so we'll do it here.
+                            parts = re.split('(MUSE_1-0rc)',k)
+                            end_without_suffix = re.split('(\.vcf)',parts[2])
+                            def make_rename_line(suffix):
+                                old_file = parts[0] + parts[1] + end_without_suffix[0] + suffix #'.vcf.gz.md5'
+                                new_file = parts[0] + parts[1] + '-' + muse_1_0rc_identifier + end_without_suffix[0] + suffix #'.vcf.gz.md5'
+                                # Note: the [[ -f `old_file` ]] && mv ... is necessary because this will be called by seqware and if there are retries,
+                                # they will fail because the file has already been renamed once before. I didn't use cp because some broad output files
+                                # could be rather large.
+                                return '[[ -f ' + old_file + ' ]] && mv ' + old_file + '\t\t' + new_file + '\n'
+
+                            file_rename_cmd += make_rename_line('.vcf')
+                            file_rename_cmd += make_rename_line('.vcf.gz.md5')
+                            file_rename_cmd += make_rename_line('.vcf.gz.idx')
+                            file_rename_cmd += make_rename_line('.vcf.gz.idx.md5')
+                            
+                        submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
+                        submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
+                        submit_cmd_str += " --metadata-urls %s" % (",".join(urls))
+                        submit_cmd_str += " --vcfs %s " % (",".join(file_rename_map.values()))
+                        submit_cmd_str += " --vcf-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in  file_rename_map.values()) )))
+                        submit_cmd_str += " --vcf-idxs %s" % ((",".join( ("%s.idx" % i for i in  file_rename_map.values()) )))
+                        submit_cmd_str += " --vcf-idx-md5sum-files %s" % ((",".join( ("%s.idx.md5" % i for i in  file_rename_map.values()) )))
                         submit_cmd_str += " --outdir %s.%s.dir" % (pipeline, donor_tumor)
                         submit_cmd_str += " --key %s " % (upload_key)
                         submit_cmd_str += " --k-timeout-min 10"
@@ -539,12 +628,36 @@ set -ex
                         if args.rsync:
                             submit_cmd_str += " --skip-upload --skip-validate"
 
+                    # Handle the Broad intermediate tar file
                     if pipeline in ['broad_tar']:
+                        # First, we need to add "SB-10" to all file names, right before that date-part (after dRanger., mutect., snowman.)
+                        file_rename_cmd = ''
+                        file_rename_map = {}
+                        for f in new_files:
+                            parts = re.split('(broad)',f)
+                            new_file_name = parts[0] + parts[1] + broad_docker_version_string + parts[2]
+                            file_rename_map[f] = new_file_name
+                            
+                        for k in file_rename_map:
+                            file_rename_cmd += '[[ -f '+ k+' ]] && mv ' + k + '\t\t' + file_rename_map[k] + '\n'
+                            # We also have to rename the broad intermediate tar md5 file.
+                            # But since these files aren't in the list `new_files`, we can't rely on that list to properly
+                            # generate the renaming commands, so we'll do it here.
+                            parts = re.split('(broad)',k)
+                            end_without_suffix =re.split('(\.tar)', parts[2])
+                            def make_rename_line(suffix):
+                                old_file = parts[0] + parts[1] + end_without_suffix[0] + suffix #'.vcf.gz.md5'
+                                new_file = parts[0] + parts[1] + broad_docker_version_string + end_without_suffix[0] + suffix #'.vcf.gz.md5'
+                                return '[[ -f ' + old_file + ' ]] && mv ' + old_file + '\t\t' + new_file + '\n'
+
+                            file_rename_cmd += make_rename_line('.tar.md5')
+                            
+                            
                         submit_cmd_str = "perl -I /opt/gt-download-upload-wrapper/gt-download-upload-wrapper-2.0.12/lib"
                         submit_cmd_str += " /opt/vcf-uploader/vcf-uploader-2.0.6/gnos_upload_vcf.pl"
                         submit_cmd_str += " --metadata-urls %s" % (",".join(urls))
-                        submit_cmd_str += " --tarballs %s " % (",".join(new_files))
-                        submit_cmd_str += " --tarball-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in new_files) )))
+                        submit_cmd_str += " --tarballs %s " % (",".join(file_rename_map.values()))
+                        submit_cmd_str += " --tarball-md5sum-files %s " % ((",".join( ("%s.md5" % i for i in file_rename_map.values()) )))
                         submit_cmd_str += " --outdir %s.%s.dir" % (pipeline, donor_tumor)
                         submit_cmd_str += " --key %s " % (upload_key)
                         submit_cmd_str += " --k-timeout-min 10"
@@ -566,6 +679,10 @@ set -ex
 
                     if args.rsync:
                         handle.write("""
+{rename_cmd}
+
+{update_analysis_xml}
+
 {prep_cmd} --out ./
 mv vcf/*/*.xml ./
 rm -rf vcf xml2
@@ -573,6 +690,8 @@ ssh -i {key} -o StrictHostKeyChecking=no {remote_host} mkdir -p {remote_dir}/{up
 RSYNC_RSH="ssh -i {key} -o StrictHostKeyChecking=no" {script_dir}/rsync_wrap -av {local_dir} {rsync}/{upload_host}/{donor}/
 echo $? > `basename $0`.submitted
 """.format(
+    rename_cmd=file_rename_cmd,
+    update_analysis_xml=update_analysis_xml,
     prep_cmd=submit_cmd_str, 
     key=os.path.abspath(args.rsync_key),
     rsync=args.rsync,
@@ -721,7 +840,7 @@ if __name__ == "__main__":
     #parser_upload.add_argument("--keyfile", default="/keys/cghub.key")
     parser_upload.add_argument("--out-base", default="pcawg_data")
     parser_upload.add_argument("--pipeline-src", default="https://github.com/ucscCancer/pcawg_tools")
-    parser_upload.add_argument("--pipeline-version", default="1.0.0")
+    parser_upload.add_argument("--pipeline-version", default="1.1.0")
     parser_upload.add_argument("--pipeline-name", default="BROAD_MUSE_PIPELINE")
     parser_upload.add_argument("--server-filter", default=None)
     parser_upload.add_argument("--study", default="tcga_pancancer_vcf")

@@ -3,6 +3,8 @@
 #$ -S /bin/bash
 #$ -pe smp 32
 
+set -e
+
 RC=1 
 while [[ RC -ne 0 ]]
 do
