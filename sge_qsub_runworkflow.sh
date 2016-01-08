@@ -1,6 +1,7 @@
 #!/bin/bash
 #$ -S /bin/bash
 #$ -cwd
+#$ -N pcawg
 #$ -pe smp 32
 #$ -l scratch=4000g
 

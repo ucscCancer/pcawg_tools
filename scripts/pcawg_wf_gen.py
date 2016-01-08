@@ -18,6 +18,7 @@ from nebula.target import Target
 from nebula.tasks import TaskGroup, GalaxyWorkflowTask
 import tempfile
 import datetime
+import random
 from urlparse import urlparse
 from urllib2 import urlopen
 
@@ -48,7 +49,8 @@ key_map = {
 
 def run_gen(args):
     args = parser.parse_args()
-
+    if args.alt_table is not None:
+        config['table_id'] = args.alt_table
     syn = synapseclient.Synapse()
     syn.login()
 
@@ -202,9 +204,12 @@ def run_audit(args):
                     dt = None
                 donor_map[donor][ent['name']] = { 'id' : id, 'update_time' : dt }
                 
-                
+    if args.alt_table is not None:
+        config['table_id'] = args.alt_table
 
-    for ent in synqueue.listAssignments(syn, list_all=True, **config):
+    ents = synqueue.listAssignments(syn, list_all=True, **config)
+    print "\n"
+    for ent in ents:
         if ent['meta']['Submitter_donor_ID'] in donor_map:
             print "%s\t%s\t%s" % (
                 ent['meta']['Submitter_donor_ID'], 
@@ -275,6 +280,7 @@ upload_study_map = {
 }
 
 upload_key_map = {
+    "cghub.ucsc.edu" : os.path.join(BASEDIR, "tool_data/files/cghub.key"),
     "gtrepo-osdc-tcga.annailabs.com" : os.path.join(BASEDIR, "tool_data/files/bionimbus.key"),
     "gtrepo-ebi.annailabs.com" : os.path.join(BASEDIR, "tool_data/files/icgc.key"),
     "gtrepo-bsc.annailabs.com" : os.path.join(BASEDIR, "tool_data/files/icgc.key"),
@@ -592,7 +598,8 @@ def run_list(args):
 def run_set(args):
     syn = synapseclient.Synapse()
     syn.login()
-
+    if args.alt_table is not None:
+        config['table_id'] = args.alt_table
     synqueue.setStates(syn, args.state, args.ids, **config)
 
 def check_within(datestr, max_hours):
@@ -618,6 +625,24 @@ def run_errors(args):
                     print "-------------"
                     print entry['job']['stderr']
                     print "-=-=-=-=-=-=-"
+
+def run_downloads(args):
+    syn = synapseclient.Synapse()
+    syn.login()
+
+    for ent in synqueue.listAssignments(syn, **config):
+        if len(args.ids) == 0 or ent['id'] in args.ids:
+            normal_server = random.choice(ent['meta']['Normal_WGS_alignment_GNOS_repos'].split("|"))
+            normal_uuid = ent['meta']['Normal_WGS_alignment_GNOS_analysis_ID']
+            
+            tumour_server = random.choice(ent['meta']['Tumour_WGS_alignment_GNOS_repos'].split("|"))
+            tumour_uuid = ent['meta']['Tumour_WGS_alignment_GNOS_analysis_IDs']
+            
+            normal_url =  "https://%s/cghub/data/analysis/download/%s" % (urlparse(normal_server).netloc, normal_uuid)
+            tumour_url =  "https://%s/cghub/data/analysis/download/%s" % (urlparse(tumour_server).netloc, tumour_uuid)
+            
+            print "if [ ! -e %s ]; then gtdownload -c %s -v %s; fi" % (normal_uuid, upload_key_map[urlparse(normal_server).netloc], normal_url)
+            print "if [ ! -e %s ]; then gtdownload -c %s -v %s; fi" % (tumour_uuid, upload_key_map[urlparse(tumour_server).netloc], tumour_url)
 
 def run_timing(args):
     doc = from_url(args.out_base)
@@ -667,6 +692,7 @@ if __name__ == "__main__":
     parser_gen.add_argument("--create-service", action="store_true", default=False)
     parser_gen.add_argument("--scratch", default=None)
     parser_gen.add_argument("--work-dir", default=None)
+    parser_gen.add_argument("--alt-table", default=None)
     parser_gen.add_argument("--sudo", action="store_true", default=False)
     parser_gen.add_argument("--galaxy", default="bgruening/galaxy-stable")
     parser_gen.add_argument("--timeout", type=int, default=60)
@@ -677,6 +703,7 @@ if __name__ == "__main__":
 
     parser_audit = subparsers.add_parser('audit')
     parser_audit.add_argument("--out-base", default="pcawg_data")
+    parser_audit.add_argument("--alt-table", default=None)
     parser_audit.set_defaults(func=run_audit)
 
     parser_gnos = subparsers.add_parser('gnos-audit')
@@ -722,13 +749,20 @@ if __name__ == "__main__":
     parser_clean.set_defaults(func=run_clean)
 
     parser_set = subparsers.add_parser('set')
+    parser_set.add_argument("--alt-table", default=None)
     parser_set.add_argument("state")
     parser_set.add_argument("ids", nargs="+")
     parser_set.set_defaults(func=run_set)
 
+
+    parser_downloads = subparsers.add_parser('downloads')
+    parser_downloads.add_argument("ids", nargs="*")
+    parser_downloads.set_defaults(func=run_downloads)
+    
     parser_timing = subparsers.add_parser('timing')
     parser_timing.add_argument("--out-base", default="pcawg_data")
     parser_timing.set_defaults(func=run_timing)
 
     args = parser.parse_args()
     args.func(args)
+
