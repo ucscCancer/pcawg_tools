@@ -303,6 +303,8 @@ def run_uploadprep(args):
 
     syn = synapseclient.Synapse()
     syn.login()
+    if args.alt_table is not None:
+        config['table_id'] = args.alt_table
 
     wl_map = {}
     job_map = {}
@@ -514,7 +516,7 @@ set -ex
                     file_rename_cmd = ''
                     file_rename_map = {}
                     update_analysis_xml = ''
-                    broad_docker_version_string = "-11"
+                    broad_docker_version_string = "-" + args.broad_docker_version_string
                     # Handle the Broad output files
                     if pipeline in ['broad']:
                         # First, we need to add "SB-10" to all file names, right before that date-part (after dRanger., mutect., snowman.)
@@ -712,6 +714,8 @@ echo $? > `basename $0`.submitted
 def run_list(args):
     syn = synapseclient.Synapse()
     syn.login()
+    if args.alt_table is not None:
+        config['table_id'] = args.alt_table
     synqueue.listAssignments(syn, display=True, **config)
 
 def run_set(args):
@@ -837,10 +841,13 @@ if __name__ == "__main__":
 
     parser_upload = subparsers.add_parser('upload-prep')
     parser_upload.add_argument("--workdir", default="upload")
+    parser_upload.add_argument("--alt-table", default=None)
     #parser_upload.add_argument("--keyfile", default="/keys/cghub.key")
     parser_upload.add_argument("--out-base", default="pcawg_data")
     parser_upload.add_argument("--pipeline-src", default="https://github.com/ucscCancer/pcawg_tools")
     parser_upload.add_argument("--pipeline-version", default="1.1.0")
+    parser_upload.add_argument("--broad-docker-version-string", default="11")
+    parser_upload.add_argument("--muse-1-0rc-identifier", default='b391201')
     parser_upload.add_argument("--pipeline-name", default="BROAD_MUSE_PIPELINE")
     parser_upload.add_argument("--server-filter", default=None)
     parser_upload.add_argument("--study", default="tcga_pancancer_vcf")
@@ -855,6 +862,7 @@ if __name__ == "__main__":
     parser_upload.set_defaults(func=run_uploadprep)
 
     parser_list = subparsers.add_parser('list')
+    parser_list.add_argument("--alt-table", default=None)
     parser_list.set_defaults(func=run_list)
 
     parser_errors = subparsers.add_parser('errors')
