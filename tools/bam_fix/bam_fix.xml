@@ -1,0 +1,18 @@
+<tool id="broad_bam_fix" name="BAM Fix" version="1.0.0">
+	<description>Fix BAM files with issues</description>
+	<requirements>
+		<container type="docker">broad_variant_pipeline:1.5</container>
+	</requirements>
+	<command interpreter="python">
+/cga/fh/pcawg_pipeline/modules/normalize_bam/normalize_bam.py ${input_bam} ${output_bam}
+	</command>
+	<inputs>
+		<param name="input_bam" type="data" format="bam" label="Input Bam"/>
+	</inputs>
+	<outputs>
+		<data name="output_bam" format="bam"/>
+	</outputs>
+	<help>
+Fix BAM files with issues
+	</help>
+</tool>
