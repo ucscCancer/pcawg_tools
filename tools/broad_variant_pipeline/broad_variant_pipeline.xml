@@ -2,7 +2,7 @@
     <description></description>
     <requirements>
         <!-- This docker image is closed source and must be obtained seperately -->
-        <container type="docker">broad_variant_pipeline:1.2</container>
+        <container type="docker">broad_variant_pipeline:1.5</container>
     </requirements>
     <command interpreter="bash">
 broad_variant_pipeline.sh ${sample_id} ${tumor_bam} ${tumor_bam.metadata.bam_index} ${normal_bam} ${normal_bam.metadata.bam_index} ${broad_ref_dir} ./
